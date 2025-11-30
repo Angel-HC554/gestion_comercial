@@ -1,0 +1,44 @@
+# Packages
+composer.phar
+vendor
+node_modules
+
+# Environment
+.env
+.env.backup
+.env.production
+
+# Build
+build
+dist
+compiled
+
+# System/Editor
+.fleet
+.idea
+.nova
+.vscode
+.zed
+
+# Leaf
+.hana
+.alchemy
+hot
+storage/framework
+storage/logs
+storage/database
+public/storage
+
+# Logs
+npm-debug.log
+yarn-error.log
+
+#office
+libreoffice
+
+#archivos generados por el sistema
+public/escaneos_supervision_diaria
+public/fotos_supervision_semanal
+storage/escaneos
+storage/orden_vehiculos
+storage/pdf_exports

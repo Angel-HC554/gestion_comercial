@@ -1,0 +1,19 @@
+table: orden_archivos
+
+columns:
+  # Clave foránea que referencia a la tabla orden_vehiculos
+  orden_vehiculo_id:
+    type: bigInteger
+    unsigned: true
+    foreign:
+      references: id
+      on: orden_vehiculos
+      onDelete: cascade
+
+  # Ruta del archivo en el sistema
+  ruta_archivo: string
+  
+  # Comentarios opcionales sobre el archivo
+  comentarios:
+    type: string
+    nullable: true

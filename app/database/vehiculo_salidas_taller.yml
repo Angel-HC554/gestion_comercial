@@ -1,0 +1,16 @@
+tablename: vehiculo_salidas_taller
+columns:
+  orden_vehiculo_id:
+    type: integer
+    foreign_key: 
+      table: orden_vehiculos
+      column: id
+      on_delete: CASCADE
+  
+  kilometraje: integer
+  
+  fecha_terminacion: date
+  
+  servicio: 
+    type: boolean
+    default: false

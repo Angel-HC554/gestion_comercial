@@ -1,0 +1,33 @@
+columns:
+  agencia: string
+  
+  # Es string porque a veces los números económicos tienen letras o ceros a la izquierda
+  no_economico: 
+    type: string
+    unique: true
+  
+  placas: string
+  tipo_vehiculo: string
+  marca: string
+  modelo: string
+  
+  # En validación es digits:4, integer es lo correcto
+  año: integer
+  
+  # Usaremos string para guardar 'En circulacion', 'En mantenimiento', etc.
+  estado: string
+  
+  # 'Arrendado' o 'Propio (CFE)'
+  propiedad: string
+  
+  proceso: string
+  
+  # Definido como nullable en tu validación de Livewire
+  alias:
+    type: string
+    nullable: true
+    
+  rpe_creamod: string
+  
+  # Timestamps (created_at, updated_at) se agregan automáticamente en Leaf 
+  # a menos que se especifique lo contrario, pero Eloquent los necesita.

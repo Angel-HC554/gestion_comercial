@@ -1,0 +1,51 @@
+tablename: supervision_diaria
+columns:
+  vehiculo_id:
+    type: integer
+    foreign_key: 
+      table: vehiculos
+      column: id
+      on_delete: CASCADE
+      
+  no_eco: string
+  nombre_auxiliar: string
+  
+  fecha: date
+  hora_inicio: time
+  hora_fin: time
+  
+  kilometraje: integer
+  gasolina: string
+  
+  # Checklist (Booleanos)
+  aceite: boolean
+  liq_fren: boolean
+  anti_con: boolean
+  agua: boolean
+  radiador: boolean
+  llantas: boolean
+  llanta_r: boolean
+  tapon_gas: boolean
+  limp_cab: boolean
+  limp_ext: boolean
+  cinturon: boolean
+  limpia_par: boolean
+  manijas_puer: boolean
+  espejo_int: boolean
+  espejo_lat_i: boolean
+  espejo_lat_d: boolean
+  gato: boolean
+  llave_cruz: boolean
+  extintor: boolean
+  direccionales: boolean
+  luces: boolean
+  intermit: boolean
+  golpes: boolean
+  
+  golpes_coment: 
+    type: text
+    nullable: true
+    
+  escaneo_url: 
+    type: string
+    nullable: true

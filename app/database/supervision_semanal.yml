@@ -1,0 +1,41 @@
+tablename: supervision_semanal
+columns:
+  vehiculo_id:
+    type: integer
+    foreign_key: 
+      table: vehiculos
+      column: id
+      on_delete: CASCADE
+  
+  user_id:
+    type: integer
+    nullable: true # Lo dejo nullable por si aún no migras la tabla users
+  
+  no_eco: string
+  
+  # Fotos Obligatorias
+  foto_del: string
+  foto_tra: string
+  foto_lado_izq: string
+  foto_lado_der: string
+  
+  # Fotos Opcionales
+  foto_poliza: 
+    type: string
+    nullable: true
+  foto_tar_circ: 
+    type: string
+    nullable: true
+  foto_kit: 
+    type: string
+    nullable: true
+  foto_atent: 
+    type: string
+    nullable: true
+  foto_llanta_ref: 
+    type: string
+    nullable: true
+    
+  resumen_est: 
+    type: text
+    nullable: true
