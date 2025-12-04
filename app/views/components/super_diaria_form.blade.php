@@ -1,147 +1,160 @@
-<style>
-    /* Estilos del formulario Diario */
-    .form-diaria-container input[type="radio"]:checked + label {
-        display: inline-flex; align-items: center; justify-content: center;
-        width: 24px; height: 24px; border-radius: 4px; font-weight: bold;
-    }
-    .form-diaria-container input[type="radio"][value="1"]:checked + label { background-color: #10B981; color: white; }
-    .form-diaria-container input[type="radio"][value="0"]:checked + label { background-color: #EF4444; color: white; }
-    
-    .form-diaria-container input, .form-diaria-container select, .form-diaria-container textarea {
-        width: 100%; border-radius: 0.5rem; border: 1px solid #d1d5db; padding: 0.625rem;
-    }
-    .form-diaria-container input:focus { border-color: #059669; ring: 2px; outline: none; }
-</style>
-
-<div class="form-diaria-container bg-white p-6 rounded-lg"
+<div class="bg-white rounded-lg shadow-sm border border-zinc-200 overflow-hidden"
      x-data="supervisionDiariaApp('{{ $vehiculo_id }}', '{{ $no_economico }}')">
-
-    <div class="border-b border-gray-200 pb-4 mb-4">
-        <h3 class="text-lg font-medium text-emerald-800">Registro de Verificación Diaria</h3>
+    
+    <div class="px-6 py-3 border-b border-zinc-200 bg-gray-50 flex justify-between items-center">
+        <div>
+            <h3 class="text-lg font-bold text-emerald-800">Supervisión Diaria</h3>
+            <p class="text-sm text-zinc-500">Vehículo: <span class="font-bold text-zinc-700">{{ $no_economico }}</span></p>
+        </div>
+        <div class="text-sm font-medium text-zinc-400">
+            Paso <span x-text="step"></span> de 4
+        </div>
     </div>
 
-    <form @submit.prevent="submitDiaria">
+    <form @submit.prevent="submitForm" class="p-6">
         
-        <div class="mb-6 border border-gray-200 rounded-lg overflow-hidden">
-            <button type="button" @click="step = (step === 1 ? 0 : 1)" class="w-full flex justify-between p-4 bg-gray-50 font-semibold text-emerald-800">
-                1. Información General
-                <span x-text="step === 1 ? '▲' : '▼'"></span>
-            </button>
-            <div x-show="step === 1" class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div x-show="step === 1" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0">
+            <h4 class="text-md font-semibold text-zinc-700 mb-4 flex items-center">
+                <span class="bg-emerald-100 text-emerald-700 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">1</span>
+                Datos Generales
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label class="block text-sm font-medium mb-1">Auxiliar Verificador</label>
-                    <select x-model="form.nombre_auxiliar" required>
+                    <label class="block text-sm font-medium text-zinc-700 mb-1">Auxiliar Verificador</label>
+                    <select x-model="form.nombre_auxiliar" class="w-full rounded-md border-zinc-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2 px-3 border">
                         <option value="">Seleccione...</option>
                         <option value="JORGE MORENO">JORGE MORENO</option>
                         <option value="OPERADOR TURNO">OPERADOR TURNO</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-1">Fecha</label>
-                    <input type="date" x-model="form.fecha" required>
+                    <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha</label>
+                    <input type="date" x-model="form.fecha" class="w-full rounded-md border-zinc-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2 px-3 border">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-1">Hora Inicio</label>
-                    <input type="time" x-model="form.hora_inicio" required>
+                    <label class="block text-sm font-medium text-zinc-700 mb-1">Hora Inicio</label>
+                    <input type="time" x-model="form.hora_inicio" class="w-full rounded-md border-zinc-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2 px-3 border">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-1">Hora Fin</label>
-                    <input type="time" x-model="form.hora_fin" required>
+                    <label class="block text-sm font-medium text-zinc-700 mb-1">Hora Fin</label>
+                    <input type="time" x-model="form.hora_fin" class="w-full rounded-md border-zinc-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2 px-3 border">
                 </div>
             </div>
         </div>
 
-        <div class="mb-6 border border-gray-200 rounded-lg overflow-hidden">
-            <button type="button" @click="step = (step === 2 ? 0 : 2)" class="w-full flex justify-between p-4 bg-gray-50 font-semibold text-emerald-800">
-                2. Lecturas Clave
-                <span x-text="step === 2 ? '▲' : '▼'"></span>
-            </button>
-            <div x-show="step === 2" class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Kilometraje</label>
-                    <input type="number" x-model="form.kilometraje" placeholder="Ej: 150000" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Nivel Gasolina</label>
-                    <select x-model="form.gasolina" required>
-                        <option value="0">Reserva</option>
-                        <option value="25">1/4</option>
-                        <option value="50">1/2</option>
-                        <option value="75">3/4</option>
-                        <option value="100">Lleno</option>
-                    </select>
-                </div>
-            </div>
-        </div>
+        <div x-show="step === 2" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0" style="display: none;">
+            <h4 class="text-md font-semibold text-zinc-700 mb-4 flex items-center">
+                <span class="bg-emerald-100 text-emerald-700 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">2</span>
+                Lecturas Clave
+            </h4>
 
-        <div class="mb-6 border border-gray-200 rounded-lg overflow-hidden">
-            <button type="button" @click="step = (step === 3 ? 0 : 3)" class="w-full flex justify-between p-4 bg-gray-50 font-semibold text-emerald-800">
-                3. Checklist de Verificación
-                <span x-text="step === 3 ? '▲' : '▼'"></span>
-            </button>
-            <div x-show="step === 3" class="p-4">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Componente</th>
-                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Estado (Bien / Mal)</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            <template x-for="(label, key) in checklistItems" :key="key">
-                                <tr>
-                                    <td class="px-3 py-2 text-sm text-gray-900" x-text="label"></td>
-                                    <td class="px-3 py-2 text-center">
-                                        <div class="flex items-center justify-center space-x-4">
-                                            <label class="inline-flex items-center cursor-pointer">
-                                                <input type="radio" :name="key" value="1" x-model="form[key]" class="hidden">
-                                                <span :class="form[key] == '1' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-400'" class="px-2 py-1 rounded">✓</span>
-                                            </label>
-                                            <label class="inline-flex items-center cursor-pointer">
-                                                <input type="radio" :name="key" value="0" x-model="form[key]" class="hidden">
-                                                <span :class="form[key] == '0' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-400'" class="px-2 py-1 rounded">✗</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="mb-6 border border-gray-200 rounded-lg overflow-hidden">
-            <button type="button" @click="step = (step === 4 ? 0 : 4)" class="w-full flex justify-between p-4 bg-gray-50 font-semibold text-emerald-800">
-                4. Reporte y Evidencia
-                <span x-text="step === 4 ? '▲' : '▼'"></span>
-            </button>
-            <div x-show="step === 4" class="p-4 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">¿Hay golpes?</label>
-                    <div class="mt-2 space-x-4">
-                        <label><input type="radio" x-model="form.golpes" value="1"> Sí</label>
-                        <label><input type="radio" x-model="form.golpes" value="0"> No</label>
+                    <label class="block text-sm font-medium text-zinc-700 mb-1">Kilometraje Actual</label>
+                    <div class="relative rounded-md shadow-sm">
+                        <input type="text" x-model="form.kilometraje" class="block w-full rounded-md border-zinc-300 pl-3 pr-12 focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2 border mask-km" placeholder="0">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <span class="text-zinc-500 sm:text-sm">km</span>
+                        </div>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Comentarios</label>
-                    <textarea x-model="form.golpes_coment" rows="3"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Adjuntar Escaneo (PDF/Img)</label>
-                    <input type="file" @change="handleFileUpload">
+                    <label class="block text-sm font-medium text-zinc-700 mb-1">Nivel de Gasolina</label>
+                    <div class="pt-2">
+                        @include('components.gasolina-slider', ['gasolina' => 0])
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="flex justify-end pt-5">
+        <div x-show="step === 3" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0" style="display: none;">
+            <h4 class="text-md font-semibold text-zinc-700 mb-4 flex items-center">
+                <span class="bg-emerald-100 text-emerald-700 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">3</span>
+                Checklist de Verificación
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto p-1">
+                <template x-for="(label, key) in checklistItems" :key="key">
+                    <div class="flex items-center justify-between p-3 bg-white border border-zinc-200 rounded-lg shadow-sm hover:border-emerald-300 transition-colors">
+                        <span class="text-sm font-medium text-zinc-700" x-text="label"></span>
+                        
+                        <div class="flex items-center bg-gray-100 rounded-lg p-1">
+                            <button type="button" 
+                                @click="form[key] = '1'"
+                                :class="form[key] === '1' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'"
+                                class="px-3 py-1 rounded-md text-xs font-bold transition-all">
+                                BIEN
+                            </button>
+                            <button type="button" 
+                                @click="form[key] = '0'"
+                                :class="form[key] === '0' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'"
+                                class="px-3 py-1 rounded-md text-xs font-bold transition-all">
+                                MAL
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <div x-show="step === 4" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0" style="display: none;">
+            <h4 class="text-md font-semibold text-zinc-700 mb-4 flex items-center">
+                <span class="bg-emerald-100 text-emerald-700 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">4</span>
+                Reporte y Evidencia
+            </h4>
+
+            <div class="space-y-6">
+                <div class="bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                    <label class="block text-sm font-bold text-zinc-700 mb-2">¿El vehículo presenta golpes nuevos?</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" x-model="form.golpes" value="1" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+                            <span class="ml-2 text-sm text-zinc-700">Sí, hay daños</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" x-model="form.golpes" value="0" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+                            <span class="ml-2 text-sm text-zinc-700">No, está bien</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-zinc-700 mb-1">Comentarios / Observaciones</label>
+                    <textarea x-model="form.golpes_coment" rows="3" class="w-full rounded-md border-zinc-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-2 border" placeholder="Describe cualquier anomalía..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-zinc-700 mb-1">Evidencia (Foto o PDF)</label>
+                    <input type="file" @change="handleFileUpload" class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-8 pt-4 border-t border-zinc-100 flex justify-between">
+            <button type="button" 
+                x-show="step > 1" 
+                @click="step--"
+                class="px-4 py-2 border border-zinc-300 shadow-sm text-sm font-medium rounded-md text-zinc-700 bg-white hover:bg-zinc-50 focus:outline-none">
+                Anterior
+            </button>
+            <div x-show="step === 1" class="flex-grow"></div> <button type="button" 
+                x-show="step < 4" 
+                @click="step++"
+                class="ml-auto px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none shadow-sm flex items-center">
+                Siguiente
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </button>
+
             <button type="submit" 
-                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center disabled:opacity-50"
+                x-show="step === 4" 
+                class="ml-auto px-6 py-2 border border-transparent text-sm font-bold rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none shadow-lg flex items-center transition-all transform hover:scale-105"
                 :disabled="loading">
-                <span x-show="!loading">Guardar Supervisión</span>
-                <span x-show="loading">Guardando...</span>
+                <span x-show="!loading">GUARDAR SUPERVISIÓN</span>
+                <span x-show="loading" class="flex items-center">
+                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Procesando...
+                </span>
             </button>
         </div>
     </form>
@@ -153,36 +166,71 @@
             step: 1,
             loading: false,
             file: null,
+            // Lista completa de items para el loop de Alpine
             checklistItems: {
-                'aceite': 'Nivel de Aceite', 'liq_fren': 'Líquido de Frenos', 'anti_con': 'Anticongelante',
-                'agua': 'Agua', 'radiador': 'Radiador', 'llantas': 'Llantas', 'llanta_r': 'Llanta Refacción',
-                'tapon_gas': 'Tapón Gasolina', 'limp_cab': 'Limpieza Cabina', 'limp_ext': 'Limpieza Exterior',
-                'cinturon': 'Cinturón', 'limpia_par': 'Limpiaparabrisas', 'luces': 'Luces', 'intermit': 'Intermitentes'
+                'aceite': 'Nivel de Aceite',
+                'liq_fren': 'Líquido de Frenos',
+                'anti_con': 'Anticongelante',
+                'agua': 'Nivel de Agua',
+                'radiador': 'Radiador',
+                'llantas': 'Estado de Llantas',
+                'llanta_r': 'Llanta Refacción',
+                'tapon_gas': 'Tapón Gasolina',
+                'limp_cab': 'Limpieza Cabina',
+                'limp_ext': 'Limpieza Exterior',
+                'cinturon': 'Cinturones',
+                'limpia_par': 'Limpiaparabrisas',
+                'manijas_puer': 'Manijas Puertas',
+                'espejo_int': 'Espejo Interior',
+                'espejo_lat_i': 'Espejo Lat. Izq',
+                'espejo_lat_d': 'Espejo Lat. Der',
+                'gato': 'Gato Hidráulico',
+                'llave_cruz': 'Llave de Cruz',
+                'extintor': 'Extintor',
+                'direccionales': 'Direccionales',
+                'luces': 'Luces Principales',
+                'intermit': 'Intermitentes'
             },
+            // Estado del formulario
             form: {
-                vehiculo_id: vehiculoId, no_eco: noEco,
-                nombre_auxiliar: '', fecha: new Date().toISOString().split('T')[0],
-                hora_inicio: '08:00', hora_fin: '08:30', kilometraje: '', gasolina: '50',
-                golpes: '0', golpes_coment: '',
-                // Default checks en 1 (Bien)
+                vehiculo_id: vehiculoId,
+                no_eco: noEco,
+                nombre_auxiliar: '',
+                fecha: new Date().toISOString().split('T')[0],
+                hora_inicio: '08:00',
+                hora_fin: '08:30',
+                kilometraje: '',
+                gasolina: '0',
+                golpes: '0',
+                golpes_coment: '',
+                // Inicializamos todos los checks en '1' (Bien)
                 aceite:'1', liq_fren:'1', anti_con:'1', agua:'1', radiador:'1', llantas:'1', llanta_r:'1',
                 tapon_gas:'1', limp_cab:'1', limp_ext:'1', cinturon:'1', limpia_par:'1', manijas_puer:'1',
                 espejo_int:'1', espejo_lat_i:'1', espejo_lat_d:'1', gato:'1', llave_cruz:'1', extintor:'1',
                 direccionales:'1', luces:'1', intermit:'1'
             },
-            
-            handleFileUpload(e) {
-                this.file = e.target.files[0];
+
+            handleFileUpload(event) {
+                this.file = event.target.files[0];
             },
 
-            async submitDiaria() {
+            async submitForm() {
                 this.loading = true;
+                
+                // Creamos FormData para enviar archivo + datos
                 const formData = new FormData();
                 
-                // Append form data
+                // Agregamos todos los campos del objeto form
                 for (const key in this.form) {
                     formData.append(key, this.form[key]);
                 }
+
+                const inputGasolinaComponente = document.querySelector('input[name="gasolina"]');
+                if (inputGasolinaComponente) {
+                    formData.set('gasolina', inputGasolinaComponente.value);
+                }
+                
+                // Agregamos el archivo si existe
                 if (this.file) {
                     formData.append('escaneo_url', this.file);
                 }
@@ -192,16 +240,25 @@
                         method: 'POST',
                         body: formData
                     });
+                    
                     const result = await response.json();
 
                     if (result.status === 'success') {
-                        Swal.fire({ title: 'Éxito', text: result.message, icon: 'success', timer: 1500, showConfirmButton: false });
-                        setTimeout(() => window.location.reload(), 1500);
+                        Swal.fire({
+                            title: '¡Guardado!',
+                            text: result.message,
+                            icon: 'success',
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(() => {
+                            window.location.reload();
+                        });
                     } else {
-                        Swal.fire('Error', result.message || 'Error desconocido', 'error');
+                        Swal.fire('Error', result.message || 'Ocurrió un error inesperado', 'error');
                     }
                 } catch (error) {
-                    Swal.fire('Error', 'Error de conexión con el servidor', 'error');
+                    console.error(error);
+                    Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
                 } finally {
                     this.loading = false;
                 }

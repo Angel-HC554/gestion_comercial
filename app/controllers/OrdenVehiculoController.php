@@ -7,6 +7,7 @@ use App\Models\OrdenVehiculo;
 use App\Models\Vehiculo;
 use App\Models\VehiculoSalidaTaller;
 use App\Models\OrdenArchivo;
+use App\Models\HistorialOrden;
 use clsTinyButStrong;
 
 class OrdenVehiculoController extends Controller
@@ -30,6 +31,7 @@ class OrdenVehiculoController extends Controller
 
         // Query Builder de Eloquent
         $query = OrdenVehiculo::query()
+            ->with('archivo')
             ->select('id', 'area', 'zona', 'departamento', 'noeconomico', 'status', 'fechafirm', 'orden_500', 'requiere_servicio', 'observacion');
         // Agregué 'observacion' al final
         // Filtros
@@ -93,6 +95,12 @@ class OrdenVehiculoController extends Controller
         // 1. Obtener todos los datos directamente (sin validar reglas estrictas)
         // Esto incluye 'area', 'zona', etc. tal cual vienen del formulario.
         $data = request()->body();
+        // --- PASO DE LIMPIEZA ---
+        // Eliminamos la coma (,) antes de cualquier validación o guardado
+        if (isset($data['kilometraje'])) {
+            $data['kilometraje'] = str_replace(',', '', $data['kilometraje']);
+        }
+        // ------------------------
 
         // 2. Manejo de Checkboxes (Si no están marcados, no llegan en el request)
         $checkboxes = [
@@ -141,6 +149,13 @@ class OrdenVehiculoController extends Controller
         // 5. Crear la Orden
         try {
             $orden = OrdenVehiculo::create($data);
+            HistorialOrden::create([
+                'orden_vehiculo_id' => $orden->id,
+                'tipo_evento' => 'orden_creada',
+                'detalles' => 'Orden creada',
+                'old_value' => null,
+                'new_value' => 'PENDIENTE'
+            ]);
             // CORRECCIÓN: Devolvemos JSON, no redirect
             return response()->json([
                 'status' => 'success',
@@ -401,6 +416,12 @@ class OrdenVehiculoController extends Controller
 
         // 1. Get all form data
         $data = request()->body();
+        // --- PASO DE LIMPIEZA ---
+        // Eliminamos la coma (,) antes de cualquier validación o guardado
+        if (isset($data['kilometraje'])) {
+            $data['kilometraje'] = str_replace(',', '', $data['kilometraje']);
+        }
+        // ------------------------
 
         // 2. Handle checkboxes (same as in store method)
         $checkboxes = [
@@ -453,6 +474,13 @@ class OrdenVehiculoController extends Controller
         // 5. Update the order
         try {
             $orden->update($data);
+            HistorialOrden::create([
+                'orden_vehiculo_id' => $orden->id,
+                'tipo_evento' => 'orden_actualizada',
+                'detalles' => 'Datos generales actualizados',
+                'old_value' => null,
+                'new_value' => null
+            ]);
 
             return response()->json([
                 'status' => 'success',
@@ -481,15 +509,39 @@ class OrdenVehiculoController extends Controller
 
         // 1. Get all form data
         $data = request()->body();
+        $kmSalidaInput = $data['kilometraje'] ?? 0;
+
+        $kmSalida = str_replace(',', '', $kmSalidaInput);
+        $kmEntrada = (int) $orden->kilometraje;
+        // --- PASO DE LIMPIEZA ---
+        if ($kmSalida < $kmEntrada) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "El kilometraje de salida no puede ser menor al de entrada ($kmEntrada)."
+            ], 400);
+        }
 
         // 5. Update the order
         try {
+            // Capturamos estado anterior
+            $oldStatus = $orden->status;
+            $newStatus = $data['status'];
             $orden->update(['status' => $data['status']]);
             VehiculoSalidaTaller::create([
                 'orden_vehiculo_id' => $orden->id,
-                'kilometraje' => $data['kilometraje'],
+                'kilometraje' => $kmSalida,
                 'fecha_terminacion' => $data['fecha_terminacion'],
                 'servicio' => $orden->requiere_servicio,
+            ]);
+
+            HistorialOrden::create([
+                'orden_vehiculo_id' => $orden->id,
+                'tipo_evento' => 'estado_cambiado',
+                'detalles' => $newStatus === 'TERMINADO'
+                    ? 'Orden finalizada - Kilometraje: ' . $kmSalida
+                    : 'Estado actualizado manualmente',
+                'old_value' => $oldStatus,
+                'new_value' => $newStatus,
             ]);
 
             return response()->json([
@@ -526,7 +578,7 @@ class OrdenVehiculoController extends Controller
             // 2. Preparar el directorio de subida
             // Guardaremos en: storage/escaneos/ID_ORDEN/
             $basePath = dirname(__DIR__, 2); // Raíz del proyecto
-            $uploadDir = $basePath . '/storage/escaneos/' . $orden->id . '/';
+            $uploadDir = $basePath . '/public/ordenes_escaneos/' . $orden->id . '/';
 
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0777, true);
@@ -538,24 +590,96 @@ class OrdenVehiculoController extends Controller
             $targetPath = $uploadDir . $fileName;
 
             if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+                // Capturamos estado antes del cambio
+                $oldStatus = $orden->status;
+                
+                // 4. Actualizar Estado de la Orden a VEHICULO TALLER solo si no está TERMINADO
+                if ($oldStatus !== 'TERMINADO') {
+                    $orden->status = 'VEHICULO TALLER';
+                    $orden->save();
+                }
 
-                // 4. Actualizar Estado de la Orden a VEHICULO TALLER
-                $orden->status = 'VEHICULO TALLER';
-                $orden->save(); // O $orden->update(...)
+                // 5. Verificar si ya existe un escaneo previo
+                $rutaRelativa = '/ordenes_escaneos/' . $orden->id . '/' . $fileName;
+                $archivoExistente = OrdenArchivo::where('orden_vehiculo_id', $orden->id)// Asumiendo que hay un campo tipo_archivo
+                    ->first();
 
-                // 5. Crear registro en OrdenArchivo
-                // La ruta guardada será relativa para facilitar su acceso web luego
-                $rutaRelativa = '/storage/escaneos/' . $orden->id . '/' . $fileName;
-
-                OrdenArchivo::create([
-                    'orden_vehiculo_id' => $orden->id,
-                    'ruta_archivo'      => $rutaRelativa,
-                    'comentarios'       => $comentarios
-                ]);
+                if ($archivoExistente) {
+                    // Obtener el nombre del archivo anterior para el historial
+                    $archivoAnterior = basename($archivoExistente->ruta_archivo);
+                    
+                    // Eliminar el archivo físico anterior si existe
+                    $rutaAnterior = dirname(__DIR__, 2) . '/public/ordenes_escaneos/' . $orden->id . '/' . $archivoAnterior;
+                    if (file_exists($rutaAnterior) && is_file($rutaAnterior)) {
+                        @unlink($rutaAnterior);
+                    }
+                    
+                    // Actualizar el registro existente
+                    $archivoExistente->update([
+                        'ruta_archivo' => $rutaRelativa,
+                        'comentarios'  => $comentarios,
+                        'updated_at'   => date('Y-m-d H:i:s')
+                    ]);
+                    
+                    // Actualizar el historial del archivo
+                    $historialExistente = HistorialOrden::where('orden_vehiculo_id', $orden->id)
+                        ->where('tipo_evento', 'archivo_subido')
+                        ->where('new_value', $archivoAnterior)
+                        ->first();
+                        
+                    if ($historialExistente) {
+                        $historialExistente->update([
+                            'old_value' => $archivoAnterior,
+                            'new_value' => $fileName,
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ]);
+                    } else {
+                        // Si por alguna razón no existe el historial, lo creamos
+                        HistorialOrden::create([
+                            'orden_vehiculo_id' => $orden->id,
+                            'tipo_evento' => 'archivo_subido',
+                            'detalles' => 'ESCANEO ACTUALIZADO',
+                            'old_value' => $archivoAnterior,
+                            'new_value' => $fileName,
+                        ]);
+                    }
+                    
+                    $mensaje = 'Escaneo actualizado correctamente.';
+                } else {
+                    // Crear nuevo registro si no existe uno previo
+                    OrdenArchivo::create([
+                        'orden_vehiculo_id' => $orden->id,
+                        'ruta_archivo'      => $rutaRelativa,
+                        'comentarios'       => $comentarios,
+                        'tipo_archivo'      => 'escaneo' // Asegurarse de establecer el tipo de archivo
+                    ]);
+                    
+                    // Registrar en el historial
+                    HistorialOrden::create([
+                        'orden_vehiculo_id' => $orden->id,
+                        'tipo_evento' => 'archivo_subido',
+                        'detalles' => 'ESCANEO SUBIDO',
+                        'old_value' => null,
+                        'new_value' => $fileName,
+                    ]);
+                    
+                    $mensaje = 'Escaneo subido correctamente.';
+                }
+                
+                // Registrar cambio de estado si es necesario
+                if ($oldStatus !== 'VEHICULO TALLER' && $oldStatus !== 'TERMINADO') {
+                    HistorialOrden::create([
+                        'orden_vehiculo_id' => $orden->id,
+                        'tipo_evento' => 'estado_cambiado',
+                        'detalles' => 'Estado actualizado por subida de escaneo',
+                        'old_value' => $oldStatus,
+                        'new_value' => 'VEHICULO TALLER',
+                    ]);
+                }
 
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Escaneo subido y estado actualizado correctamente.'
+                    'message' => $mensaje
                 ]);
             } else {
                 throw new \Exception("Error al mover el archivo al servidor.");
@@ -589,6 +713,14 @@ class OrdenVehiculoController extends Controller
             $orden->update([
                 'orden_500' => $nuevoCodigo
             ]);
+            // --- NUEVO: REGISTRO HISTORIAL ---
+            HistorialOrden::create([
+                'orden_vehiculo_id' => $orden->id,
+                'tipo_evento' => 'orden_500',
+                'detalles' => 'Numero: ' . $nuevoCodigo,
+                'old_value' => null, // Podrías poner el valor anterior si quisieras
+                'new_value' => $nuevoCodigo
+            ]);
 
             return response()->json([
                 'status' => 'success',
@@ -605,32 +737,60 @@ class OrdenVehiculoController extends Controller
     }
 
     public function destroy($id)
-{
-    $orden = OrdenVehiculo::find($id);
+    {
+        $orden = OrdenVehiculo::find($id);
 
-    if (!$orden) {
-        return response()->json([
-            'status' => 'error', 
-            'message' => 'Orden no encontrada'
-        ], 404);
+        if (!$orden) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Orden no encontrada'
+            ], 404);
+        }
+
+        try {
+            // Opcional: Si tienes configurada la relación en el modelo, 
+            // podrías necesitar borrar archivos relacionados primero o confiar en el "cascade" de la BD.
+            // Por ahora, hacemos un delete simple:
+            $orden->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Orden eliminada correctamente'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se pudo eliminar: ' . $e->getMessage()
+            ], 500);
+        }
     }
+    // Obtener historial de una orden específica
+    public function history($id)
+    {
+        $historial = HistorialOrden::where('orden_vehiculo_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-    try {
-        // Opcional: Si tienes configurada la relación en el modelo, 
-        // podrías necesitar borrar archivos relacionados primero o confiar en el "cascade" de la BD.
-        // Por ahora, hacemos un delete simple:
-        $orden->delete();
+        $archivos = OrdenArchivo::where('orden_vehiculo_id', $id)->get();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Orden eliminada correctamente'
-        ]);
+        $historial->transform(function ($evento) use ($archivos) {
+            if ($evento->tipo_evento === 'archivo_subido' && $evento->new_value) {
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'No se pudo eliminar: ' . $e->getMessage()
-        ], 500);
+                // Buscamos el archivo que coincida con el nombre guardado en 'new_value'
+                // new_value tiene el nombre del archivo (ej: escaneo_123.pdf)
+                $archivoEncontrado = $archivos->first(function ($archivo) use ($evento) {
+                    // Usamos str_contains o str_ends_with porque ruta_archivo tiene la ruta completa
+                    return strpos($archivo->ruta_archivo, $evento->new_value) !== false;
+                });
+
+                if ($archivoEncontrado) {
+                    // Creamos una propiedad "virtual" para el JSON
+                    $evento->comentario_archivo = $archivoEncontrado->comentarios;
+                }
+            }
+            return $evento;
+        });
+
+        return response()->json($historial);
     }
-}
 }

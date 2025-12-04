@@ -15,14 +15,16 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1/dist/fancybox/fancybox.css" />
 
     @vite(['css/app.css', 'js/app.js'])
-        <link rel="stylesheet" href="http://localhost/gestion_comercial-original/public/build/assets/app-CV5Aeeuw.css">
-    <link rel="stylesheet" href="http://localhost/gestion_comercial-original/public/build/assets/app-CV5Aeeuw.css">
+    {{-- <link rel="stylesheet" href="http://localhost/gestion_comercial-original/public/build/assets/app-CV5Aeeuw.css">
+    <link rel="stylesheet" href="http://localhost/gestion_comercial-original/public/build/assets/app-CV5Aeeuw.css"> --}}
 
     <!-- Alpine Plugins -->
 <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
  
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    @alpine
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/imask"></script>
+    <script src="/assets/js/input-masks.js"></script>
 
     <style>
         [x-cloak] {
@@ -111,7 +113,7 @@
                             <div class="px-4 py-1 text-xs font-bold tracking-wider text-zinc-400 uppercase">
                                 Supervisiones</div>
 
-                            <a href="/supervision-semanal"
+                            <a href="/dashboard-semanal"
                                 class="flex items-center gap-3 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 hover:text-emerald-700 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-zinc-400">
@@ -120,7 +122,7 @@
                                 </svg>
                                 Semanal
                             </a>
-                            <a href="/supervision-diaria"
+                            <a href="/dashboard-diario"
                                 class="flex items-center gap-3 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 hover:text-emerald-700 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-zinc-400">

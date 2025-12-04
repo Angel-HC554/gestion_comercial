@@ -128,6 +128,12 @@ class SupervisionDiariaController extends Controller
     {
         $data = request()->body();
         $files = request()->files();
+        // --- PASO DE LIMPIEZA ---
+        // Eliminamos la coma (,) antes de cualquier validación o guardado
+        if (isset($data['kilometraje'])) {
+            $data['kilometraje'] = str_replace(',', '', $data['kilometraje']);
+        }
+        // ------------------------
 
         // 1. Validaciones Básicas
         $required = ['vehiculo_id', 'kilometraje', 'fecha', 'hora_inicio', 'hora_fin', 'nombre_auxiliar'];

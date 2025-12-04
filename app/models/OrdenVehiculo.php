@@ -68,6 +68,14 @@ class OrdenVehiculo extends Model
     ];
 
     /**
+     * Relación para obtener UN SOLO archivo (el más reciente).
+     * Esta es la que usa tu botón de descarga.
+     */
+    public function archivo()
+    {
+        return $this->hasOne(OrdenArchivo::class, 'orden_vehiculo_id')->latest();
+    }
+    /**
      * Get all of the archivos for the OrdenVehiculo
      *
      */

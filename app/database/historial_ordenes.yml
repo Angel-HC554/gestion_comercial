@@ -1,0 +1,20 @@
+tablename: historial_ordenes
+columns:
+  orden_vehiculo_id:
+    type: integer
+    foreign_key:
+      table: orden_vehiculos
+      column: id
+      on_delete: CASCADE
+
+  tipo_evento: string
+  
+  detalles: text
+
+  old_value:
+    type: string
+    nullable: true
+
+  new_value:
+    type: string
+    nullable: true

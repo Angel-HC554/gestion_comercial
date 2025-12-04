@@ -38,6 +38,7 @@ libreoffice
 
 #archivos generados por el sistema
 public/escaneos_supervision_diaria
+public/ordenes_escaneos
 public/fotos_supervision_semanal
 storage/escaneos
 storage/orden_vehiculos

@@ -19,6 +19,7 @@ app()->get('/ordenvehiculos', 'OrdenVehiculoController@index');
 app()->get('/api/ordenes/search', 'OrdenVehiculoController@search');
 
 // Rutas para editar ordenes de vehículo
+app()->get('/api/ordenes/{id}/historial', 'OrdenVehiculoController@history');
 app()->get('/ordenvehiculos/{id}/edit', 'OrdenVehiculoController@edit');
 app()->put('/ordenvehiculos/{id}', 'OrdenVehiculoController@update');
 app()->put('/ordenvehiculos/modal/{id}', 'OrdenVehiculoController@updateModal');
@@ -44,3 +45,6 @@ app()->post('/supervision-semanal', 'SupervisionSemanalController@store');
 app()->get('/supervision-semanal', 'SupervisionSemanalController@index');
 app()->post('/supervision-diaria', 'SupervisionDiariaController@store');
 app()->get('/supervision-diaria', 'SupervisionDiariaController@index');
+
+app()->get('/dashboard-diario', 'DashboardController@index');
+app()->get('/dashboard-semanal', 'DashboardSemanalController@index');

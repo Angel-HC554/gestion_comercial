@@ -171,7 +171,7 @@
                                                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
                                     </button>
-                                    
+
                                     <a :href="'/ordenvehiculos/' + orden.id + '/edit'"
                                         class="text-blue-500 bg-blue-50 p-1.5 rounded hover:bg-blue-100 transition">
                                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -179,7 +179,7 @@
                                                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.768 3.732z" />
                                         </svg>
                                     </a>
-                                    
+
                                     <button @click="openModal('delete', orden)"
                                         class="text-red-600 bg-red-50 p-1.5 rounded hover:bg-red-100 transition">
                                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -265,16 +265,24 @@
                         x-text="selectedOrden?.status"></span></p>
 
                 <div class="space-y-4 mb-6">
-                    
-                    <div class= p-3 rounded-md border border-emerald-100 space-y-3">
+
+                    <div class=p-3 rounded-md border border-emerald-100 space-y-3">
                         <div>
-                            <label class="block text-sm font-medium text-zinc-700 mb-1">Kilometraje Salida <span class="text-red-500">*</span></label>
-                            <input type="number" x-model="tempData.kilometraje" required
-                                class="w-full border border-gray-300 rounded-md focus:ring-emerald-600 focus:border-emerald-600 p-2 shadow-sm"
-                                placeholder="Ingrese el kilometraje de salida">
+                            <label class="block text-sm font-medium text-zinc-700 mb-1">Kilometraje Salida <span
+                                    class="text-red-500">*</span></label>
+                            <div class="relative rounded-md shadow-sm">
+                                <input type="text" x-model="tempData.kilometraje" required
+                                    class="w-full border border-gray-300 rounded-md focus:ring-emerald-600 focus:border-emerald-600 py-2 pl-3 pr-12 shadow-sm mask-km"
+                                    placeholder="Ingrese el kilometraje de salida">
+
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <span class="text-gray-500 sm:text-sm">km</span>
+                                </div>
+                            </div>
                         </div>
                         <div class="mt-2">
-                            <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha de Terminación <span class="text-red-500">*</span></label>
+                            <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha de Terminación <span
+                                    class="text-red-500">*</span></label>
                             <input type="date" x-model="tempData.fechaTerminacion" required
                                 class="w-full border border-gray-300 rounded-md focus:ring-emerald-600 focus:border-emerald-600 p-2 shadow-sm"
                                 x-bind:max="new Date().toISOString().split('T')[0]">
@@ -335,6 +343,28 @@
 
                 // Datos Temporales para Edición
                 selectedOrden: null,
+                historial: [],
+                historialLoading: false,
+                // Mapas de configuración (copiados de tu PHP array)
+                badgeClasses: {
+                    'orden_creado': 'bg-green-100 text-green-700',
+                    'orden_creada': 'bg-green-100 text-green-700', // Por si acaso el typo en store
+                    'orden_actualizado': 'bg-blue-100 text-blue-700',
+                    'orden_actualizada': 'bg-blue-100 text-blue-700',
+                    'estado_cambiado': 'bg-amber-100 text-amber-700',
+                    'archivo_subido': 'bg-purple-100 text-purple-700',
+                    'orden_500': 'bg-gray-100 text-gray-700'
+                },
+                titleMap: {
+                    'archivo_subido': 'Se subió un archivo',
+                    'estado_cambiado': 'Se cambió el estado',
+                    'orden_creado': 'Se creó la orden',
+                    'orden_creada': 'Se creó la orden',
+                    'orden_actualizado': 'Se actualizó la orden',
+                    'orden_actualizada': 'Se actualizó la orden',
+                    'orden_500': 'Se agregó código 500',
+                },
+
                 tempData: {
                     orden_500: '',
                     newStatus: 'TERMINADO',
@@ -400,7 +430,47 @@
                         fechaTerminacion: ''
                     };
 
+
                     this.modals[type] = true;
+                    // NUEVO: Si abrimos el modal "more", cargamos el historial
+                    if (type === 'more') {
+                        this.fetchHistorial(orden.id);
+                        this.activeTab = 'general'; // Reset tab
+                    }
+                },
+
+                // NUEVA FUNCIÓN
+                async fetchHistorial(id) {
+                    this.historialLoading = true;
+                    this.historial = []; // Limpiar anterior
+                    try {
+                        const res = await fetch(`/api/ordenes/${id}/historial`); // Ajusta tu ruta según definas en Leaf
+                        if (res.ok) {
+                            this.historial = await res.json();
+                        }
+                    } catch (e) {
+                        console.error("Error cargando historial", e);
+                    } finally {
+                        this.historialLoading = false;
+                    }
+                },
+                // UTILIDADES PARA LA VISTA
+                formatDate(dateString) {
+                    if (!dateString) return '';
+                    const date = new Date(dateString);
+                    return date.toLocaleString('es-MX', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+                getTitulo(tipo) {
+                    return this.titleMap[tipo] || tipo.replace('_', ' ').toUpperCase();
+                },
+                getClass(tipo) {
+                    return this.badgeClasses[tipo] || 'bg-gray-100 text-gray-700';
                 },
 
                 // ACCIONES DE GUARDADO (Mockup por ahora)
@@ -450,7 +520,28 @@
                         if (fileInput && fileInput.files.length > 0) {
                             formData.append('archivo', fileInput.files[0]);
                         } else {
-                            Swal.fire('Error', 'Debes seleccionar un archivo', 'warning');
+                            //Swal.fire('Error', 'Debes seleccionar un archivo', 'warning');
+                            Swal.fire({
+                                position: "top-center",
+                                timerProgressBar: false,
+                                icon: "warning",
+                                title: "Debes seleccionar un archivo",
+                                showConfirmButton: true,
+                                confirmButtonColor: '#059669',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                    Swal.hideLoading();
+                                    const backdrop = document.querySelector('.swal2-backdrop-show');
+                                    if (backdrop) {
+                                        backdrop.addEventListener('click', (e) => {
+                                            e
+                                                .stopPropagation(); // evita que el clic llegue al @click.away
+                                            // Opcional: también puedes evitar que se cierre Swal si quieres
+                                            // e.preventDefault();
+                                        });
+                                    }
+                                }
+                            });
                             return;
                         }
 
@@ -458,8 +549,6 @@
                         formData.append('_token', csrfToken); // Agregar token al form data también por seguridad
 
                         body = formData;
-                        // IMPORTANTE: Al usar FormData, NO definimos 'Content-Type' en headers.
-                        // El navegador lo pondrá automáticamente como multipart/form-data con el boundary correcto.
 
                     } else {
                         // --- LÓGICA EXISTENTE PARA JSON (code500, status, etc) ---
@@ -501,6 +590,7 @@
 
                             Swal.fire({
                                 title: '¡Éxito!',
+                                position: "top",
                                 text: data.message || 'Acción realizada correctamente',
                                 icon: 'success',
                                 timer: 1500,
@@ -517,10 +607,26 @@
                         })
                         .catch(error => {
                             console.error('Error:', error);
+
                             Swal.fire({
-                                title: 'Error',
+                                position: "top-center",
+                                icon: "warning",
+                                allowOutsideClick: false,
+                                title: "Error",
                                 text: error.message || 'Ocurrió un error',
-                                icon: 'error'
+                                showConfirmButton: true,
+                                confirmButtonColor: '#059669',
+                                didOpen: () => {
+                                    const backdrop = document.querySelector('.swal2-backdrop-show');
+                                    if (backdrop) {
+                                        backdrop.addEventListener('click', (e) => {
+                                            e
+                                                .stopPropagation(); // evita que el clic llegue al @click.away
+                                            // Opcional: también puedes evitar que se cierre Swal si quieres
+                                            // e.preventDefault();
+                                        });
+                                    }
+                                }
                             });
                         })
                         .finally(() => {

@@ -36,9 +36,9 @@
             </div>
 
             <!-- Tab Content -->
-            <div class="flex-1 overflow-hidden px-6 pb-6 mt-4">
+            <div class="flex-1 flex flex-col overflow-hidden px-6 pb-6 mt-4">
                 <!-- Tab Content Wrapper with fixed height -->
-                <div class="h-full flex flex-col" style="min-height: 400px;">
+                <div class="flex-1 flex flex-col min-h-0 overflow-y-auto" style="min-height: 400px;">
                     <!-- Información General Tab -->
                     <div x-show="activeTab === 'general'" class="h-full overflow-y-auto p-4 space-y-6">
                         <!-- Sección de información principal -->
@@ -85,14 +85,31 @@
                                     Documento generado
                                 </a>
 
-                                <a href="#" @click.prevent="alert('Falta implementar descarga')"
-                                    class="flex items-center px-4 py-2 text-sm text-orange-600 bg-orange-50 hover:bg-orange-100 rounded mt-2">
-                                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                    </svg>
-                                    Entregado a Taller
-                                </a>
+                                <div class="mt-2">
+                                    <template x-if="selectedOrden?.archivo && selectedOrden.archivo.ruta_archivo">
+                                        <a :href="selectedOrden.archivo.ruta_archivo" target="_blank"
+                                            class="flex items-center px-4 py-2 text-sm text-orange-600 bg-orange-50 hover:bg-orange-100 rounded border border-orange-200 transition-colors">
+                                            <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                            </svg>
+                                            Entregado a Taller
+                                        </a>
+                                    </template>
+
+                                    <template x-if="!selectedOrden?.archivo">
+                                        <span
+                                            class="flex items-center px-4 py-2 text-sm text-gray-400 bg-gray-50 rounded border border-gray-100 cursor-not-allowed">
+                                            <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                            </svg>
+                                            Sin escaneo subido
+                                        </span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -131,17 +148,8 @@
                     </div>
 
                     <!-- Historial Tab -->
-                    <div x-show="activeTab === 'historial'" class="h-full overflow-y-auto">
-                        <div
-                            class="bg-zinc-50 rounded-lg border border-zinc-200 p-6 text-center h-full flex flex-col items-center justify-center">
-                            <svg class="mx-auto h-12 w-12 text-zinc-400" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
-                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <h3 class="mt-2 text-sm font-medium text-zinc-900">Historial de actividad</h3>
-                            <p class="mt-1 text-sm text-zinc-500">El historial de actividad aparecerá aquí</p>
-                        </div>
+                    <div x-show="activeTab === 'historial'" class="h-full min-h-0">
+                        @include('ordenvehiculos.historial')
                     </div>
                 </div>
 
