@@ -17,10 +17,10 @@
             <div class="flex flex-col md:flex-row gap-4 items-end md:items-center bg-white rounded-lg border-t-4 border-t-emerald-600 shadow-sm p-4 border border-zinc-200">
                 
                 <div class="flex flex-row w-full md:w-auto justify-between">
-                    <div class="w-1/2">
+                    <div class="w-full">
                         <label class="text-sm font-bold text-zinc-700 mb-1">Agencia:</label>
                         <select name="agencia" class="w-full h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none transition-shadow">
-                            <option value="">Todas las Agencias</option>
+                            <option value="">Todas</option>
                             @foreach($agencias as $agencia)
                                 <option value="{{ $agencia }}" {{ ($filtrosActuales['agencia'] ?? '') == $agencia ? 'selected' : '' }}>
                                     {{ $agencia }}
@@ -81,11 +81,11 @@
                             @foreach($vehiculo->status_dias as $status)
                                 <td class="p-1">
                                     @if($status == 'cumplido')
-                                        <div class="flex justify-center" title="Cumplido">
+                                        <a href="{{ optional($vehiculo->latestSupervision)->escaneo_url }}" target="_blank" class="flex justify-center" title="Cumplido">
                                             <svg class="w-6 h-6 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                             </svg>
-                                        </div>
+                                        </a>
                                     @elseif($status == 'no_cumplido')
                                         <div class="flex justify-center" title="No Cumplido">
                                             <svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">

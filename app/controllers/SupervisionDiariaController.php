@@ -155,7 +155,7 @@ class SupervisionDiariaController extends Controller
             if ($lastRecord && $nuevoKm < $lastRecord->kilometraje) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => "El kilometraje ($nuevoKm) no puede ser menor al último registrado (" . number_format($lastRecord->kilometraje) . ")."
+                    'message' => "El kilometraje no puede ser menor al último registrado (" . number_format($lastRecord->kilometraje) . ")."
                 ], 400);
             }
 

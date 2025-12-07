@@ -188,7 +188,7 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha Gen.</label>
-                    <input type="date" name="fechafirm"
+                    <input type="date" name="fechafirm" x-bind:max="new Date().toISOString().split('T')[0]"
                         class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
                         value="{{ old('fechafirm', $ordenEditar->fechafirm ?? date('Y-m-d')) }}">
                 </div>

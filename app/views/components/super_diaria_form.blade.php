@@ -30,7 +30,8 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha</label>
-                    <input type="date" x-model="form.fecha" class="w-full rounded-md border-zinc-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2 px-3 border">
+                    <input type="date" x-model="form.fecha" class="w-full rounded-md border-zinc-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2 px-3 border"
+                    x-bind:max="new Date().toISOString().split('T')[0]">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 mb-1">Hora Inicio</label>
@@ -60,8 +61,7 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-zinc-700 mb-1">Nivel de Gasolina</label>
-                    <div class="pt-2">
+                    <div>
                         @include('components.gasolina-slider', ['gasolina' => 0])
                     </div>
                 </div>
@@ -243,6 +243,10 @@
                     
                     const result = await response.json();
 
+                    if (!response.ok) {
+                        throw new Error(result.message || 'Error en la solicitud');
+                    }
+
                     if (result.status === 'success') {
                         Swal.fire({
                             title: '¡Guardado!',
@@ -258,7 +262,17 @@
                     }
                 } catch (error) {
                     console.error(error);
-                    Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+                    Swal.fire({
+                        title: 'Error',
+                        text: error.message || 'No se pudo conectar con el servidor',
+                        icon: 'warning',
+                        confirmButtonText: 'Entendido'
+                    });
+                    
+                    // Si el error es de validación de kilometraje, regresar al paso 2
+                    if (error.message && error.message.includes('kilometraje')) {
+                        this.step = 2;
+                    }
                 } finally {
                     this.loading = false;
                 }

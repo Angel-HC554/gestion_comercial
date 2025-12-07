@@ -296,7 +296,7 @@
                 <div class="p-6">
                     <div x-show="tabHistorial === 'historial'" x-cloak>
                         <div class="flex justify-between mb-4">
-                            <h3 class="text-lg font-medium leading-6 text-emerald-800">
+                            <h3 class="text-lg font-semibold leading-6 text-emerald-800">
                                 Todas las órdenes del vehículo
                             </h3>
                             <a href="/ordenvehiculos/create" class="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition ease-in-out duration-150">
@@ -304,47 +304,7 @@
                             </a>
                         </div>
 
-                        <div class="overflow-x-auto border border-gray-200 rounded-lg">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Orden #</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kilometraje</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Taller</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    @forelse ($ordenes as $orden)
-                                        <tr>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                {{ $orden->id }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {{ $orden->fechafirm ? \Carbon\Carbon::parse($orden->fechafirm)->format('d/m/Y') : 'N/A' }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {{ number_format($orden->kilometraje) }} km
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {{ $orden->taller ?? 'N/A' }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                <a href="/ordenvehiculos/pdf/{{ $orden->id }}" class="text-emerald-600 hover:text-emerald-900 mr-3">PDF</a>
-                                                <a href="/ordenvehiculos/{{ $orden->id }}/edit" class="text-indigo-600 hover:text-indigo-900">Editar</a>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="5" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                                                No hay órdenes registradas.
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
+                        @include('ordenvehiculos.tabla', ['noEconomico' => $vehiculo->no_economico])
                     </div>
 
                     <div x-show="tabHistorial === 'semanal'" x-cloak>

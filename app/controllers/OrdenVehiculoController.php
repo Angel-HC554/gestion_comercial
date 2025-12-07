@@ -29,11 +29,17 @@ class OrdenVehiculoController extends Controller
         $fecha_inicio = request()->get('fecha_inicio', '');
         $fecha_fin = request()->get('fecha_fin', '');
 
+        // NUEVO PARÁMETRO: Para filtrar exactamente por un vehículo (vista show)
+        $noEconomicoExacto = request()->get('no_economico_exacto', '');
+
         // Query Builder de Eloquent
         $query = OrdenVehiculo::query()
             ->with('archivo')
             ->select('id', 'area', 'zona', 'departamento', 'noeconomico', 'status', 'fechafirm', 'orden_500', 'requiere_servicio', 'observacion');
-        // Agregué 'observacion' al final
+        if ($noEconomicoExacto) {
+            // Filtro exacto para la vista "Show" del vehículo
+            $query->where('noeconomico', $noEconomicoExacto);
+        }
         // Filtros
         if ($search) {
             $query->where('noeconomico', 'like', "%{$search}%");
@@ -64,9 +70,9 @@ class OrdenVehiculoController extends Controller
     }
     public function create()
     {
-        // 1. Simular el siguiente ID (como no hay BD aún, ponemos 1)
-        // Cuando tengas BD usarás: OrdenVehiculo::max('id') + 1;
-        $nextId = 1;
+        // Obtener el siguiente ID disponible
+        $nextId = OrdenVehiculo::max('id') + 1;
+        $nextId = $nextId ?: 1; // Si no hay registros, comenzar desde 1
 
         // 2. DATOS DE EJEMPLO: Vehículos (Simulando tu tabla 'vehiculos')
         $vehiculos = Vehiculo::query()->select('no_economico', 'placas', 'marca', 'modelo')->get();
@@ -517,7 +523,7 @@ class OrdenVehiculoController extends Controller
         if ($kmSalida < $kmEntrada) {
             return response()->json([
                 'status' => 'error',
-                'message' => "El kilometraje de salida no puede ser menor al de entrada ($kmEntrada)."
+                'message' => "El kilometraje de salida no puede ser menor al de entrada (" . number_format($kmEntrada) . ")."
             ], 400);
         }
 

@@ -40,6 +40,17 @@ try {
 
 /*
 |--------------------------------------------------------------------------
+| [NUEVO] Configurar Zona Horaria
+|--------------------------------------------------------------------------
+|
+| Establecemos la zona horaria inmediatamente después de cargar el .env
+| para asegurar que todos los logs y fechas sean correctos desde el inicio.
+|
+*/
+date_default_timezone_set(_env('APP_TIMEZONE', 'America/Mexico_City'));
+
+/*
+|--------------------------------------------------------------------------
 | Load application paths
 |--------------------------------------------------------------------------
 |
@@ -55,6 +66,28 @@ if (php_sapi_name() === 'cli-server') {
 
     unset($path);
 }
+/*
+|--------------------------------------------------------------------------
+| Definición de Roles y Permisos de Seguridad
+|--------------------------------------------------------------------------
+*/
+auth()->createRoles([
+    'admin' => [
+        'ver ordenes',
+        'crear ordenes',
+        'editar ordenes',
+        'eliminar ordenes', // Admin es el único que puede borrar
+        'gestionar usuarios'
+    ],
+    'operador' => [
+        'ver ordenes',
+        'crear ordenes',
+        'editar ordenes',
+    ],
+    'invitado' => [
+        'ver ordenes'
+    ]
+]);
 
 /*
 |--------------------------------------------------------------------------

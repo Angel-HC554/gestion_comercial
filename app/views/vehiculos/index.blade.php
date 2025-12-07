@@ -6,7 +6,7 @@
     <div x-data="vehiculosApp()" x-init="init()" @import-success.window="handleImportSuccess($event.detail.message)" class="min-h-screen bg-gray-50 pb-10">
 
         <div class="flex items-center justify-between mb-6 mx-10 pt-6">
-            <h1 class="text-3xl font-bold tracking-tight text-zinc-900">Vehículos</h1>
+            <h1 class="text-2xl font-bold tracking-tight text-zinc-900">Vehículos</h1>
 
             <div x-show="flashMessage" x-transition.opacity.duration.500ms
                 class="fixed top-5 left-1/2 transform -translate-x-1/2 z-[9999] px-4 py-2 rounded-lg shadow-lg text-sm font-medium text-white"

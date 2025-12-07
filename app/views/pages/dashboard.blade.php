@@ -14,4 +14,10 @@
             <div class="p-6 text-gray-100">You're logged in!</div>
         </div>
     </div>
+    @if(auth()->user() && auth()->user()->can('eliminar ordenes'))
+        <p>Eres admin</p>
+    @endif
+    @can('eliminar ordenes')
+        <p>Eres admin yeah</p>
+    @endcan
 @endsection
