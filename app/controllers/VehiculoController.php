@@ -163,12 +163,19 @@ class VehiculoController extends Controller
             ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
             ->exists();
 
+        // Buscamos una orden que NO esté terminada para este vehículo
+        $ordenActiva = OrdenVehiculo::where('noeconomico', $vehiculo->no_economico)
+            ->whereIn('status', ['VEHICULO TALLER'])
+            ->latest() // Por si hubiera error y hay 2, tomamos la última
+            ->first();
+
         // Renderizar vista
         render('vehiculos.show', [
             'vehiculo' => $vehiculo,
             'ordenes' => $ordenes,
             'supervision_existe' => $supervision_existe,
-            'fotos' => $fotos
+            'fotos' => $fotos,
+            'ordenActiva' => $ordenActiva
         ]);
     }
     

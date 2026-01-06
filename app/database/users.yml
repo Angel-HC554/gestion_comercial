@@ -2,17 +2,18 @@ remember_token: true
 
 columns:
   name: string
-  email:
+  user:
     type: string
     unique: true
-  email_verified_at:
-    type: timestamp
+  leaf_auth_user_roles:
+    type: text
     nullable: true
   password: string
 
 seeds:
   data:
     - name: 'Administrador'
-      email: 'admin@admin.com'
+      user: 'admin'
       password: '$2y$10$r53gubEb8lmYf1/N8qcPaeAOGaMl1FM.CiNQvisJU.qNVaJ5.82mu'
+      leaf_auth_user_roles: '["admin"]'
   

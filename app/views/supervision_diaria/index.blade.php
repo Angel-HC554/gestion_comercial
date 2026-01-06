@@ -1,6 +1,6 @@
-@extends('layouts.app-layout')
-
-@section('title', 'Supervisión Diaria')
+@extends('layouts.app-layout', [
+    'title' => 'Supervisión Diaria'
+])
 
 @section('content')
 <div class="min-h-screen bg-gray-50 pb-10">

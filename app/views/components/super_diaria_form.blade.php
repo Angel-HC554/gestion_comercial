@@ -22,24 +22,20 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 mb-1">Auxiliar Verificador</label>
-                    <select x-model="form.nombre_auxiliar" class="w-full rounded-md border-zinc-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2 px-3 border">
-                        <option value="">Seleccione...</option>
-                        <option value="JORGE MORENO">JORGE MORENO</option>
-                        <option value="OPERADOR TURNO">OPERADOR TURNO</option>
-                    </select>
+                    <input type="text" x-model="form.nombre_auxiliar" class="w-full rounded-md border-2 border-zinc-300 focus:outline-none focus:border-emerald-600 focus:ring-emerald-500 sm:text-sm py-2 px-3" placeholder="Ingrese el nombre del auxiliar">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha</label>
-                    <input type="date" x-model="form.fecha" class="w-full rounded-md border-zinc-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2 px-3 border"
-                    x-bind:max="new Date().toISOString().split('T')[0]">
+                    <input type="date" x-model="form.fecha" class="w-full rounded-md border-zinc-300 focus:outline-none focus:border-emerald-600 focus:ring-emerald-600 sm:text-sm py-2 px-3 border-2"
+                    x-bind:max="maxDate" @blur="validateFecha()">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 mb-1">Hora Inicio</label>
-                    <input type="time" x-model="form.hora_inicio" class="w-full rounded-md border-zinc-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2 px-3 border">
+                    <input type="time" x-model="form.hora_inicio" class="w-full rounded-md border-zinc-300 focus:outline-none focus:border-emerald-600 focus:ring-emerald-600 sm:text-sm py-2 px-3 border-2">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 mb-1">Hora Fin</label>
-                    <input type="time" x-model="form.hora_fin" class="w-full rounded-md border-zinc-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2 px-3 border">
+                    <input type="time" x-model="form.hora_fin" class="w-full rounded-md border-zinc-300 focus:outline-none focus:border-emerald-600 focus:ring-emerald-600 sm:text-sm py-2 px-3 border-2">
                 </div>
             </div>
         </div>
@@ -53,8 +49,8 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 mb-1">Kilometraje Actual</label>
-                    <div class="relative rounded-md shadow-sm">
-                        <input type="text" x-model="form.kilometraje" class="block w-full rounded-md border-zinc-300 pl-3 pr-12 focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2 border mask-km" placeholder="0">
+                    <div class="relative rounded-md">
+                        <input type="text" x-model="form.kilometraje" class="block w-full rounded-md border-zinc-300 pl-3 pr-12 focus:outline-none focus:border-emerald-600 focus:ring-emerald-600 sm:text-sm py-2 border-2 mask-km" placeholder="0">
                         <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                             <span class="text-zinc-500 sm:text-sm">km</span>
                         </div>
@@ -76,7 +72,7 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto p-1">
                 <template x-for="(label, key) in checklistItems" :key="key">
-                    <div class="flex items-center justify-between p-3 bg-white border border-zinc-200 rounded-lg shadow-sm hover:border-emerald-300 transition-colors">
+                    <div class="flex items-center justify-between p-3 bg-white border-2 border-zinc-300 rounded-lg shadow-sm hover:border-emerald-500 transition-colors">
                         <span class="text-sm font-medium text-zinc-700" x-text="label"></span>
                         
                         <div class="flex items-center bg-gray-100 rounded-lg p-1">
@@ -120,13 +116,13 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-zinc-700 mb-1">Comentarios / Observaciones</label>
-                    <textarea x-model="form.golpes_coment" rows="3" class="w-full rounded-md border-zinc-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-2 border" placeholder="Describe cualquier anomalía..."></textarea>
+                    <label class="block text-sm font-medium text-zinc-700 mb-1">Observaciones</label>
+                    <textarea x-model="form.golpes_coment" rows="3" class="w-full rounded-md border-zinc-300 focus:outline-none focus:border-emerald-600 focus:ring-emerald-600 sm:text-sm p-2 border-2" placeholder="Describe cualquier anomalía..."></textarea>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-zinc-700 mb-1">Evidencia (Foto o PDF)</label>
-                    <input type="file" @change="handleFileUpload" class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                    <label class="block text-sm font-medium text-zinc-700 mb-1">Subir formato entregado por el auxiliar</label>
+                    <input type="file" @change="handleFileUpload" class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer">
                 </div>
             </div>
         </div>
@@ -135,20 +131,20 @@
             <button type="button" 
                 x-show="step > 1" 
                 @click="step--"
-                class="px-4 py-2 border border-zinc-300 shadow-sm text-sm font-medium rounded-md text-zinc-700 bg-white hover:bg-zinc-50 focus:outline-none">
+                class="px-4 py-2 border border-zinc-300 shadow-sm text-sm font-medium rounded-md text-zinc-700 bg-white hover:bg-zinc-50 focus:outline-none cursor-pointer">
                 Anterior
             </button>
             <div x-show="step === 1" class="flex-grow"></div> <button type="button" 
                 x-show="step < 4" 
                 @click="step++"
-                class="ml-auto px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none shadow-sm flex items-center">
+                class="ml-auto px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none shadow-sm flex items-center cursor-pointer">
                 Siguiente
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
             </button>
 
             <button type="submit" 
                 x-show="step === 4" 
-                class="ml-auto px-6 py-2 border border-transparent text-sm font-bold rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none shadow-lg flex items-center transition-all transform hover:scale-105"
+                class="ml-auto px-6 py-2 border border-transparent text-sm font-bold rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none shadow-lg flex items-center transition-all transform hover:scale-105 cursor-pointer"
                 :disabled="loading">
                 <span x-show="!loading">GUARDAR SUPERVISIÓN</span>
                 <span x-show="loading" class="flex items-center">
@@ -196,7 +192,7 @@
                 vehiculo_id: vehiculoId,
                 no_eco: noEco,
                 nombre_auxiliar: '',
-                fecha: new Date().toISOString().split('T')[0],
+                fecha: new Date().toLocaleDateString('en-CA'),
                 hora_inicio: '08:00',
                 hora_fin: '08:30',
                 kilometraje: '',
@@ -208,6 +204,35 @@
                 tapon_gas:'1', limp_cab:'1', limp_ext:'1', cinturon:'1', limpia_par:'1', manijas_puer:'1',
                 espejo_int:'1', espejo_lat_i:'1', espejo_lat_d:'1', gato:'1', llave_cruz:'1', extintor:'1',
                 direccionales:'1', luces:'1', intermit:'1'
+            },
+            maxDate: new Date().toLocaleDateString('en-CA'),
+            validateFecha() {
+                // Si no hay fecha, no hacemos nada
+                if (!this.form.fecha) return;
+
+                // Comparamos cadenas (YYYY-MM-DD)
+                if (this.form.fecha > this.maxDate) {
+                    // Opción A: Resetear a HOY
+                    this.form.fecha = this.maxDate;
+
+                    // Opción B: Si prefieres borrarlo
+                    // this.tempData.fechaTerminacion = '';
+
+                    // Usamos tu SweetAlert existente para un aviso sutil (Toast)
+                    const Swal = window.Swal; // Aseguramos acceso a Swal
+                    if (Swal) {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'warning',
+                            title: 'No puedes seleccionar fechas futuras',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    } else {
+                        alert('No puedes seleccionar fechas futuras');
+                    }
+                }
             },
 
             handleFileUpload(event) {

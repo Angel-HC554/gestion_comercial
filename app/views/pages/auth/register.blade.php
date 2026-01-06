@@ -21,12 +21,11 @@
             </div>
 
             <div class="w-full flex relative flex-col justify-center">
-                <input name="email" type="email" required="required" placeholder="Email" value="{{ $email ?? '' }}"
-                    class="flex w-full h-11 px-3.5 text-sm border rounded-md border-gray-300 ring-offset-background placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-                    value="{{ $email ?? '' }}">
-                <small class="text-red-900 text-sm">{{ $errors['email'] ?? ($errors['auth'] ?? null) }}</small>
+                <input name="user" type="text" required="required" placeholder="Identificador (letras y números)"
+                    value="{{ $user ?? '' }}"
+                    class="flex w-full h-11 px-3.5 text-sm border rounded-md border-gray-300 ring-offset-background placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-zinc-800 disabled:cursor-not-allowed disabled:opacity-50">
+                <small class="text-red-900 text-sm">{{ $errors['user'] ?? ($errors['auth'] ?? null) }}</small>
             </div>
-
 
             <div class="w-full flex relative flex-col justify-center">
                 <input name="password" type="password" required="required" value="{{ $password ?? '' }}"

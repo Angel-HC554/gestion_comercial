@@ -77,15 +77,20 @@ auth()->createRoles([
         'crear ordenes',
         'editar ordenes',
         'eliminar ordenes', // Admin es el único que puede borrar
-        'gestionar usuarios'
+        'gestionar usuarios',
+        'generar 500'
     ],
-    'operador' => [
+    'supervisor' => [
         'ver ordenes',
         'crear ordenes',
         'editar ordenes',
     ],
-    'invitado' => [
-        'ver ordenes'
+    'oficinista' => [
+        'ver ordenes',
+        'generar 500' 
+    ],
+    'generar500' => [
+        'generar 500'
     ]
 ]);
 

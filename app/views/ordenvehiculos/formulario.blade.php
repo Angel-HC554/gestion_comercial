@@ -1,17 +1,23 @@
-<div class="mx-10 shadow-lg rounded-lg p-8 mt-5 bg-white border border-zinc-200" x-data="{
+<div class="mx-10 shadow-lg rounded-lg p-8 bg-white border border-zinc-200" x-data="{
     // Datos BD
     vehiculosDB: {{ json_encode($vehiculos ?? []) }},
     usersDB: {{ json_encode($users ?? []) }},
+    maxDate: new Date().toLocaleDateString('en-CA'),
+    // Validación de KM
+    // Si viene del show (tiene valor inicial), úsalo. Si no, empieza en 0.
+    minKilometraje: {{ $ultimoKm ?? 0 }},
 
     // Estado del Formulario
     loading: false,
     showModal: false,
     ordenId: null,
+    returnUrl: '{{ $returnUrl ?? '/ordenvehiculos' }}',
 
     // Variables de autocompletado
-    numeco: '{{ old('noeconomico', $ordenEditar->noeconomico ?? '') }}',
-    placa: '{{ old('placas', $ordenEditar->placas ?? '') }}',
-    marca: '{{ old('marca', $ordenEditar->marca ?? '') }}',
+    numeco: '{{ old('noeconomico', $ordenEditar->noeconomico ?? ($preseleccionado['no_economico'] ?? '')) }}',
+    placa: '{{ old('placas', $ordenEditar->placas ?? ($preseleccionado['placas'] ?? '')) }}',
+    kilometraje: '{{ old('kilometraje', $ordenEditar->kilometraje ?? '') }}',
+    marca: '{{ old('marca', $ordenEditar->marca ?? (isset($preseleccionado) ? $preseleccionado['marca'] . ' ' . $preseleccionado['modelo'] : '')) }}',
     areausuaria: '{{ old('areausuaria', $ordenEditar->areausuaria ?? '') }}',
     rpeusuaria: '{{ old('rpeusuaria', $ordenEditar->rpeusuaria ?? '') }}',
     autoriza: '{{ old('autoriza', $ordenEditar->autoriza ?? '') }}',
@@ -21,12 +27,44 @@
 
     gas: {{ $ordenEditar->gasolina ?? 50 }},
 
+    validateFecha(el) {
+                // Si no hay fecha, no hacemos nada
+                if (!el.value) return;
+
+                // Comparamos cadenas (YYYY-MM-DD)
+                if (el.value > this.maxDate) {
+                    // Opción A: Resetear a HOY
+                    el.value = this.maxDate;
+
+                    // Opción B: Si prefieres borrarlo
+                    // this.tempData.fechaTerminacion = '';
+
+                    // Usamos tu SweetAlert existente para un aviso sutil (Toast)
+                    const Swal = window.Swal; // Aseguramos acceso a Swal
+                    if (Swal) {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'warning',
+                            title: 'No puedes seleccionar fechas futuras',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    } else {
+                        alert('No puedes seleccionar fechas futuras');
+                    }
+                }
+            },
     // 1. Buscar Vehículo
     buscarVehiculo() {
         let encontrado = this.vehiculosDB.find(v => v.no_economico == this.numeco);
         if (encontrado) {
             this.placa = encontrado.placas;
             this.marca = encontrado.marca + ' ' + (encontrado.modelo || '');
+            // ¡AQUÍ ESTÁ LA CLAVE!: Actualizamos el límite dinámicamente
+            this.minKilometraje = parseInt(encontrado.ultimo_km) || 0;
+        }else{
+            this.minKilometraje = 0;
         }
     },
 
@@ -45,11 +83,44 @@
         // Captura todos los campos del formulario automáticamente
         const form = document.getElementById('ordenForm');
         const formData = new FormData(form);
+        // --- NUEVA VALIDACIÓN DE KILOMETRAJE ---
+        // Obtenemos el valor y quitamos las comas
+        let kmInput = formData.get('kilometraje').toString().replace(/,/g, '');
+        let kmActual = parseInt(kmInput) || 0;
+
+        // Solo validamos si es creación (no edición) y si tenemos un minKilometraje
+        const isEdit = '{{ isset($ordenEditar) }}' === '1';
+
+        if (!isEdit && kmActual <= this.minKilometraje && kmActual !== 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Kilometraje incorrecto',
+                text: 'El kilometraje (' + new Intl.NumberFormat().format(kmActual) + ' km) no puede ser menor o igual al último registrado (' + new Intl.NumberFormat().format(this.minKilometraje) + ' km).',
+            });
+            this.loading = false;
+            return; // Detenemos el envío
+        }
+        // --- VALIDACIÓN 2: REPARACIONES (CHECKBOXES) ---
+        // Buscamos inputs que empiecen con 'vehicle' y estén marcados (:checked)
+        const checkboxesMarcados = form.querySelectorAll('input[name^=vehicle]:checked');
+
+        if (checkboxesMarcados.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Faltan reparaciones',
+                text: 'Debes seleccionar al menos una reparación a efectuar antes de generar el documento.',
+                confirmButtonColor: '#059669' // Color emerald para combinar
+            });
+            this.loading = false;
+            return; // Detenemos el envío
+        }
+        
+        // ----------------------------------------
         const data = Object.fromEntries(formData.entries());
 
         try {
             // Determinar si es edición o creación
-            const isEdit = '{{ isset($ordenEditar) }}' === '1';
+            
             const url = isEdit ?
                 `/ordenvehiculos/${'{{ $ordenEditar->id ?? '' }}'}` :
                 '/ordenvehiculos/store'; //le cambie aqui, le puse store
@@ -105,7 +176,7 @@
             <div>
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Área</label>
                 <input type="text" name="area" list="areas-list" required
-                    class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
+                    class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
                     value="{{ old('area', $ordenEditar->area ?? '') }}" placeholder="Escribe el área">
                 <datalist id="areas-list">
                     <option value="DW01"></option>
@@ -125,14 +196,14 @@
             <div>
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Zona</label>
                 <input type="text" name="zona" required
-                    class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
+                    class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
                     value="{{ old('zona', $ordenEditar->zona ?? 'MERIDA') }}">
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Departamento</label>
                 <input type="text" name="departamento" required
-                    class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
+                    class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
                     value="{{ old('departamento', $ordenEditar->departamento ?? 'COMERCIAL') }}">
             </div>
         </div>
@@ -142,7 +213,7 @@
                 <label class="block text-sm font-medium text-zinc-700 mb-1">No. Económico</label>
                 <input type="text" name="noeconomico" list="economicos-list" required x-model="numeco"
                     @input="buscarVehiculo()"
-                    class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
+                    class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
                     placeholder="Ej. 12345">
                 <datalist id="economicos-list">
                     <template x-for="v in vehiculosDB" :key="v.no_economico">
@@ -154,13 +225,13 @@
             <div>
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Marca</label>
                 <input type="text" name="marca" required x-model="marca"
-                    class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
+                    class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Placas</label>
                 <input type="text" name="placas" required x-model="placa"
-                    class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
+                    class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
             </div>
         </div>
 
@@ -168,34 +239,57 @@
             <div>
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Taller</label>
                 <input type="text" name="taller"
-                    class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
+                    class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
                     value="{{ old('taller', $ordenEditar->taller ?? '') }}" placeholder="Nombre del taller">
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Kilometraje</label>
-                <div class="relative rounded-md shadow-sm">
-                    <input type="text" name="kilometraje"
-                        class="appearance-none block w-full pl-3 pr-12 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors mask-km"
+                <div class="relative rounded-md">
+                    <input type="text" name="kilometraje" x-model="kilometraje" required
+                        class="appearance-none block w-full pl-3 pr-12 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors mask-km"
                         value="{{ old('kilometraje', $ordenEditar->kilometraje ?? '') }}">
 
                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                         <span class="text-gray-500 sm:text-sm">km</span>
                     </div>
                 </div>
+                {{-- 2. Ayuda visual Dinámica --}}
+                {{-- Usamos h-5 para reservar el espacio y evitar saltos de layout --}}
+                <div class="mt-1 h-5 flex items-center">
+                    {{-- Solo mostramos si hay un minKilometraje > 0 y NO estamos editando una orden vieja --}}
+                    <span x-show="minKilometraje > 0 && !{{ isset($ordenEditar) ? 'true' : 'false' }}"
+                        x-transition.opacity.duration.300ms
+                        class="text-xs font-medium text-emerald-600 flex items-center gap-1" style="display: none;">
+                        {{-- style="display: none" evita parpadeo al cargar --}}
+
+                        {{-- Icono pequeño de info --}}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd" />
+                        </svg>
+
+                        {{-- Texto con formato --}}
+                        <span>
+                            Último registrado: <strong
+                                x-text="new Intl.NumberFormat('es-MX').format(minKilometraje)"></strong> km
+                        </span>
+                    </span>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha Gen.</label>
-                    <input type="date" name="fechafirm" x-bind:max="new Date().toISOString().split('T')[0]"
-                        class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
+                    <input type="date" name="fechafirm" x-bind:max="maxDate" @blur="validateFecha($el)"
+                        class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
                         value="{{ old('fechafirm', $ordenEditar->fechafirm ?? date('Y-m-d')) }}">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha Recep.</label>
-                    <input type="date" name="fecharecep"
-                        class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
+                    <input type="date" name="fecharecep" x-bind:max="maxDate" @blur="validateFecha($el)"
+                        class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
                         value="{{ old('fecharecep', $ordenEditar->fecharecep ?? '') }}">
                 </div>
             </div>
@@ -224,7 +318,8 @@
             <div class="grid grid-cols-3 gap-y-6 gap-x-8">
                 <div class="col-span-2 grid grid-cols-2 gap-4">
                     @foreach ($items as $item)
-                        <div class="flex items-center justify-between bg-zinc-50 p-3 rounded-lg border border-zinc-100">
+                        <div
+                            class="flex items-center justify-between bg-zinc-50 p-3 rounded-lg border border-zinc-100">
                             <span class="text-sm font-medium text-zinc-700">{{ $item['label'] }}</span>
                             <div class="flex items-center space-x-4">
                                 <label class="inline-flex items-center">
@@ -295,7 +390,7 @@
             <div>
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Observaciones</label>
                 <textarea name="observacion" rows="3" required
-                    class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">{{ old('observacion', $ordenEditar->observacion ?? '') }}</textarea>
+                    class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">{{ old('observacion', $ordenEditar->observacion ?? '') }}</textarea>
             </div>
 
             <div class="space-y-4 flex justify-evenly">
@@ -347,12 +442,12 @@
                 <div class="space-y-3">
                     <input type="text" name="areausuaria" list="users-list" placeholder="Nombre..." required
                         x-model="areausuaria" @input="buscarUsuario(areausuaria, 'rpeusuaria')"
-                        class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
+                        class="bg-white appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
 
                     <div class="relative">
                         <span class="absolute left-3 top-2 text-xs text-zinc-400">RPE</span>
                         <input type="text" name="rpeusuaria" x-model="rpeusuaria"
-                            class="appearance-none block w-full px-10 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
+                            class="bg-white appearance-none block w-full px-10 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
                     </div>
                 </div>
             </div>
@@ -362,12 +457,12 @@
                 <div class="space-y-3">
                     <input type="text" name="autoriza" list="users-list" placeholder="Nombre..." required
                         x-model="autoriza" @input="buscarUsuario(autoriza, 'rpejefedpt')"
-                        class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
+                        class="bg-white appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
 
                     <div class="relative">
                         <span class="absolute left-3 top-2 text-xs text-zinc-400">RPE</span>
                         <input type="text" name="rpejefedpt" x-model="rpejefedpt"
-                            class="appearance-none block w-full px-10 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
+                            class="bg-white appearance-none block w-full px-10 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
                     </div>
                 </div>
             </div>
@@ -377,20 +472,20 @@
                 <div class="space-y-3">
                     <input type="text" name="resppv" list="users-list" placeholder="Nombre..." required
                         x-model="resppv" @input="buscarUsuario(resppv, 'rperesppv')"
-                        class="appearance-none block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
+                        class="bg-white appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
 
                     <div class="relative">
                         <span class="absolute left-3 top-2 text-xs text-zinc-400">RPE</span>
                         <input type="text" name="rperesppv" x-model="rperesppv"
-                            class="appearance-none block w-full px-10 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
+                            class="bg-white appearance-none block w-full px-10 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="flex justify-center pb-8">
+        <div class="flex justify-center">
             <button type="submit"
-                class="w-72 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-72 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-transform cursor-pointer hover:scale-102 disabled:opacity-50 disabled:cursor-not-allowed"
                 :disabled="loading">
                 <span
                     x-show="!loading">{{ isset($ordenEditar) ? 'ACTUALIZAR DOCUMENTO' : 'GENERAR DOCUMENTO' }}</span>
@@ -430,7 +525,7 @@
                         class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-emerald-600 text-base font-medium text-white hover:bg-emerald-700 focus:outline-none sm:text-sm">
                         Descargar PDF
                     </a>
-                    <a href="/ordenvehiculos"
+                    <a :href="returnUrl"
                         class="inline-flex justify-center rounded-md border border-zinc-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-zinc-700 hover:bg-zinc-50 focus:outline-none sm:text-sm">
                         Aceptar
                     </a>

@@ -16,8 +16,8 @@ class LoginController extends Controller
     public function store()
     {
         $data = request()->validate([
-            'email' => 'email',
-            'password' => 'min:8',
+            'user' => 'required|string',
+            'password' => 'required|min:8',
         ]);
 
         if (!$data) {

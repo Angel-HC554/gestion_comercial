@@ -53,7 +53,7 @@
     class="
         {{-- Clases Base --}}
         relative inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium
-        transition-all duration-150
+        transition-all duration-150 cursor-pointer
         focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-emerald-600
         disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed
         

@@ -8,7 +8,7 @@ class RegisterController extends Controller
     {
         $form = flash()->display('form') ?? [];
 
-        response()->view('pages.auth.register', array_merge($form, [
+        response()->view('pages.auth.register', array_merge((array) $form, [
             'errors' => flash()->display('error') ?? [],
         ]));
     }
@@ -16,9 +16,9 @@ class RegisterController extends Controller
     public function store()
     {
         $credentials = request()->validate([
-            'name' => 'string',
-            'email' => 'email',
-            'password' => 'min:8',
+            'name' => 'required|string',
+            'user' => 'required|alpha_num',
+            'password' => 'required|min:8',
             'confirmPassword*' => 'matchesValueOf:password',
         ]);
 

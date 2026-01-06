@@ -1,6 +1,6 @@
-@extends('layouts.app-layout')
-
-@section('title', 'Dashboard')
+@extends('layouts.app-layout', [
+    'title' => 'Supervisiones Diarias'
+])
 
 @section('content')
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -9,8 +9,8 @@
     
     <div class="flex flex-col md:flex-row justify-between items-center mb-8">
         <div>
-            <h1 class="text-3xl font-bold text-zinc-900">Panel de Control</h1>
-            <p class="text-zinc-500 text-sm mt-1">Resumen operativo de la flota al día de hoy.</p>
+            <h1 class="text-3xl font-bold text-zinc-900">Gestion diaria</h1>
+            <p class="text-zinc-500 text-sm mt-1">Resumen supervisiones al día de hoy.</p>
         </div>
         <div class="text-right mt-4 md:mt-0">
             <span class="bg-white border border-zinc-200 text-zinc-700 px-4 py-2 rounded-lg text-sm font-medium shadow-sm">

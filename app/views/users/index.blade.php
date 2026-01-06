@@ -1,16 +1,19 @@
-@extends('layouts.app-layout')
-
-@section('title', 'Listado de Órdenes')
+@extends('layouts.app-layout', [
+    'title' => 'Gestión de Usuarios'
+])
 
 @section('content')
 
     <div class="mx-auto px-4 sm:px-6 lg:px-8 py-6" x-data="{ openModal: false }">
 
-        <div class="flex justify-between items-center mb-6">
+        <div class="flex justify-start gap-12 items-center mb-6">
             <h1 class="text-2xl font-bold text-zinc-900">Gestión de Usuarios</h1>
             <button @click="openModal = true"
-                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-colors text-sm">
-                Crear Usuario
+                class="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-colors text-sm cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                Crear usuario
             </button>
         </div>
 
@@ -45,37 +48,49 @@
 
                     @csrf <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-zinc-700">Usuario</label>
-                            <input type="text" name="name" required
-                                class="w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                            <label class="block text-sm font-medium text-zinc-700">Usuario (ID)</label>
+                            <input type="text" name="user" required pattern="[A-Za-z0-9]+"
+                                title="Solo letras y números" placeholder="Usuario"
+                                class="w-full border-2 border-gray-300 px-2 py-2 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-sm">
+                            <small class="text-xs text-zinc-500 mt-1 block">Identificador alfanumérico único.</small>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-zinc-700">Email</label>
-                            <input type="email" name="email" required
-                                class="w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                            <label class="block text-sm font-medium text-zinc-700">Nombre</label>
+                            <input type="text" name="name" required placeholder="Nombre"
+                                class="w-full border-2 border-gray-300 px-2 py-2 rounded-md focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 text-sm">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-zinc-700">Contraseña</label>
-                            <input type="password" name="password" required
-                                class="w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                            <input type="password" name="password" required placeholder="Contraseña"
+                                class="w-full border-2 border-gray-300 px-2 py-2 rounded-md focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 text-sm">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-zinc-700">Rol</label>
-                            <select name="leaf_auth_user_roles" class="w-full border-gray-300 rounded-md shadow-sm">
+                            <label class="block text-sm font-medium text-zinc-700 mb-1">Rol</label>
+                            <select name="main_role" required
+                                class="w-full border-2 border-gray-300 rounded-md px-2 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent cursor-pointer">
                                 <option value="admin">Administrador</option>
-                                <option value="operador">Operador</option>
-                                <option value="admin">Administrador</option>
+                                <option value="supervisor">Supervisor</option>
+                                <option value="oficinista">Oficinista</option>
                             </select>
+                        </div>
+
+                        <div class="border-t border-gray-200 pt-4">
+                            <h3 class="text-sm font-medium text-zinc-900 mb-2">Roles adicionales</h3>
+                            <div class="flex items-center gap-2">
+                                <input id="generar500" type="checkbox" name="rol_extra" value="generar500"
+                                    class="h-4 w-4 text-emerald-600 focus:ring-emerald-600 border-gray-300 rounded cursor-pointer">
+                                <label for="generar500" class="text-sm text-zinc-700">Puede generar Orden 500</label>
+                            </div>
                         </div>
                     </div>
 
                     <div class="mt-6 flex justify-end gap-2">
                         <button type="button" @click="openModal = false"
-                            class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium">
+                            class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium cursor-pointer">
                             Cancelar
                         </button>
                         <button type="submit"
-                            class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium">
+                            class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium cursor-pointer">
                             Guardar Usuario
                         </button>
                     </div>
@@ -86,7 +101,7 @@
         <div class="px-4 pb-4 border-zinc-200 flex justify-between items-center">
             <div class="relative w-64">
                 <input type="text" name="search" placeholder="Buscar usuario..."
-                    class="w-full pl-10 pr-4 py-2 bg-white border border-zinc-300 rounded-md text-sm focus:ring-emerald-500 focus:border-emerald-500"
+                    class="w-full pl-10 pr-4 py-2 bg-white border-2 border-zinc-300 rounded-md text-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                     hx-get="/users/search" hx-trigger="keyup changed delay:500ms, search" hx-target="#users-table-body">
 
                 <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24"
@@ -97,27 +112,27 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow border overflow-hidden border-zinc-200">
+        <div class="bg-white rounded-lg shadow border overflow-hidden border-zinc-400">
 
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-zinc-200">
-                    <thead class="bg-gray-50">
+                <table class="min-w-full divide-y divide-zinc-400">
+                    <thead class="bg-emerald-600/85 text-white">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID
+                            <th class="px-6 py-3 text-left text-xs font-bold  text-white uppercase tracking-wider">ID
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-6 py-3 text-left text-xs font-bold  text-white uppercase tracking-wider">
+                                Nombre</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold  text-white uppercase tracking-wider">
                                 Usuario</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email
+                            <th class="px-6 py-3 text-left text-xs font-bold  text-white uppercase tracking-wider">Roles
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roles
-                            </th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-6 py-3 text-right text-xs font-bold text-white uppercase tracking-wider">
                                 Acciones</th>
                         </tr>
                     </thead>
 
-                    <tbody id="users-table-body" class="bg-white divide-y divide-zinc-200" hx-get="/users/search"
-                        hx-trigger="load">
+                    <tbody id="users-table-body" class="bg-white divide-y divide-zinc-300" hx-get="/users/search"
+                        hx-trigger="load, search">
                         <tr class="htmx-indicator-content">
                             <td colspan="5" class="px-6 py-12 text-center text-zinc-500">
                                 <svg class="animate-spin h-8 w-8 text-emerald-600 mx-auto mb-3"

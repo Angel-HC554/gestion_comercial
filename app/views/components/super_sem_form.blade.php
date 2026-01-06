@@ -69,7 +69,6 @@
         width: 100%;
         padding: 12px;
         border-radius: 8px;
-        border: 1px solid #ccc;
         font-size: 16px;
         min-height: 120px;
         resize: vertical;
@@ -152,7 +151,7 @@
         <div class="summary-section">
             <label for="vehicle_summary" style="font-weight:bold; color:#016f2b;">Resumen del estado del
                 vehiculo:</label>
-            <textarea id="vehicle_summary" name="resumen_est" rows="5"
+            <textarea id="vehicle_summary" name="resumen_est" rows="5" class="focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 border-2 border-zinc-300"
                 placeholder="Describe aquí el estado general del vehículo..."></textarea>
         </div>
         <div id="progreso-subida" style="display: none; margin-top: 15px;">
@@ -160,7 +159,7 @@
             <progress id="barra-progreso" value="0" max="100"
                 style="width: 100%; height: 20px;"></progress>
         </div>
-        <button type="submit" class="submit-btn">Guardar</button>
+        <button type="submit" class="submit-btn shadow-sm">Guardar</button>
     </form>
 </div>
 

@@ -94,10 +94,10 @@ return [
     | Unique fields
     |--------------------------------------------------------------------------
     |
-    | This is a list of items that should be unique to each user eg: email
+    | This is a list of items that should be unique to each user eg: user id
     |
     */
-    'unique' => ['email'],
+    'unique' => ['user'],
 
     /*
     |--------------------------------------------------------------------------

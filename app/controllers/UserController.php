@@ -25,7 +25,7 @@ class UserController extends Controller
 
         if ($search) {
             $query->where('name', 'like', "%$search%")
-            ->orWhere('email', 'like', "%$search%");
+            ->orWhere('user', 'like', "%$search%");
         }
 
         $total = $query->count();
@@ -62,23 +62,32 @@ class UserController extends Controller
     {
         $data = request()->body();
 
-        // 1. Validación manual simple (para evitar error SQL si el email existe)
-        if (User::where('email', $data['email'])->exists()) {
-            return response()->json(['message' => 'El correo electrónico ya está registrado.'], 400);
+        if (User::where('user', $data['user'])->exists()) {
+            return response()->json(['message' => 'El identificador ya está registrado.'], 400);
+        }
+
+        $allowedMainRoles = ['admin', 'supervisor', 'oficinista'];
+        $allowedExtraRoles = ['generar500'];
+
+        $mainRole = $data['main_role'] ?? null;
+        if (!$mainRole || !in_array($mainRole, $allowedMainRoles, true)) {
+            return response()->json(['message' => 'El rol principal es inválido o falta.'], 400);
+        }
+
+        $roles = [$mainRole];
+        $extraRole = $data['rol_extra'] ?? null;
+        if (!empty($extraRole) && in_array($extraRole, $allowedExtraRoles, true)) {
+            $roles[] = $extraRole;
         }
 
         try {
-            // 2. Crear usuario usando el Modelo (Esto NO cierra la sesión del Admin)
             $newUser = new User();
             $newUser->name = $data['name'];
-            $newUser->email = $data['email'];
-            // IMPORTANTE: Hashear la contraseña manualmente
+            $newUser->user = $data['user'];
             $newUser->password = Password::hash($data['password']);
-            // Guardar el rol directamente en la columna leaf_auth_user_roles como JSON
-            $rol = $data['leaf_auth_user_roles'] ?? 'invitado';
-            $newUser->leaf_auth_user_roles = json_encode([$rol]);
+            $newUser->leaf_auth_user_roles = json_encode(array_values(array_unique($roles)));
             $newUser->save();
-            
+
             return response()->json(['message' => 'Usuario creado correctamente'], 201);
 
         } catch (\Exception $e) {
@@ -116,31 +125,28 @@ class UserController extends Controller
         try {
             // Update basic user info
             $user->name = $data['name'];
-            $user->email = $data['email'];
+            $user->user = $data['user'];
             
             // Update password if provided
             if (!empty($data['password'])) {
                 $user->password = Password::hash($data['password']);
             }
             
-            // Build roles array
-            $roles = [];
-            
-            // Add main role
-            if (!empty($data['main_role'])) {
-                $roles[] = $data['main_role'];
+            $allowedMainRoles = ['admin', 'supervisor', 'oficinista'];
+            $allowedExtraRoles = ['generar500'];
+
+            $mainRole = $data['main_role'] ?? null;
+            if (!$mainRole || !in_array($mainRole, $allowedMainRoles, true)) {
+                return response()->json(['message' => 'El rol principal es inválido o falta.'], 400);
             }
-            
-            // Add additional roles if any
-            if (!empty($data['rol_extra'])) {
-                array_push($roles,$data['rol_extra']);
+
+            $roles = [$mainRole];
+            $extraRole = $data['rol_extra'] ?? null;
+            if (!empty($extraRole) && in_array($extraRole, $allowedExtraRoles, true)) {
+                $roles[] = $extraRole;
             }
-            
-            // Ensure roles are unique
-            $roles = array_unique($roles);
-            
-            // Save roles as JSON array
-            $user->leaf_auth_user_roles = json_encode(array_values($roles));
+
+            $user->leaf_auth_user_roles = json_encode(array_values(array_unique($roles)));
             
             $user->save();
             

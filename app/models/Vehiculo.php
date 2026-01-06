@@ -120,16 +120,21 @@ class Vehiculo extends Model
     // Se accede como: $vehiculo->estado_mantenimiento
     public function getEstadoMantenimientoAttribute()
     {
-        $intervalo = 10000;
-        $ventanaRoja = 1000;
-        $ventanaAmarilla = 2000;
+        //kilometraje
+        $intervaloKm = 10000;
+        $kmventanaRoja = 1000;
+        $kmventanaAmarilla = 2000;
+        //Tiempo
+        $mesesIntervalo = 3;
+        $diasVentanaRoja = 7;
+        $diasVentanaAmarilla = 21;
         $margenServicio = 500;
 
-        // Eager loading friendly: usa las relaciones cargadas si existen
+        // Eager loading: usa las relaciones cargadas si existen
         $supervision = $this->getRelationValue('latestSupervision') ?? $this->latestSupervision()->first();
         $mantenimiento = $this->getRelationValue('latestMantenimiento') ?? $this->latestMantenimiento()->first();
 
-        // Validación inicial
+        // Validación inicial, si no hay supervisión, retorna gris
         if (!$supervision || $supervision->kilometraje === null) {
             return 'gris';
         }
@@ -137,34 +142,168 @@ class Vehiculo extends Model
         $kmActual = $supervision->kilometraje;
         $kmUltimoMantenimiento = $mantenimiento?->kilometraje ?? 0;
 
-        // 1. Servicio reciente
+        // 1. Servicio reciente: Si hay mantenimiento y la diferencia es mínima, es verde automáticamente
         if ($mantenimiento && abs($kmActual - $kmUltimoMantenimiento) <= $margenServicio) {
             return 'verde';
         }
 
-        // 2. Vencido (solo si HAY mantenimiento previo registrado)
-        if ($mantenimiento && ($kmActual - $kmUltimoMantenimiento) > $intervalo) {
-            return 'rojo_pasado';
-        }
-
-        // 3. Cálculo de Próximo mantenimiento
+        //evaluacion de kilometraje, calculamos cuando toca el siguiente
         if ($mantenimiento) {
-            $proximoMantenimiento = $kmUltimoMantenimiento + $intervalo;
+            $proximoMantenimiento = $kmUltimoMantenimiento + $intervaloKm;
         } else {
             // Si nunca ha tenido mtto, calculamos basado en el intervalo puro
-            $proximoMantenimiento = ceil($kmActual / $intervalo) * $intervalo;
-            if ($proximoMantenimiento == 0) $proximoMantenimiento = $intervalo;
+            $proximoMantenimiento = ceil($kmActual / $intervaloKm) * $intervaloKm;
+            if ($proximoMantenimiento == 0) $proximoMantenimiento = $intervaloKm;
         }
 
         $kmFaltantes = $proximoMantenimiento - $kmActual;
 
-        if ($kmFaltantes <= $ventanaRoja) {
-            return 'rojo';
-        }
-        if ($kmFaltantes <= $ventanaAmarilla) {
-            return 'amarillo';
+        //Determinar color por km
+        $colorKm = 'verde';
+        if ($kmFaltantes < 0) {
+            $colorKm = 'rojo_pasado';
+        } elseif ($kmFaltantes <= $kmventanaRoja){
+            $colorKm = 'rojo';
+        } elseif ($kmFaltantes <= $kmventanaAmarilla){
+            $colorKm = 'amarillo';
         }
 
+        $colorTiempo = 'verde';
+
+        if ($mantenimiento && $mantenimiento->fecha_terminacion) {
+            $fechaUltimo = Carbon::parse($mantenimiento->fecha_terminacion);
+            $fechaLimite = $fechaUltimo->copy()->addMonths($mesesIntervalo);
+            $hoy = Carbon::today();
+
+            // Dias faltantes (negativo si ya paso)
+            $diasFaltantes = $hoy->diffInDays($fechaLimite, false);
+
+            if ($diasFaltantes < 0) {
+                $colorTiempo = 'rojo_pasado';
+            } elseif ($diasFaltantes <= $diasVentanaRoja){
+                $colorTiempo = 'rojo';
+            } elseif ($diasFaltantes <= $diasVentanaAmarilla){
+                $colorTiempo = 'amarillo';
+            }
+        }
+
+        //Evaluacion final
+        //Orden de gravedad por prioridad
+        if ($colorKm === 'rojo_pasado' || $colorTiempo === 'rojo_pasado') {
+            return 'rojo_pasado';
+        }
+
+        if ($colorKm === 'rojo' || $colorTiempo === 'rojo') {
+            return 'rojo';
+        }
+
+        if ($colorKm === 'amarillo' || $colorTiempo === 'amarillo') {
+            return 'amarillo';
+        }
         return 'verde';
+    }
+
+    // Se accede como: $vehiculo->info_mantenimiento
+    public function getInfoMantenimientoAttribute()
+    {
+        // --- CONFIGURACIÓN ---
+        $intervaloKm = 10000;
+        $kmVentanaRoja = 1000;
+        $kmVentanaAmarilla = 2000;
+        
+        $mesesIntervalo = 3;
+        $diasVentanaRoja = 7;
+        $diasVentanaAmarilla = 21;
+        $margenServicio = 500; // Margen de tolerancia post-servicio
+
+        // --- CARGA DE DATOS ---
+        // Usamos relaciones cacheadas o cargamos
+        $supervision = $this->relationLoaded('latestSupervision') ? $this->latestSupervision : $this->latestSupervision()->first();
+        $mantenimiento = $this->relationLoaded('latestMantenimiento') ? $this->latestMantenimiento : $this->latestMantenimiento()->first();
+
+        // Valores por defecto
+        $data = [
+            'estatus_general' => 'gris', // Semáforo grande
+            'estatus_km' => 'verde',     // Color texto km
+            'estatus_tiempo' => 'verde', // Color texto tiempo
+            'km_actual' => 0,
+            'km_ultimo_mantenimiento' => 0,
+            'km_proximo_servicio' => 10000,
+            'km_faltantes' => 0,
+            'fecha_ultimo_servicio' => null,
+            'fecha_proximo_servicio' => null,
+            'dias_restantes' => null,
+            'tiene_info' => false
+        ];
+
+        if (!$supervision || $supervision->kilometraje === null) {
+            return $data; // Retorna vacío si no hay supervisión
+        }
+
+        $data['tiene_info'] = true;
+        $data['km_actual'] = $supervision->kilometraje;
+        $kmUltimoMantenimiento = $mantenimiento?->kilometraje ?? 0;
+        $data['km_ultimo_mantenimiento'] = $kmUltimoMantenimiento;
+        
+        if ($mantenimiento && $mantenimiento->fecha_terminacion) {
+             $data['fecha_ultimo_servicio'] = $mantenimiento->fecha_terminacion;
+        }
+
+        // --- 1. CÁLCULOS KILOMETRAJE ---
+        
+        // Regla: Si acaba de salir del taller (diferencia mínima), reseteamos visualmente
+        if ($mantenimiento && abs($data['km_actual'] - $kmUltimoMantenimiento) <= $margenServicio) {
+            $data['estatus_general'] = 'verde';
+            $data['km_proximo_servicio'] = $kmUltimoMantenimiento + $intervaloKm;
+            $data['km_faltantes'] = $intervaloKm; // Mostramos tanque lleno
+            // Aún así calculamos fechas abajo por si acaso
+        } else {
+             // Cálculo normal
+            if ($mantenimiento) {
+                $proximo = $kmUltimoMantenimiento + $intervaloKm;
+            } else {
+                $proximo = ceil($data['km_actual'] / $intervaloKm) * $intervaloKm;
+                if ($proximo == 0) $proximo = $intervaloKm;
+            }
+            
+            $data['km_proximo_servicio'] = $proximo;
+            $data['km_faltantes'] = $proximo - $data['km_actual'];
+
+            // Color KM
+            if ($data['km_faltantes'] < 0) $data['estatus_km'] = 'rojo_pasado';
+            elseif ($data['km_faltantes'] <= $kmVentanaRoja) $data['estatus_km'] = 'rojo';
+            elseif ($data['km_faltantes'] <= $kmVentanaAmarilla) $data['estatus_km'] = 'amarillo';
+        }
+
+        // --- 2. CÁLCULOS TIEMPO ---
+        if ($mantenimiento && $mantenimiento->fecha_terminacion) {
+            $fechaUltimo = Carbon::parse($mantenimiento->fecha_terminacion);
+            $proximaFecha = $fechaUltimo->copy()->addMonths($mesesIntervalo);
+            $hoy = Carbon::today();
+
+            $data['fecha_proximo_servicio'] = $proximaFecha; // Objeto Carbon
+            $data['dias_restantes'] = $hoy->diffInDays($proximaFecha, false);
+
+            // Color Tiempo
+            if ($data['dias_restantes'] < 0) $data['estatus_tiempo'] = 'rojo_pasado';
+            elseif ($data['dias_restantes'] <= $diasVentanaRoja) $data['estatus_tiempo'] = 'rojo';
+            elseif ($data['dias_restantes'] <= $diasVentanaAmarilla) $data['estatus_tiempo'] = 'amarillo';
+        }
+
+        // --- 3. EVALUACIÓN FINAL (El peor gana) ---
+        // Si ya definimos verde arriba por margen de servicio, respetarlo, si no:
+        if ($data['estatus_general'] !== 'verde' || abs($data['km_actual'] - $kmUltimoMantenimiento) > $margenServicio) {
+             if ($data['estatus_km'] === 'rojo_pasado' || $data['estatus_tiempo'] === 'rojo_pasado') {
+                $data['estatus_general'] = 'rojo_pasado';
+            } elseif ($data['estatus_km'] === 'rojo' || $data['estatus_tiempo'] === 'rojo') {
+                $data['estatus_general'] = 'rojo';
+            } elseif ($data['estatus_km'] === 'amarillo' || $data['estatus_tiempo'] === 'amarillo') {
+                $data['estatus_general'] = 'amarillo';
+            } else {
+                $data['estatus_general'] = 'verde';
+            }
+        }
+
+        return $data;
     }
 }

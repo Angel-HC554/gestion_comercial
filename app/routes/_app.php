@@ -3,6 +3,9 @@
 app()->get('/', function () {
     response()->redirect('/auth/login');
 });
+// Ruta para la página de inicio (Dashboard)
+app()->get('/dashboard', 'HomeController@index');
+app()->get('/api/check-orden-500', 'NotificationController@checkOrden500');
 app()->get('/ordenvehiculos/create', 'OrdenVehiculoController@create');
 app()->post('/ordenvehiculos/store', 'OrdenVehiculoController@store');
 // NUEVA RUTA: Pantalla de éxito/generación de PDF
@@ -50,6 +53,7 @@ app()->get('/supervision-diaria', 'SupervisionDiariaController@index');
 
 app()->get('/dashboard-diario', 'DashboardController@index');
 app()->get('/dashboard-semanal', 'DashboardSemanalController@index');
+app()->get('/dashboard-vehiculos', 'DashboardVehiculosController@index');
 
 // RUTA TEMPORAL PARA ASIGNAR ADMIN
 app()->get('/hacerme-admin', function() {

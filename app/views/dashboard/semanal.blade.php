@@ -1,6 +1,7 @@
-@extends('layouts.app-layout')
+@extends('layouts.app-layout', [
+    'title' => 'Supervisiones Semanales'
+])
 
-@section('title', 'Dashboard Semanal')
 
 @section('content')
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -11,15 +12,24 @@
         <div>
             <div class="flex items-center gap-2">
                 <h1 class="text-3xl font-bold text-zinc-900">Gestión Semanal</h1>
-                <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded border border-purple-200 uppercase tracking-wide">Reporte Táctico</span>
             </div>
             <p class="text-zinc-500 text-sm mt-1">Avance de la semana: <strong>{{ $semanaLabel }}</strong></p>
         </div>
         
-        <a href="/supervision-semanal" class="mt-4 md:mt-0 flex items-center gap-2 bg-white border border-zinc-300 text-zinc-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-zinc-50 hover:text-zinc-900 transition-all shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-            Ver Sábana de Datos
-        </a>
+        <div class="bg-emerald-900 p-4 rounded-xl border border-emerald-800 shadow-sm text-white flex items-center gap-4">
+            <div>
+                <h3 class="text-lg font-bold">Gestión Rápida</h3>
+                <p class="text-emerald-200 text-xs">Accede a las matrices</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="/supervision-diaria" class="bg-white/10 hover:bg-white/20 text-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                    Diarias
+                </a>
+                <a href="/supervision-semanal" class="bg-emerald-600 hover:bg-emerald-500 text-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                    Semanales
+                </a>
+            </div>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

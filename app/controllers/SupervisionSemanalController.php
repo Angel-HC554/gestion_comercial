@@ -6,6 +6,8 @@ use App\Models\SupervisionSemanal;
 use App\Models\Vehiculo;
 use Carbon\Carbon;
 use setasign\Fpdi\Tcpdf\Fpdi;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class SupervisionSemanalController extends Controller
 {
@@ -144,7 +146,6 @@ class SupervisionSemanalController extends Controller
     public function store()
     {
         // 1. Obtener datos y archivos
-        // En Leaf usamos request()->post() para datos y request()->files() para archivos
         $data = request()->body();
         $files = request()->files();
 
@@ -153,11 +154,29 @@ class SupervisionSemanalController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Faltan datos del vehículo.'], 400);
         }
 
+        $hasUploadedFile = false;
+        foreach ($files as $file) {
+            if (is_array($file) && isset($file['error']) && $file['error'] === UPLOAD_ERR_OK) {
+                $hasUploadedFile = true;
+                break;
+            }
+        }
+
+        if (!$hasUploadedFile) {
+            return response()->json(['status' => 'error', "message" => 'No has subido ninguna foto'], 400);
+        }
+
+        $requiredPhotos = [
+            'foto_del'      => 'delantera',
+            'foto_tra'      => 'trasera',
+            'foto_lado_izq' => 'del lado izquierdo',
+            'foto_lado_der' => 'del lado derecho',
+            'foto_llanta_ref' => 'de la llanta de refaccion'
+        ];
         // Validar que las fotos obligatorias vengan
-        $requiredPhotos = ['foto_del', 'foto_tra', 'foto_lado_izq', 'foto_lado_der'];
-        foreach ($requiredPhotos as $photo) {
-            if (!isset($files[$photo]) || $files[$photo]['error'] !== UPLOAD_ERR_OK) {
-                return response()->json(['status' => 'error', 'message' => "La imagen $photo es obligatoria."], 400);
+        foreach ($requiredPhotos as $inputName => $userFriendlyName) {
+            if (!isset($files[$inputName]) || $files[$inputName]['error'] !== UPLOAD_ERR_OK) {
+                return response()->json(['status' => 'error', 'message' => "La foto $userFriendlyName es obligatoria."], 400);
             }
         }
 
@@ -215,6 +234,8 @@ class SupervisionSemanalController extends Controller
      */
     private function storeImage($fileArray, $no_eco, $descripcion)
     {
+        $maxDim = 1200; 
+        $quality = 75;
         // Definir ruta: public/fotos_supervision_semanal/NUM_ECO/FECHA/
         $dateFolder = date('Y-m-d');
         // __DIR__ es app/controllers, subimos a la raiz y entramos a public
@@ -233,9 +254,32 @@ class SupervisionSemanalController extends Controller
         $targetFile = $fullPath . '/' . $filename;
 
         // Mover el archivo temporal al destino
-        if (move_uploaded_file($fileArray['tmp_name'], $targetFile)) {
-            // Retornar la ruta relativa para la BD (ej: /fotos_supervision_semanal/...)
+        try {
+            // 3. INICIO DE LA MAGIA DE INTERVENTION IMAGE
+            
+            // Creamos el manager (usando el driver GD)
+            $manager = new ImageManager(new Driver());
+
+            // Leemos la imagen desde el archivo temporal
+            $image = $manager->read($fileArray['tmp_name']);
+
+            // a. Redimensionar (scaleDown evita estirar imágenes pequeñas)
+            // Solo reduce si la imagen es mayor a $maxDim, manteniendo la proporción.
+            $image->scaleDown(width: $maxDim, height: $maxDim);
+
+            // b. Orientación Automática (corrige fotos de iPhone/Samsung rotadas)
+            // Nota: En la v3 esto suele ser automático al leer, pero si usas v2 es ->orientate()
+            
+            // c. Guardar comprimida y convertida a JPG
+            $image->toJpeg($quality)->save($targetFile);
+
+            // Retornar ruta relativa
             return $relativePath . '/' . $filename;
+
+        } catch (\Exception $e) {
+            // Si el archivo no es una imagen válida o falla algo
+            // error_log($e->getMessage()); // Descomentar para debug
+            return null;
         }
 
         return null;
@@ -308,11 +352,11 @@ class SupervisionSemanalController extends Controller
         $pdf->Cell(50, 5, 'Eco: ' . $supervision->no_eco, 0, 0, 'R');
 
         // Configuración de fotos Pag 1
-        $top    = 50;  // Bajé un poco para dar aire al logo
-        $left   = 28;
-        $ancho  = 75;
-        $alto   = 60;
-        $espacio = 8;
+        $top    = 45;  // Bajé un poco para dar aire al logo
+        $left   = 15;
+        $ancho  = 85;
+        $alto   = 65;
+        $espacio = 6;
 
         for ($i = 0; $i < 6; $i++) {
             // Solo pintamos si existe la imagen

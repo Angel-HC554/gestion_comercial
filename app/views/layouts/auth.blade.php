@@ -15,6 +15,7 @@
 
 <body class="bg-background">
     @yield('content')
+    @stack('scripts')
 </body>
 
 </html>

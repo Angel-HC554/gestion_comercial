@@ -1,11 +1,11 @@
-@extends('layouts.app-layout') {{-- O el layout que estés usando --}}
-
-@section('title', 'Vehículos')
+@extends('layouts.app-layout', [
+    'title' => 'Vehículos'
+])
 
 @section('content')
     <div x-data="vehiculosApp()" x-init="init()" @import-success.window="handleImportSuccess($event.detail.message)" class="min-h-screen bg-gray-50 pb-10">
 
-        <div class="flex items-center justify-between mb-6 mx-10 pt-6">
+        <div class="flex items-center justify-start gap-12 mb-6 mx-10 pt-6">
             <h1 class="text-2xl font-bold tracking-tight text-zinc-900">Vehículos</h1>
 
             <div x-show="flashMessage" x-transition.opacity.duration.500ms
@@ -15,31 +15,45 @@
             </div>
 
             <div class="flex space-x-2">
-                <button @click="$dispatch('open-import-modal')"
-                    class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                        stroke="currentColor" class="size-4">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                    </svg>
-                    Importar
-                </button>
-
-                <button @click="$dispatch('open-export-modal')"
-                    class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                        stroke="currentColor" class="size-4">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
-                    Exportar
-                </button>
+                <div class="relative" x-data="{ open: false }" @click.away="open = false">
+                    <button @click="open = !open"
+                        class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors shadow-sm cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="1.5" stroke="currentColor"
+                                    class="w-4 h-4 text-zinc-400 group-hover:text-zinc-600 transition-transform duration-200"
+                                    :class="open ? 'rotate-180' : ''">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                </svg>
+                        Acciones
+                    </button>
+                    <div x-show="open" x-transition.opacity.duration.200ms x-cloak
+                        class="absolute left-0 mt-2 w-64 origin-top-left rounded-xl bg-white shadow-xl ring-1 ring-zinc-900/5 focus:outline-none z-50 flex p-1 gap-1">
+                        <a @click="$dispatch('open-import-modal')"
+                            class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 rounded-lg hover:bg-zinc-100 hover:text-zinc-900 transition-colors cursor-pointer">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                stroke="currentColor" class="size-4">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                            </svg>
+                            Importar
+                        </a>
+                        <div class="w-px bg-zinc-200 my-1 mx-1"></div>
+                        <a @click="$dispatch('open-export-modal')"
+                            class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 rounded-lg hover:bg-zinc-100 hover:text-zinc-900 transition-colors cursor-pointer">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                stroke="currentColor" class="size-4">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            Exportar
+                        </a>
+                    </div>
+                </div>
 
                 <button @click="openNewModal"
-                    class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                        stroke="currentColor" class="size-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
                     </svg>
                     Nuevo Vehículo
                 </button>
@@ -58,11 +72,11 @@
                     </svg>
                 </div>
                 <input type="text" x-model.debounce.500ms="search" placeholder="no. económico"
-                    class="block w-full rounded-md border-0 py-1.5 pl-10 text-zinc-900 ring-1 ring-inset ring-zinc-300 placeholder:text-zinc-400 focus:ring-2 focus:ring-inset focus:ring-emerald-600 sm:text-sm sm:leading-6 bg-white shadow-sm">
+                    class="block w-full rounded-md border-2 py-1.5 pl-10 text-zinc-900 border-zinc-300 placeholder:text-zinc-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm sm:leading-6 bg-white">
             </div>
 
             <select x-model="estado"
-                class="w-full sm:w-64 h-9 border border-zinc-300 bg-zinc-50 rounded-md px-2 py-1 text-zinc-500 focus:ring-emerald-600 focus:border-emerald-600 text-sm shadow-sm">
+                class="w-full sm:w-64 h-9 border-2 border-zinc-300 rounded-md px-2 py-1 text-zinc-500 focus:ring-emerald-600 focus:border-emerald-600 text-sm cursor-pointer">
                 <option value="">Todos</option>
                 @foreach ($estados as $est)
                     <option value="{{ $est }}" class="text-zinc-700">{{ $est }}</option>
@@ -70,7 +84,7 @@
             </select>
 
             <button @click="resetFilters"
-                class="w-full sm:w-auto px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-sm font-medium rounded-md transition-colors shadow-sm border border-zinc-200">
+                class="w-full sm:w-auto px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-sm font-medium rounded-md transition-colors border border-zinc-300 cursor-pointer">
                 Borrar filtros
             </button>
         </div>
@@ -186,7 +200,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Agencia</label>
                                 <select x-model="form.agencia"
-                                    class="mt-1 block w-full rounded-md border-zinc-200 border-2">
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:ring-emerald-600 focus:border-emerald-600">
                                     <option value="DW01">DW01</option>
                                     <option value="DW01A">DW01A</option>
                                     <option value="DW01B">DW01B</option>
@@ -202,53 +216,53 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">No. económico</label>
-                                <input type="text" x-model="form.no_economico"
-                                    class="mt-1 block w-full rounded-md border-zinc-200 border-2" />
+                                <input type="text" x-model="form.no_economico" placeholder="No. económico"
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Placas</label>
-                                <input type="text" x-model="form.placas"
-                                    class="mt-1 block w-full rounded-md border-zinc-200 border-2" />
+                                <input type="text" x-model="form.placas" placeholder="Placas"
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Tipo de vehículo</label>
-                                <input type="text" x-model="form.tipo_vehiculo"
-                                    class="mt-1 block w-full rounded-md border-zinc-200 border-2" />
+                                <input type="text" x-model="form.tipo_vehiculo" placeholder="Tipo de vehículo"
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Marca</label>
-                                <input type="text" x-model="form.marca"
-                                    class="mt-1 block w-full rounded-md border-zinc-200 border-2" />
+                                <input type="text" x-model="form.marca" placeholder="Marca"
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Modelo</label>
-                                <input type="text" x-model="form.modelo"
-                                    class="mt-1 block w-full rounded-md border-zinc-200 border-2" />
+                                <input type="text" x-model="form.modelo" placeholder="Modelo"
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Año</label>
-                                <input type="number" x-model="form.año"
-                                    class="mt-1 block w-full rounded-md border-zinc-200 border-2" placeholder="2025" />
+                                <input type="number" x-model="form.año" placeholder="Ingresa el año"
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" placeholder="2025" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Proceso</label>
-                                <input type="text" x-model="form.proceso"
-                                    class="mt-1 block w-full rounded-md border-zinc-200 border-2" />
+                                <input type="text" x-model="form.proceso" placeholder="Proceso"
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Alias</label>
-                                <input type="text" x-model="form.alias"
-                                    class="mt-1 block w-full rounded-md border-zinc-200 border-2" />
+                                <input type="text" x-model="form.alias" placeholder="Alias"
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">RPE Crea/Mod</label>
-                                <input type="text" x-model="form.rpe_creamod"
-                                    class="mt-1 block w-full rounded-md border-zinc-200 border-2" />
+                                <input type="text" x-model="form.rpe_creamod" placeholder="RPE Crea/Mod"
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Estado</label>
                                 <select x-model="form.estado"
-                                    class="mt-1 block w-full rounded-md border-zinc-200 border-2">
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:ring-emerald-600 focus:border-emerald-600">
                                     <option value="">Seleccione...</option>
                                     <option value="En circulacion">En circulación</option>
                                     <option value="En mantenimiento">En mantenimiento</option>
@@ -260,7 +274,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Propiedad</label>
                                 <select x-model="form.propiedad"
-                                    class="mt-1 block w-full rounded-md border-zinc-200 border-2">
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:ring-emerald-600 focus:border-emerald-600">
                                     <option value="">Seleccione...</option>
                                     <option value="Arrendado">Arrendado</option>
                                     <option value="Propio (CFE)">Propio (CFE)</option>
@@ -270,9 +284,9 @@
 
                         <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-zinc-100">
                             <button type="button" @click="modals.new = false"
-                                class="px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 rounded-md transition-colors">Cancelar</button>
+                                class="px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 rounded-md transition-colors cursor-pointer">Cancelar</button>
                             <button type="submit"
-                                class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-md shadow-sm transition-colors flex items-center"
+                                class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-md shadow-sm transition-colors flex items-center cursor-pointer"
                                 :disabled="submitting">
                                 <span x-show="!submitting">Guardar</span>
                                 <span x-show="submitting">Guardando...</span>
@@ -303,13 +317,6 @@
             caret-color: #111827;
             width: 100%;
             /* Asegura que llenen el contenedor */
-        }
-
-        .vehiculo-modal input:focus,
-        .vehiculo-modal select:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
-            border-color: rgba(16, 185, 129, 0.7);
         }
 
         [x-cloak] {

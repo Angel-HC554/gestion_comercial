@@ -1,4 +1,4 @@
-<div class="h-full flex flex-col min-h-0 overflow-y-auto relative px-10">
+<div class="h-full flex flex-col min-h-0 overflow-y-auto relative px-10 bg-zinc-50 rounded-md">
     <div x-show="historialLoading" x-transition.opacity
         class="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center pointer-events-none">
 
@@ -29,7 +29,7 @@
 
         <template x-for="evento in historial" :key="evento.id">
             <div class="relative ml-1 rounded-xl border border-gray-200 bg-white p-4 shadow-sm mb-4">
-                <span
+                <span   
                     class="absolute -left-3 top-5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100"></span>
 
                 <div class="flex items-start justify-between mb-2">

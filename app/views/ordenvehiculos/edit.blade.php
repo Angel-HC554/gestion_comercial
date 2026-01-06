@@ -1,9 +1,9 @@
-@extends('layouts.app-layout')
-
-@section('title', 'Crear Orden')
+@extends('layouts.app-layout', [
+    'title' => 'Editar orden'
+])
 
 @section('content')
-    <div class="flex justify-between items-center mx-10 mb-6">
+    <div class="flex justify-start gap-12 items-center mx-10 py-6">
         <h1 class="text-2xl font-bold tracking-tight text-zinc-900">Editar orden de servicio y reparación</h1>
         <div class="flex items-center gap-2">
             <span class="font-semibold text-zinc-600">Orden No: {{ $id ?? 'Nueva' }}</span>

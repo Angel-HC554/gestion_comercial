@@ -35,7 +35,27 @@ class OrdenVehiculoController extends Controller
         // Query Builder de Eloquent
         $query = OrdenVehiculo::query()
             ->with('archivo')
-            ->select('id', 'area', 'zona', 'departamento', 'noeconomico', 'status', 'fechafirm', 'orden_500', 'requiere_servicio', 'observacion');
+            ->select('id', 'area', 'zona', 'departamento', 'noeconomico', 'status', 'fechafirm', 'orden_500', 'requiere_servicio', 'observacion',
+                    'vehicle1',
+            'vehicle2',
+            'vehicle3',
+            'vehicle4',
+            'vehicle5',
+            'vehicle6',
+            'vehicle7',
+            'vehicle8',
+            'vehicle9',
+            'vehicle10',
+            'vehicle11',
+            'vehicle12',
+            'vehicle13',
+            'vehicle14',
+            'vehicle15',
+            'vehicle16',
+            'vehicle17',
+            'vehicle18',
+            'vehicle19',
+            'vehicle20',);
         if ($noEconomicoExacto) {
             // Filtro exacto para la vista "Show" del vehículo
             $query->where('noeconomico', $noEconomicoExacto);
@@ -70,12 +90,50 @@ class OrdenVehiculoController extends Controller
     }
     public function create()
     {
+        // 1. Obtener ID de la URL (si existe)
+        $vehiculoId = request()->get('vehiculo_id');
+        $returnUrl = request()->get('return_url');
+
+        $preseleccionado = null;
+        $ultimoKm = 0;
+        // 2. Si venimos del Show, buscamos los datos
+        if ($vehiculoId) {
+            $vehiculo = Vehiculo::find($vehiculoId);
+            if ($vehiculo) {
+                // Reutilizamos tu lógica de obtener último KM (asegúrate que el modelo Vehiculo tenga este método o calculalo aquí)
+                $kmData = $vehiculo->ultimoKilometraje(); // Asumiendo que este método existe en tu modelo Vehiculo
+                $ultimoKm = $kmData['kilometraje'] ?? 0;
+
+                $preseleccionado = [
+                    'no_economico' => $vehiculo->no_economico,
+                    'placas'       => $vehiculo->placas,
+                    'marca'        => $vehiculo->marca,
+                    'modelo'       => $vehiculo->modelo, // Ejemplo de mapeo
+                ];
+            }
+        }
         // Obtener el siguiente ID disponible
         $nextId = OrdenVehiculo::max('id') + 1;
         $nextId = $nextId ?: 1; // Si no hay registros, comenzar desde 1
 
+        $vehiculosRaw = Vehiculo::all();
+
+        $vehiculos = $vehiculosRaw->map(function($v) {
+        // Calculamos el KM para CADA vehículo de la lista
+        $k = $v->ultimoKilometraje();
+        
+        return [
+            'no_economico' => $v->no_economico,
+            'placas'       => $v->placas,
+            'marca'        => $v->marca,
+            'modelo'       => $v->modelo,
+            // ¡ESTO ES LO NUEVO! Enviamos el último KM al frontend
+            'ultimo_km'    => $k['kilometraje'] ?? 0 
+        ];
+    });
+
         // 2. DATOS DE EJEMPLO: Vehículos (Simulando tu tabla 'vehiculos')
-        $vehiculos = Vehiculo::query()->select('no_economico', 'placas', 'marca', 'modelo')->get();
+        //$vehiculos = Vehiculo::query()->select('no_economico', 'placas', 'marca', 'modelo')->get();
 
         // 3. DATOS DE EJEMPLO: Usuarios (Simulando tu tabla 'users')
         // Nota: 'usuario' aquí simula ser el RPE
@@ -92,7 +150,11 @@ class OrdenVehiculoController extends Controller
             'id' => $nextId,
             'vehiculos' => $vehiculos,
             'users' => $users,
-            'ordenEditar' => null
+            'ordenEditar' => null,
+            // NUEVAS VARIABLES
+            'preseleccionado' => $preseleccionado,
+            'ultimoKm' => $ultimoKm
+            ,'returnUrl' => $returnUrl ?: '/ordenvehiculos'
         ]);
     }
 
@@ -155,6 +217,13 @@ class OrdenVehiculoController extends Controller
         // 5. Crear la Orden
         try {
             $orden = OrdenVehiculo::create($data);
+            //Actualizar estado del vehiculo
+            $vehiculo = Vehiculo::where('no_economico', $orden->noeconomico)->first();
+
+            if ($vehiculo) {
+                $vehiculo->update(['estado' => 'En Mantenimiento']);
+            }
+
             HistorialOrden::create([
                 'orden_vehiculo_id' => $orden->id,
                 'tipo_evento' => 'orden_creada',
@@ -516,6 +585,8 @@ class OrdenVehiculoController extends Controller
         // 1. Get all form data
         $data = request()->body();
         $kmSalidaInput = $data['kilometraje'] ?? 0;
+        $newStatus = $data['status'] ?? null;
+        $fechaTerminacion = $data['fechaTerminacion'] ?? $data['fecha_terminacion'] ?? date('Y-m-d');
 
         $kmSalida = str_replace(',', '', $kmSalidaInput);
         $kmEntrada = (int) $orden->kilometraje;
@@ -531,14 +602,24 @@ class OrdenVehiculoController extends Controller
         try {
             // Capturamos estado anterior
             $oldStatus = $orden->status;
-            $newStatus = $data['status'];
-            $orden->update(['status' => $data['status']]);
-            VehiculoSalidaTaller::create([
+            $orden->update(['status' => $newStatus]);
+
+            if ($newStatus === 'TERMINADO') {
+                VehiculoSalidaTaller::create([
                 'orden_vehiculo_id' => $orden->id,
                 'kilometraje' => $kmSalida,
-                'fecha_terminacion' => $data['fecha_terminacion'],
+                'fecha_terminacion' => $fechaTerminacion,
                 'servicio' => $orden->requiere_servicio,
             ]);
+
+                // --- NUEVO: LIBERAR VEHÍCULO ---
+                $vehiculo = Vehiculo::where('no_economico', $orden->noeconomico)->first();
+                
+                if ($vehiculo) {
+                    $vehiculo->update(['estado' => 'En Circulacion']);
+                }
+                // -------------------------------
+            }
 
             HistorialOrden::create([
                 'orden_vehiculo_id' => $orden->id,
@@ -598,7 +679,7 @@ class OrdenVehiculoController extends Controller
             if (move_uploaded_file($file['tmp_name'], $targetPath)) {
                 // Capturamos estado antes del cambio
                 $oldStatus = $orden->status;
-                
+
                 // 4. Actualizar Estado de la Orden a VEHICULO TALLER solo si no está TERMINADO
                 if ($oldStatus !== 'TERMINADO') {
                     $orden->status = 'VEHICULO TALLER';
@@ -607,32 +688,32 @@ class OrdenVehiculoController extends Controller
 
                 // 5. Verificar si ya existe un escaneo previo
                 $rutaRelativa = '/ordenes_escaneos/' . $orden->id . '/' . $fileName;
-                $archivoExistente = OrdenArchivo::where('orden_vehiculo_id', $orden->id)// Asumiendo que hay un campo tipo_archivo
+                $archivoExistente = OrdenArchivo::where('orden_vehiculo_id', $orden->id) // Asumiendo que hay un campo tipo_archivo
                     ->first();
 
                 if ($archivoExistente) {
                     // Obtener el nombre del archivo anterior para el historial
                     $archivoAnterior = basename($archivoExistente->ruta_archivo);
-                    
+
                     // Eliminar el archivo físico anterior si existe
                     $rutaAnterior = dirname(__DIR__, 2) . '/public/ordenes_escaneos/' . $orden->id . '/' . $archivoAnterior;
                     if (file_exists($rutaAnterior) && is_file($rutaAnterior)) {
                         @unlink($rutaAnterior);
                     }
-                    
+
                     // Actualizar el registro existente
                     $archivoExistente->update([
                         'ruta_archivo' => $rutaRelativa,
                         'comentarios'  => $comentarios,
                         'updated_at'   => date('Y-m-d H:i:s')
                     ]);
-                    
+
                     // Actualizar el historial del archivo
                     $historialExistente = HistorialOrden::where('orden_vehiculo_id', $orden->id)
                         ->where('tipo_evento', 'archivo_subido')
                         ->where('new_value', $archivoAnterior)
                         ->first();
-                        
+
                     if ($historialExistente) {
                         $historialExistente->update([
                             'old_value' => $archivoAnterior,
@@ -649,7 +730,7 @@ class OrdenVehiculoController extends Controller
                             'new_value' => $fileName,
                         ]);
                     }
-                    
+
                     $mensaje = 'Escaneo actualizado correctamente.';
                 } else {
                     // Crear nuevo registro si no existe uno previo
@@ -659,7 +740,7 @@ class OrdenVehiculoController extends Controller
                         'comentarios'       => $comentarios,
                         'tipo_archivo'      => 'escaneo' // Asegurarse de establecer el tipo de archivo
                     ]);
-                    
+
                     // Registrar en el historial
                     HistorialOrden::create([
                         'orden_vehiculo_id' => $orden->id,
@@ -668,10 +749,10 @@ class OrdenVehiculoController extends Controller
                         'old_value' => null,
                         'new_value' => $fileName,
                     ]);
-                    
+
                     $mensaje = 'Escaneo subido correctamente.';
                 }
-                
+
                 // Registrar cambio de estado si es necesario
                 if ($oldStatus !== 'VEHICULO TALLER' && $oldStatus !== 'TERMINADO') {
                     HistorialOrden::create([

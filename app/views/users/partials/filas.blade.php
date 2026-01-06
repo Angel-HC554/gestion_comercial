@@ -1,13 +1,13 @@
 @forelse($users as $user)
     <tr class="hover:bg-gray-50 transition-colors">
         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-            #{{ $user->id }}
+            {{ $user->id }}
         </td>
         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
             {{ $user->name }}
         </td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-            {{ $user->email }}
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+            {{ $user->user }}
         </td>
         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
             @php
