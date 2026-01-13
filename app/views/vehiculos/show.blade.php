@@ -5,7 +5,7 @@
 @section('content')
     <div x-data="{
         tab: 'estado', // Pestaña activa del primer grupo (Estado/Fotos)
-        tabHistorial: 'historial' // Pestaña activa del segundo grupo (Historial/Supervisión)
+        tabHistorial: 'analisis' // Pestaña activa del segundo grupo (Historial/Supervisión)
     }" class="min-h-screen pb-10">
 
         <div class="flex items-center justify-between mb-6 mx-6 md:mx-10 pt-6">
@@ -210,66 +210,66 @@
                                 <div class="space-y-3">
                                     {{-- BLOQUE 1: KILOMETRAJE --}}
                                 <div class="flex items-start justify-end sm:justify-start gap-2">
-            <div class="mt-1 text-gray-400">
-               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-               </svg>
-            </div>
-            
-            <div>
-                <p class="text-sm font-medium text-gray-700">
-                    Por Kilometraje:
-                </p>
-                @if ($kmData['kilometraje'] !== 0)
-                    <p class="text-base {{ $claseTexto[$estadoKm] ?? 'text-gray-800' }}">
-                        {{ number_format($proximo) }} km
-                    </p>
-                    <span class="block text-xs {{ $estadoKm !== 'verde' ? $claseTexto[$estadoKm] : 'text-gray-500' }}">
-                        @if($kmFaltantes < 0)
-                            ¡Excedido por {{ number_format(abs($kmFaltantes)) }} km!
-                        @else
-                            Faltan: {{ number_format($kmFaltantes) }} km
-                        @endif
-                    </span>
-                @else
-                    <span class="text-gray-400">—</span>
-                @endif
-            </div>
-        </div>
+                                    <div class="mt-1 text-gray-400">
+                                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                       </svg>
+                                    </div>
 
-        {{-- BLOQUE 2: TIEMPO (Solo si hay historial) --}}
-        @if ($proximaFecha)
-            <div class="flex items-start justify-end sm:justify-start gap-2 border-t border-gray-100 pt-2">
-                 <div class="mt-1 text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v7.5" />
-                    </svg>
-                </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-700">
+                                            Por Kilometraje:
+                                        </p>
+                                        @if ($kmData['kilometraje'] !== 0)
+                                            <p class="text-base {{ $claseTexto[$estadoKm] ?? 'text-gray-800' }}">
+                                                {{ number_format($proximo) }} km
+                                            </p>
+                                            <span class="block text-xs {{ $estadoKm !== 'verde' ? $claseTexto[$estadoKm] : 'text-gray-500' }}">
+                                                @if($kmFaltantes < 0)
+                                                    ¡Excedido por {{ number_format(abs($kmFaltantes)) }} km!
+                                                @else
+                                                    Faltan: {{ number_format($kmFaltantes) }} km
+                                                @endif
+                                            </span>
+                                        @else
+                                            <span class="text-gray-400">—</span>
+                                        @endif
+                                    </div>
+                                </div>
 
-                <div>
-                    <p class="text-sm font-medium text-gray-700">
-                        Por Fecha:
-                    </p>
-                    <p class="text-base {{ $claseTexto[$estadoFecha] ?? 'text-gray-800' }}">
-                        {{ $proximaFecha->format('d/m/Y') }}
-                    </p>
-                    <span class="block text-xs {{ $estadoFecha !== 'verde' ? $claseTexto[$estadoFecha] : 'text-gray-500' }}">
-                        @if($diasRestantes < 0)
-                            ¡Vencido hace {{ abs(intval($diasRestantes)) }} días!
-                        @else
-                            Faltan: {{ intval($diasRestantes) }} días
-                        @endif
-                    </span>
-                </div>
-            </div>
-        @endif
-    </div>
-</div>
+                                {{-- BLOQUE 2: TIEMPO (Solo si hay historial) --}}
+                             @if ($proximaFecha)
+                                <div class="flex items-start justify-end sm:justify-start gap-2 border-t border-gray-100 pt-2">
+                                     <div class="mt-1 text-gray-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v7.5" />
+                                        </svg>
+                                    </div>
+                                
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-700">
+                                            Por Fecha:
+                                        </p>
+                                        <p class="text-base {{ $claseTexto[$estadoFecha] ?? 'text-gray-800' }}">
+                                            {{ $proximaFecha->format('d/m/Y') }}
+                                        </p>
+                                        <span class="block text-xs {{ $estadoFecha !== 'verde' ? $claseTexto[$estadoFecha] : 'text-gray-500' }}">
+                                            @if($diasRestantes < 0)
+                                                ¡Vencido hace {{ abs(intval($diasRestantes)) }} días!
+                                            @else
+                                                Faltan: {{ intval($diasRestantes) }} días
+                                            @endif
+                                        </span>
+                                    </div>
+                                </div>
+                             @endif
+                        </div>
+                    </div>
 
-                                <div class="flex-shrink-0">
-                                    <div
-                                        class="inline-flex items-center px-4 py-4 rounded-full text-sm font-semibold {{ $coloresBadge[$estatus] ?? 'bg-gray-400' }} text-white shadow-sm">
-                                        {{ $textosBadge[$estatus] ?? 'Indefinido' }}
+                    <div class="shrink-0">
+                        <div
+                            class="inline-flex items-center px-4 py-4 rounded-full text-sm font-semibold {{ $coloresBadge[$estatus] ?? 'bg-gray-400' }} text-white shadow-sm">
+                            {{ $textosBadge[$estatus] ?? 'Indefinido' }}
                                     </div>
                                 </div>
 
@@ -355,11 +355,17 @@
             <div class="rounded-xl border border-gray-200 bg-white shadow-md">
                 <div class="border-b border-gray-200 px-6 pt-4">
                     <nav class="flex space-x-4 overflow-x-auto">
+                        <button @click="tabHistorial = 'analisis'"
+                            :class="tabHistorial === 'analisis' ? 'bg-emerald-600 text-white' :
+                                'text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                            class="px-4 py-2 rounded-t-md text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer">
+                            Historial de Órdenes
+                        </button>
                         <button @click="tabHistorial = 'historial'"
                             :class="tabHistorial === 'historial' ? 'bg-emerald-600 text-white' :
                                 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
                             class="px-4 py-2 rounded-t-md text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer">
-                            Historial de Órdenes
+                            Listado de órdenes
                         </button>
                         <button @click="tabHistorial = 'semanal'"
                             :class="tabHistorial === 'semanal' ? 'bg-emerald-600 text-white' :
@@ -377,6 +383,10 @@
                 </div>
 
                 <div class="p-6">
+                    <div x-show="tabHistorial === 'analisis'" x-cloak>
+                        @include('vehiculos.grafica', ['chartData' => $chartData])
+                    </div>
+
                     <div x-show="tabHistorial === 'historial'" x-cloak>
                         <div class="flex justify-between mb-4">
                             <h3 class="text-lg font-semibold leading-6 text-emerald-800">
@@ -418,7 +428,7 @@
                                             <div class="mt-4">
                                                 <button type="button"
                                                     @click="$dispatch('open-finish-modal-global', {{ json_encode($ordenActiva) }})"
-                                                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors">
+                                                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors cursor-pointer">
                                                     <svg class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24"
                                                         stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -437,18 +447,22 @@
                         @elseif ($supervision_existe)
                             <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r shadow-sm">
                                 <div class="flex items-center">
-                                    <div class="flex-shrink-0">
-                                        <svg class="h-5 w-5 text-emerald-500" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd"
-                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                clip-rule="evenodd" />
+                                    <div class="shrink-0">
+                                        <svg class="h-5 w-5 text-emerald-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                                         </svg>
                                     </div>
-                                    <div class="ml-3">
-                                        <p class="text-sm text-emerald-700">
-                                            La supervisión semanal ya fue realizada para este vehículo en la semana
-                                            actual.
+                                    <div class="ml-3 flex-1 flex justify-start items-center gap-4">
+                                        <p class="text-md text-emerald-700">
+                                            La supervisión semanal ya fue realizada para este vehículo.
+                                        </p>
+                                        <p class="mt-2 text-md md:mt-0 md:ml-6 hover:underline">
+                                            <a href="{{ '/supervisiones/pdf/'. $id_supervision }}" target="_blank" 
+                                               class="whitespace-nowrap font-bold text-emerald-700 hover:text-emerald-600 flex items-center gap-1">
+                                                Ver supervisión PDF <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
+                                                    <path fill-rule="evenodd" d="M5.22 14.78a.75.75 0 0 0 1.06 0l7.22-7.22v5.69a.75.75 0 0 0 1.5 0v-7.5a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0 0 1.5h5.69l-7.22 7.22a.75.75 0 0 0 0 1.06Z" clip-rule="evenodd" />
+                                                </svg>
+                                            </a>
                                         </p>
                                     </div>
                                 </div>
@@ -462,7 +476,7 @@
                         @endif
                     </div>
 
-                    <div x-show="tabHistorial === 'diaria'" x-cloak>
+                    <div x-show="tabHistorial === 'diaria'" x-cloak x-data="{subTab: 'form'}">
                         {{-- CASO 1: VEHÍCULO EN MANTENIMIENTO (Bloqueo) --}}
                         @if ($vehiculo->estado === 'En Mantenimiento')
                             <div class="bg-amber-50 border-l-4 border-amber-500 p-6 rounded-r shadow-sm">
@@ -489,7 +503,7 @@
                                             <div class="mt-4">
                                                 <button type="button"
                                                     @click="$dispatch('open-finish-modal-global', {{ json_encode($ordenActiva) }})"
-                                                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors">
+                                                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors cursor-pointer">
                                                     <svg class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24"
                                                         stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -505,10 +519,44 @@
                             </div>
                             {{-- INCLUIMOS EL FORMULARIO --}}
                         @else
-                            @include('components.super_diaria_form', [
-                                'vehiculo_id' => $vehiculo->id,
-                                'no_economico' => $vehiculo->no_economico,
-                            ])
+                            <div class="flex justify-center mb-6">
+                                <div class="bg-gray-100 p-1 rounded-lg inline-flex shadow-inner">
+                                    <button 
+                                        @click="subTab = 'form'"
+                                        :class="subTab === 'form' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                                        class="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 cursor-pointer">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                        Nueva Supervisión
+                                    </button>
+
+                                    <button 
+                                        @click="subTab = 'historial'"
+                                        hx-get="/supervision-diaria/{{ $vehiculo->id }}/historial"
+                                        hx-target="#historial-container"
+                                        hx-indicator="#loading-history"
+                                        hx-trigger="click once"
+                                        :class="subTab === 'historial' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                                        class="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 cursor-pointer">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Ver Historial
+                                    </button>
+                                </div>
+                            </div>
+                            <div x-show="subTab === 'form'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                                @include('components.super_diaria_form', [
+                                    'vehiculo_id' => $vehiculo->id,
+                                    'no_economico' => $vehiculo->no_economico,
+                                ])
+                            </div>
+                            <div x-show="subTab === 'historial'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                                <div id="loading-history" class="htmx-indicator flex justify-center py-10">
+                                    <svg class="animate-spin h-8 w-8 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </div>
+                                <div id="historial-container"></div>
+                            </div>
                         @endif
                     </div>
 
@@ -567,11 +615,11 @@
 
             <div class="flex justify-end gap-2 border-t pt-4 border-gray-300">
                 <button @click="close()"
-                    class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors">
+                    class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors cursor-pointer">
                     Cancelar
                 </button>
                 <button @click="save()"
-                    class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium shadow-sm transition-colors flex items-center">
+                    class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium shadow-sm transition-colors flex items-center cursor-pointer">
                     <svg x-show="loading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
@@ -601,7 +649,7 @@
                 open(ordenData) {
                     this.orden = ordenData;
                     this.form.kilometraje = ''; // Limpiar km
-                    this.form.fechaTerminacion = this.maxDate;
+                    this.form.fechaTerminacion = ''; // No establecer fecha por defecto
                     this.isOpen = true;
                 },
                 close() {
@@ -667,7 +715,7 @@
                             },
                             body: JSON.stringify({
                                 kilometraje: this.form.kilometraje,
-                                fecha_terminacion: this.form.fechaTerminacion || this.maxDate,
+                                fecha_terminacion: this.form.fechaTerminacion,
                                 status: this.form.status
                             })
                         });
@@ -721,6 +769,14 @@
     <style>
         [x-cloak] {
             display: none !important;
+        }
+
+        .htmx-indicator {
+            display: none !important;
+        }
+
+        .htmx-indicator.htmx-request {
+            display: flex !important;
         }
     </style>
 @endsection

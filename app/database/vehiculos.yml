@@ -13,10 +13,21 @@ columns:
   
   # En validación es digits:4, integer es lo correcto
   año: integer
+
+  # Contador de órdenes activas
+  ordenes_pendientes:
+    type: integer
+    default: 0
   
-  # Usaremos string para guardar 'En circulacion', 'En mantenimiento', etc.
+  en_taller:
+    type: boolean
+    default: 0
+    
+  finalizado:
+    type: boolean
+    default: true
+
   estado: string
-  
   # 'Arrendado' o 'Propio (CFE)'
   propiedad: string
   

@@ -11,7 +11,8 @@ class SupervisionSemanal extends Model
     protected $fillable = [
         'vehiculo_id', 
         'user_id',
-        'no_eco', 
+        'no_eco',
+        'fecha_captura',
         'foto_del', 
         'foto_tra', 
         'foto_lado_der', 
@@ -22,6 +23,12 @@ class SupervisionSemanal extends Model
         'foto_atent',
         'foto_llanta_ref',
         'resumen_est'
+    ];
+
+    protected $casts = [
+        'fecha_captura' => 'date',
+        'created_at'    => 'datetime',
+        'updated_at'    => 'datetime',
     ];
 
     public function vehiculo()

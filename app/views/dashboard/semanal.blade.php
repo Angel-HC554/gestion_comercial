@@ -8,12 +8,12 @@
 
 <div class="min-h-screen bg-gray-50 p-6 md:p-10">
     
-    <div class="flex flex-col md:flex-row justify-between items-center mb-8">
+    <div class="flex flex-col md:flex-row justify-start gap-5 items-center mb-8">
         <div>
             <div class="flex items-center gap-2">
                 <h1 class="text-3xl font-bold text-zinc-900">Gestión Semanal</h1>
             </div>
-            <p class="text-zinc-500 text-sm mt-1">Avance de la semana: <strong>{{ $semanaLabel }}</strong></p>
+            <p class="text-zinc-500 text-sm mt-1">Avance de la semana: <strong class="uppercase">{{ $semanaLabel }}</strong></p>
         </div>
         
         <div class="bg-emerald-900 p-4 rounded-xl border border-emerald-800 shadow-sm text-white flex items-center gap-4">

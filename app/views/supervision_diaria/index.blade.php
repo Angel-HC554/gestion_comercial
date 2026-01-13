@@ -46,6 +46,11 @@
                     </svg>
                     Filtrar
                 </button>
+
+                <a href="/supervision-diaria/resumen-agencias?mes={{ $filtrosActuales['mes'] }}&año={{ $filtrosActuales['año'] }}" 
+                    class="w-full md:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer no-underline">
+                    Ver Resumen por Agencias
+                </a>
             </div>
         </form>
 

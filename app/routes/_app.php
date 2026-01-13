@@ -42,15 +42,19 @@ app()->post('/vehiculos', 'VehiculoController@store');
 app()->post('/vehiculos/import', 'VehiculoController@import');
 app()->get('/vehiculos/export', 'VehiculoController@export');
 app()->get('/vehiculos/{id}', 'VehiculoController@show');
+app()->get('/vehiculos/{id}/historial', 'VehiculoController@historial');
+app()->get('/vehiculo/{id}/prueba-grafica', 'VehiculoController@pruebaHistorialOrdenes');
 
 // Rutas de Supervisión
 // Ruta para generar el reporte PDF de supervisión semanal
 app()->get('/supervisiones/pdf/{id}', 'SupervisionSemanalController@generarReportePdf');
 app()->post('/supervision-semanal', 'SupervisionSemanalController@store');
 app()->get('/supervision-semanal', 'SupervisionSemanalController@index');
+app()->get('/supervision-semanal/resumen-agencias','SupervisionSemanalController@resumenAgencias');
+app()->get('/supervision-diaria/resumen-agencias','SupervisionDiariaController@resumenAgencias');
 app()->post('/supervision-diaria', 'SupervisionDiariaController@store');
 app()->get('/supervision-diaria', 'SupervisionDiariaController@index');
-
+app()->get('/supervision-diaria/{id}/historial', 'SupervisionDiariaController@historial');
 app()->get('/dashboard-diario', 'DashboardController@index');
 app()->get('/dashboard-semanal', 'DashboardSemanalController@index');
 app()->get('/dashboard-vehiculos', 'DashboardVehiculosController@index');

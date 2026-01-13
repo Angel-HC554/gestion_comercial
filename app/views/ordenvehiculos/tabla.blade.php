@@ -2,23 +2,23 @@
     $noEconomico = $noEconomico ?? null;
 @endphp
 
-<div class="mx-auto py-6" x-data="ordenesTable('{{ $noEconomico }}')" x-init="fetchData()" @open-finish-modal.window="openModal('status', $event.detail)" x-cloak>
+<div class="mx-auto py-6" x-data="ordenesTable('{{ $noEconomico }}')" @open-finish-modal.window="openModal('status', $event.detail)" x-cloak>
     @csrf
 
     <div class="bg-white p-4 rounded-lg shadow-sm border-t-4 border-emerald-600/40 mb-6 flex flex-wrap gap-4 items-end">
         <div class="flex flex-col">
             <label class="text-sm font-medium text-zinc-700 mb-1">Desde</label>
-            <input type="date" x-model="filters.fecha_inicio" @change="fetchData()"
+            <input type="date" x-model="filters.fecha_inicio" @blur="fetchData()" @change="fetchData()"
                 class="border-2 border-zinc-300 rounded-md focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 text-sm h-9 p-2">
         </div>
         <div class="flex flex-col">
             <label class="text-sm font-medium text-zinc-700 mb-1">Hasta</label>
-            <input type="date" x-model="filters.fecha_fin" @change="fetchData()"
+            <input type="date" x-model="filters.fecha_fin" @blur="fetchData()" @change="fetchData()"
                 class="border-2 border-zinc-300 rounded-md focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 text-sm h-9 p-2">
         </div>
         <div class="flex flex-col">
             <label class="text-sm font-medium text-zinc-700 mb-1">Estado</label>
-            <select x-model="filters.estado" @change="fetchData()"
+            <select x-model="filters.estado" @blur="fetchData()" @change="fetchData()"
                 class="border-2 border-zinc-300 rounded-md focus:ring-emerald-600 focus:border-emerald-600 text-sm w-40 h-9 pr-2 cursor-pointer">
                 <option value="">Todos</option>
                 <option value="PENDIENTE">PENDIENTE</option>
@@ -245,9 +245,9 @@
 
         <div class="flex justify-end gap-2">
             <button @click="modals.code500 = false"
-                class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium">Cancelar</button>
+                class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium cursor-pointer">Cancelar</button>
             <button @click="saveAction('code500')"
-                class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium shadow-sm">Guardar</button>
+                class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium shadow-sm cursor-pointer">Guardar</button>
         </div>
     </div>
 </div>
@@ -374,28 +374,28 @@
             },
 
             // Mapa de etiquetas para las reparaciones
-    reparacionesMap: {
-        'vehicle1': 'Afinación mayor',
-        'vehicle2': 'Ajuste motor',
-        'vehicle3': 'Alineación y balanceo',
-        'vehicle4': 'Amortiguadores',
-        'vehicle5': 'Cambio aceite y filtro',
-        'vehicle6': 'Clutch',
-        'vehicle7': 'Diagnóstico',
-        'vehicle8': 'Dirección',
-        'vehicle9': 'Servicio Lavado y engrasado',
-        'vehicle10': 'Hojalatería y pintura',
-        'vehicle11': 'Medio motor',
-        'vehicle12': 'Motor completo',
-        'vehicle13': 'Parabrisas y vidrios',
-        'vehicle14': 'Frenos',
-        'vehicle15': 'Sistema eléctrico',
-        'vehicle16': 'Sistema de enfriamiento',
-        'vehicle17': 'Suspensión',
-        'vehicle18': 'Transmisión y diferencial',
-        'vehicle19': 'Tapicería',
-        'vehicle20': 'Otro',
-    },
+            reparacionesMap: {
+                'vehicle1': 'Afinación mayor',
+                'vehicle2': 'Ajuste motor',
+                'vehicle3': 'Alineación y balanceo',
+                'vehicle4': 'Amortiguadores',
+                'vehicle5': 'Cambio aceite y filtro',
+                'vehicle6': 'Clutch',
+                'vehicle7': 'Diagnóstico',
+                'vehicle8': 'Dirección',
+                'vehicle9': 'Servicio Lavado y engrasado',
+                'vehicle10': 'Hojalatería y pintura',
+                'vehicle11': 'Medio motor',
+                'vehicle12': 'Motor completo',
+                'vehicle13': 'Parabrisas y vidrios',
+                'vehicle14': 'Frenos',
+                'vehicle15': 'Sistema eléctrico',
+                'vehicle16': 'Sistema de enfriamiento',
+                'vehicle17': 'Suspensión',
+                'vehicle18': 'Transmisión y diferencial',
+                'vehicle19': 'Tapicería',
+                'vehicle20': 'Otro',
+            },
 
             tempData: {
                 orden_500: '',
@@ -430,6 +430,26 @@
                         alert('No puedes seleccionar fechas futuras');
                     }
                 }
+            },
+            init() {
+                // Carga inicial de datos
+                this.fetchData();
+
+                // Watchers para reaccionar a cambios en los filtros y búsqueda
+                this.$watch('search', () => {
+                    this.currentPage = 1;  // Reinicia a la primera página al buscar
+                    this.fetchData();
+                });
+
+                this.$watch('filters', () => {
+                    this.currentPage = 1;
+                    this.fetchData();
+                }, { deep: true }); // Importante: deep para detectar cambios dentro del objeto filters
+
+                this.$watch('perPage', () => {
+                    this.currentPage = 1;
+                    this.fetchData();
+                });
             },
 
             // Cargar Datos

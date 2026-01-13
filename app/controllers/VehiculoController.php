@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\Vehiculo;
 use App\Models\OrdenVehiculo;
 use App\Models\SupervisionSemanal;
+use App\Models\SupervisionDiaria;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -141,6 +142,62 @@ class VehiculoController extends Controller
         $vehiculo->load(['latestSupervision', 'latestMantenimiento']);
 
         $numero_eco = $vehiculo->no_economico;
+        //---------------------------------------------------->
+        // 1. Obtener ordenes para la TABLA INFERIOR (Orden Descendente - Ya lo tenías)
+        $ordenes = OrdenVehiculo::where('noeconomico', $numero_eco)
+                    ->orderBy('id', 'desc')
+                    ->get();
+
+        // 2. LOGICA NUEVA PARA LA GRÁFICA (Necesitamos orden Ascendente por fecha)
+        // Usamos la colección que ya trajimos para no consultar 2 veces, solo la invertimos
+        $ordenesParaGrafica = $ordenes->sortBy('fechafirm'); 
+
+        // Catálogo de reparaciones (Copiado de tu método pruebaHistorialOrdenes)
+        $catalogoReparaciones = [
+            'vehicle1' => 'Afinación mayor',
+            'vehicle11' => 'Medio motor',
+            'vehicle2' => 'Ajuste motor',
+            'vehicle12' => 'Motor completo',
+            'vehicle3' => 'Alineación y balanceo',
+            'vehicle13' => 'Parabrisas y vidrios',
+            'vehicle4' => 'Amortiguadores',
+            'vehicle14' => 'Frenos',
+            'vehicle5' => 'Cambio aceite y filtro',
+            'vehicle15' => 'Sistema eléctrico',
+            'vehicle6' => 'Clutch',
+            'vehicle16' => 'Sistema de enfriamiento',
+            'vehicle7' => 'Diagnóstico',
+            'vehicle17' => 'Suspensión',
+            'vehicle8' => 'Dirección',
+            'vehicle18' => 'Transmisión y diferencial',
+            'vehicle9' => 'Lavado y engrasado',
+            'vehicle19' => 'Tapicería',
+            'vehicle10' => 'Hojalatería y pintura',
+            'vehicle20' => 'Otro',
+        ];
+
+        // Mapeo de datos para ChartJS
+        $chartData = $ordenesParaGrafica->map(function($orden) use ($catalogoReparaciones) {
+            $reparaciones = [];
+            $esGolpe = false;
+
+            foreach ($catalogoReparaciones as $key => $label) {
+                if (!empty($orden->$key) && $orden->$key != '0') {
+                    $reparaciones[] = $label;
+                    if ($key === 'vehicle10') { $esGolpe = true; }
+                }
+            }
+
+            return [
+                'id' => $orden->id,
+                'fecha' => $orden->fechafirm,
+                'km' => (int) str_replace(',', '', $orden->kilometraje),
+                'taller' => $orden->taller,
+                'es_golpe' => $esGolpe,
+                'reparaciones' => $reparaciones,
+                'observacion' => $orden->observacion
+            ];
+        })->values(); // values() resetea los índices del array después del sortBy
 
         // Obtener historial de órdenes
         // Nota: 'archivos' y 'historial' deben ser relaciones en OrdenVehiculo si las usas con 'with'
@@ -152,16 +209,12 @@ class VehiculoController extends Controller
         // Fotos de la última supervisión semanal
         $fotos = SupervisionSemanal::select('foto_del', 'foto_tra', 'foto_lado_der', 'foto_lado_izq')
             ->where('no_eco', $numero_eco)
-            ->orderBy('created_at', 'desc')
+            ->orderBy('fecha_captura', 'desc')
             ->first();
 
         // Checar si ya existe supervisión esta semana
-        $startOfWeek = Carbon::now()->startOfWeek();
-        $endOfWeek = Carbon::now()->endOfWeek();
-        
-        $supervision_existe = SupervisionSemanal::where('no_eco', $numero_eco)
-            ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
-            ->exists();
+        $supervision_existe = $vehiculo->tieneSupervisionSemanal();
+        $id_supervision     = $supervision_existe ? $vehiculo->obtenerIdSupervisionSemanal() : null;
 
         // Buscamos una orden que NO esté terminada para este vehículo
         $ordenActiva = OrdenVehiculo::where('noeconomico', $vehiculo->no_economico)
@@ -174,8 +227,10 @@ class VehiculoController extends Controller
             'vehiculo' => $vehiculo,
             'ordenes' => $ordenes,
             'supervision_existe' => $supervision_existe,
+            'id_supervision' => $id_supervision,
             'fotos' => $fotos,
-            'ordenActiva' => $ordenActiva
+            'ordenActiva' => $ordenActiva,
+            'chartData' => $chartData
         ]);
     }
     
@@ -309,7 +364,7 @@ class VehiculoController extends Controller
             // 3. Definir Encabezados (Idénticos a tu Import/Export anterior)
             $headers = [
                 '#', 'Agencia', 'Número Económico', 'Placas', 'Tipo Vehículo', 
-                'Marca', 'Modelo', 'Año', 'Estado', 'Propiedad', 
+                'Marca', 'Modelo', 'Año', 'Ordenes Pendientes', 'En Taller', 'Finalizado', 'Estado', 'Propiedad', 
                 'Proceso', 'Alias', 'RPE Crea/Modifica'
             ];
 
@@ -329,18 +384,21 @@ class VehiculoController extends Controller
                     $v->marca,
                     $v->modelo,
                     $v->año,
+                    $v->ordenes_pendientes,
+                    $v->en_taller ? 'Sí' : 'No',
+                    $v->finalizado ? 'Sí' : 'No',
                     $v->estado,
                     $v->propiedad,
                     $v->proceso,
                     $v->alias,
-                    $v->rpe_creamod
+                    $v->rpe_creamod,
                 ];
                 $sheet->fromArray($rowData, NULL, 'A' . $rowNum);
                 $rowNum++;
             }
 
             // 5. ESTILOS (Replicando tu VehiculosExport.php)
-            $lastCol = 'M'; // Columna 13
+            $lastCol = 'P'; // Columna 13
             $headerRange = "A1:{$lastCol}1";
 
             // A) Autoajustar ancho de columnas
@@ -392,4 +450,105 @@ class VehiculoController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+    
+    public function historial($id)
+    {
+        // 1. Buscamos el vehículo (Eloquent funciona igual aquí)
+        $vehiculo = Vehiculo::find($id);
+
+        if (!$vehiculo) {
+            response()->page('errors/404', [], 404); // O manejar el error como prefieras
+            return;
+        }
+
+        // 2. Obtenemos supervisiones
+        $supervisiones = SupervisionDiaria::where('vehiculo_id', $id)
+            ->orderBy('fecha', 'desc')
+            ->orderBy('hora_inicio', 'desc')
+            ->get();
+
+        // 3. Renderizamos la vista usando el helper de Leaf (Blade/Aloe)
+        // Nota: Si usas response()->blade(), asegúrate de tenerlo configurado.
+        // Si usas el render por defecto de Leaf:
+        render('vehiculos.historial', [
+            'vehiculo' => $vehiculo,
+            'supervisiones' => $supervisiones
+        ]);
+    }
+
+    public function pruebaHistorialOrdenes($id)
+{
+    // 1. Buscamos el vehículo
+    $vehiculo = Vehiculo::find($id);
+
+    if (!$vehiculo) {
+        return 'Vehículo no encontrado';
+    }
+
+    // 2. Buscamos sus órdenes
+    // NOTA: Según tu modelo, usas 'noeconomico' para relacionar, no 'vehiculo_id'
+    $ordenes = OrdenVehiculo::where('noeconomico', $vehiculo->no_economico)
+        ->orderBy('fechafirm', 'asc') // Importante: Orden ascendente para la gráfica
+        ->get();
+
+    // 3. Diccionario de Reparaciones (Lo reusamos del formulario)
+    $catalogoReparaciones = [
+        'vehicle1' => 'Afinación mayor',
+        'vehicle11' => 'Medio motor',
+        'vehicle2' => 'Ajuste motor',
+        'vehicle12' => 'Motor completo',
+        'vehicle3' => 'Alineación y balanceo',
+        'vehicle13' => 'Parabrisas y vidrios',
+        'vehicle4' => 'Amortiguadores',
+        'vehicle14' => 'Frenos',
+        'vehicle5' => 'Cambio aceite y filtro',
+        'vehicle15' => 'Sistema eléctrico',
+        'vehicle6' => 'Clutch',
+        'vehicle16' => 'Sistema de enfriamiento',
+        'vehicle7' => 'Diagnóstico',
+        'vehicle17' => 'Suspensión',
+        'vehicle8' => 'Dirección',
+        'vehicle18' => 'Transmisión y diferencial',
+        'vehicle9' => 'Lavado y engrasado',
+        'vehicle19' => 'Tapicería',
+        'vehicle10' => 'Hojalatería y pintura', // <--- CLAVE PARA GOLPES
+        'vehicle20' => 'Otro',
+    ];
+
+    // 4. Preparamos datos para la Gráfica
+    $chartData = $ordenes->map(function($orden) use ($catalogoReparaciones) {
+        
+        // Detectar reparaciones marcadas
+        $reparaciones = [];
+        $esGolpe = false;
+
+        foreach ($catalogoReparaciones as $key => $label) {
+            // Tu checkbox guarda "X" o "on" o 1? Asumimos que si no es null/vacio está marcado
+            // En tu form usas value="X"
+            if (!empty($orden->$key) && $orden->$key != '0') {
+                $reparaciones[] = $label;
+                if ($key === 'vehicle10') { // Si es Hojalatería
+                    $esGolpe = true;
+                }
+            }
+        }
+
+        return [
+            'id' => $orden->id,
+            'fecha' => $orden->fechafirm, // Eje X
+            'km' => (int) str_replace(',', '', $orden->kilometraje), // Eje Y (limpiamos comas)
+            'taller' => $orden->taller,
+            'es_golpe' => $esGolpe, // Para pintar punto rojo
+            'reparaciones' => $reparaciones, // Para el tooltip/modal
+            'observacion' => $orden->observacion
+        ];
+    });
+
+    render('vehiculos.prueba_grafica', [
+        'vehiculo' => $vehiculo,
+        'ordenes' => $ordenes->sortByDesc('fechafirm'), // Para la tabla (más reciente arriba)
+        'chartData' => $chartData,
+        'catalogo' => $catalogoReparaciones
+    ]);
+}
 }

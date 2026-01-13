@@ -131,7 +131,7 @@
                         <div class="h-full">
                             <div class="mb-5">
                                 <label class="block text-sm font-bold text-zinc-700 mb-2">Archivo:</label>
-                                <input type="file" x-ref="fileInput"
+                                <input type="file" accept=".pdf" x-ref="fileInput"
                                     class="block w-full text-sm text-zinc-500
                                             file:rounded-md file:text-sm file:font-semibold
                                             file:bg-emerald-50 file:text-emerald-700

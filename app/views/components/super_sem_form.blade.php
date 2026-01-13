@@ -97,17 +97,20 @@
     }
 </style>
 
-<div class="form-container">
-    <div class="form-group" style="margin-bottom: 25px;">
-        <label style="font-weight: bold; color: #016f2b; display: block; margin-bottom: 8px;">Vehiculo: <span
+<div class="form-container" x-data="superSemanal()">
+    <form id="vehicleForm" action="/supervision-semanal" method="post"
+        enctype="multipart/form-data"> @csrf
+    <div class="form-group flex items-center gap-4" style="margin-bottom: 25px;">
+        <label style="font-weight: bold; color: #016f2b; display: block;">Vehiculo: <span
                 style="font-weight: bold; color: black;">{{ $no_economico}}</span></label>
+        <div class="flex items-center gap-2">
+            <label style="font-weight: bold; color: #016f2b;">Fecha:</label>
+            <input type="date" x-model="fecha" @blur="validarFecha()" @change="validarFecha()" :max="new Date().toLocaleDateString('en-CA')" name="fecha_captura" required class="w-full rounded-md border-zinc-300 focus:outline-none focus:border-emerald-600 focus:ring-emerald-600 sm:text-sm py-2 px-3 border-2">
+        </div>
     </div>
     <h2 style="color: #016f2b;"> Ingresa las fotos del vehiculo:</h2>
 
-
-    <form id="vehicleForm" action="/supervision-semanal" method="post"
-        enctype="multipart/form-data">
-        @csrf
+        
         <input type="hidden" name="no_eco" value="{{ $no_economico }}">
         <input type="hidden" name="vehiculo_id" value="{{ $vehiculo_id }}">
         <div class="photo-grid">
@@ -151,7 +154,7 @@
         <div class="summary-section">
             <label for="vehicle_summary" style="font-weight:bold; color:#016f2b;">Resumen del estado del
                 vehiculo:</label>
-            <textarea id="vehicle_summary" name="resumen_est" rows="5" class="focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 border-2 border-zinc-300"
+            <textarea id="vehicle_summary" name="resumen_est" rows="3" class="focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 border-2 border-zinc-300"
                 placeholder="Describe aquí el estado general del vehículo..."></textarea>
         </div>
         <div id="progreso-subida" style="display: none; margin-top: 15px;">
@@ -176,6 +179,32 @@
                 input.parentElement.querySelector('label').style.display = 'none';
             };
             reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function superSemanal() {
+        return {
+            fecha: new Date().toLocaleDateString('en-CA'),
+
+            validarFecha() {
+                const hoy = new Date().toLocaleDateString('en-CA');
+
+                if (this.fecha > hoy) {
+                    // Corrige automáticamente a hoy
+                    this.fecha = hoy;
+
+                    // Muestra alerta tipo toast (igual que en diaria)
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'warning',
+                        title: 'No puedes seleccionar fechas futuras',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true,
+                    });
+                }
+            }
         }
     }
 

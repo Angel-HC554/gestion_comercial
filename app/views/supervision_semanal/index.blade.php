@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="min-h-screen bg-gray-50 pb-10">
-    <div class="flex h-full flex-1 flex-col gap-4 mx-6 md:mx-10 pt-6">
+    <div class="flex h-full flex-1 flex-col gap-4 mx-6 md:mx-10 pt-6" id="contenedor-principal">
         
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <h1 class="text-3xl font-bold tracking-tight text-zinc-900">Supervisiones Semanales</h1>
@@ -38,12 +38,22 @@
                     </select>
                 </div>
 
-                <button type="submit" class="w-full md:w-auto h-10 px-6 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2">
+                <button type="submit" class="w-full md:w-auto h-10 px-6 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                     </svg>
                     Filtrar
                 </button>
+                   <button 
+                        type="button"
+                        hx-get="/supervision-semanal/resumen-agencias?mes={{ $filtrosActuales['mes'] }}&año={{ $filtrosActuales['año'] }}"
+                        hx-target="#contenedor-principal"
+                        hx-swap="innerHTML"
+                        hx-indicator="#loader-tabla"
+                        class="w-full md:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+                        Ver resumen por agencias
+                    </button>
+                
             </div>
         </form>
 
@@ -59,17 +69,17 @@
 
         <hr class="border-zinc-200">
 
-        <div id="contenido-tabla" style="display:none;" class="tabla-scrollable bg-white rounded-lg shadow-md border border-zinc-200">
+        <div id="contenido-tabla" style="display:none;" class="tabla-scrollable bg-white rounded-lg shadow-md border border-zinc-300">
             <table class="tabla-matriz">
                 <thead>
                     <tr>
                         <th class="bg-zinc-100 text-zinc-700 font-bold uppercase text-xs tracking-wider">Agencia</th>
                         <th class="bg-zinc-100 text-zinc-700 font-bold uppercase text-xs tracking-wider shadow-r">Vehículo</th>
                         @foreach($semanasDelMes as $i => $semana)
-                            <th class="bg-zinc-50 text-zinc-600 font-medium text-xs border-b-2 border-zinc-200">
+                            <th class="bg-zinc-50 text-zinc-600 font-medium text-xs border-b-2 border-zinc-300">
                                 <span class="block font-bold text-emerald-700">Semana {{ $i + 1 }}</span>
                                 <span class="text-zinc-400 text-[10px] uppercase">
-                                    {{ \Carbon\Carbon::parse($semana['inicio'])->format('d M') }} - {{ \Carbon\Carbon::parse($semana['fin'])->format('d M') }}
+                                    {{ \Carbon\Carbon::parse($semana['inicio'])->translatedFormat('d M') }} - {{ \Carbon\Carbon::parse($semana['fin'])->translatedFormat('d M') }}
                                 </span>
                             </th>
                         @endforeach
@@ -84,8 +94,7 @@
                             @foreach($vehiculo->status_semanas as $status)
                                 <td class="p-2">
                                     @if($status['tipo'] == 'cumplido')
-                                        <a href="{{ '/supervisiones/pdf/'. $status['id'] }}" target="_blank" class="flex justify-center group relative" title="Supervisión #{{ $status['id'] }}
-Fecha: {{ $status['fecha'] }}">
+                                        <a href="{{ '/supervisiones/pdf/'. $status['id'] }}" target="_blank" class="flex justify-center group relative" title="Supervisión #{{ $status['id'] }} Fecha: {{ $status['fecha'] }}">
                                             <svg class="w-7 h-7 text-emerald-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                                                 <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" />
                                             </svg>
@@ -93,6 +102,12 @@ Fecha: {{ $status['fecha'] }}">
                                                 ID: {{ $status['id'] }}
                                             </span>
                                         </a>
+                                    @elseif($status['tipo'] == 'taller')
+                                    <div class="flex justify-center relative group" title="En Taller">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7 text-amber-400">
+                                            <path fill-rule="evenodd" d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889c-.02.12-.115.26-.297.348a7.493 7.493 0 00-.986.57c-.166.115-.334.126-.45.083L6.3 5.508a1.875 1.875 0 00-2.282.819l-.922 1.597a1.875 1.875 0 00.432 2.385l.84.692c.095.078.17.229.154.43a7.598 7.598 0 000 1.139c.015.2-.059.352-.153.43l-.841.692a1.875 1.875 0 00-.432 2.385l.922 1.597a1.875 1.875 0 002.282.818l1.019-.382c.115-.043.283-.031.45.082.312.214.641.405.985.57.182.088.277.228.297.35l.178 1.071c.151.904.933 1.567 1.85 1.567h1.844c.916 0 1.699-.663 1.85-1.567l.178-1.072c.02-.12.114-.26.297-.349.344-.165.673-.356.985-.57.167-.114.335-.125.45-.082l1.02.382a1.875 1.875 0 002.28-.819l.923-1.597a1.875 1.875 0 00-.432-2.385l-.84-.692c-.095-.078-.17-.229-.154-.43a7.614 7.614 0 000-1.139c-.016-.2.059-.352.153-.43l.84-.692c.708-.582.891-1.59.433-2.385l-.922-1.597a1.875 1.875 0 00-2.282-.818l-1.02.382c-.114.043-.282.031-.449-.083a7.49 7.49 0 00-.985-.57c-.183-.087-.277-.227-.297-.348l-.179-1.072a1.875 1.875 0 00-1.85-1.567h-1.843zM12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" clip-rule="evenodd" />
+                                        </svg>
+                                    </div>
                                     @elseif($status['tipo'] == 'no_cumplido')
                                         <div class="flex justify-center relative group" title="No Cumplido">
                                             <svg class="w-7 h-7 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">

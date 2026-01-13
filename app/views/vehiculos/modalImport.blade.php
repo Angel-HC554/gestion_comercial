@@ -8,16 +8,33 @@
          @click.away="close()">
         
         <div class="p-6 border-b border-zinc-200 flex justify-between items-center">
-            <h3 class="text-xl font-bold text-zinc-900">Importar Vehículos</h3>
-            <button @click="close()" class="text-zinc-400 hover:text-zinc-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
+            <div>
+                <h3 class="text-xl font-bold text-zinc-900">Importar Vehículos</h3>
+                <p class="text-sm text-gray-600 mt-1">Carga o actualiza tu flota mediante Excel</p>
+            </div>
         </div>
 
         <div class="p-6">
+            <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-4 flex items-start gap-3">
+                <div class="bg-white p-2 rounded-full shadow-sm text-emerald-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-emerald-900">1. Descarga el formato</h4>
+                    <p class="text-sm text-emerald-700 mt-1">Usa este archivo para llenar los datos. No modifiques los encabezados de las columnas.</p>
+                    <a href="/plantillas/plantilla_vehiculos.xlsx" download class="inline-flex items-center gap-2 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded mt-2 transition-colors">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Descargar formato .xlsx
+                    </a>
+                </div>
+            </div>
+            <div class="relative flex py-1 items-center">
+                <div class="grow border-t border-gray-200"></div>
+                <span class="shrink-0 mx-4 text-gray-500 text-xs uppercase tracking-wider font-medium">2. Sube el archivo</span>
+                <div class="grow border-t border-gray-200"></div>
+            </div>
             <p class="text-sm text-zinc-600 mb-4">
-                Sube un archivo Excel (.xlsx) con las columnas: <br>
-                <span class="text-xs font-mono bg-gray-100 p-1 rounded">Agencia, No. Eco, Placas, Tipo, Marca, Modelo, Año, Estado, Propiedad, Proceso, Alias, rpe_cremod</span>
+                Sube el archivo para guardar o actualizar la información correspondiente.
             </p>
 
             <form @submit.prevent="submitImport">
@@ -50,9 +67,9 @@
                 </div>
 
                 <div class="flex justify-end gap-3 mt-6">
-                    <button type="button" @click="close()" class="px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 rounded-md transition-colors">Cancelar</button>
+                    <button type="button" @click="close()" class="px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 rounded-md transition-colors cursor-pointer">Cancelar</button>
                     <button type="submit" 
-                        class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-md shadow-sm transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-md shadow-sm transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         :disabled="!file || uploading">
                         <span x-show="!uploading">Importar</span>
                         <span x-show="uploading">Importando...</span>

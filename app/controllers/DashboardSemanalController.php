@@ -71,7 +71,7 @@ class DashboardSemanalController extends Controller
             'realizadas' => $supervisionesRealizadas,
             'faltantes' => $faltantes,
             'porcentaje' => $porcentajeCumplimiento,
-            'semanaLabel' => $inicioSemana->format('d M') . ' al ' . $finSemana->format('d M'),
+            'semanaLabel' => $inicioSemana->translatedFormat('d M') . ' al ' . $finSemana->translatedFormat('d M'),
             
             // Datos Gráficas
             'historiaLabels' => json_encode($graficaSemanas),

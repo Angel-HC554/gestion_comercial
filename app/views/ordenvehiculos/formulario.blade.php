@@ -377,10 +377,10 @@
                 @foreach ($reparaciones as $key => $label)
                     <div class="flex items-center">
                         <input type="checkbox" name="{{ $key }}" value="X" id="{{ $key }}"
-                            class="w-4 h-4 text-emerald-600 border-zinc-300 rounded focus:ring-emerald-500"
+                            class="w-4 h-4 text-emerald-600 border-zinc-300 rounded focus:ring-emerald-500 cursor-pointer"
                             {{ isset($ordenEditar) && $ordenEditar->$key == 'X' ? 'checked' : '' }}>
                         <label for="{{ $key }}"
-                            class="ml-2 text-sm text-zinc-700">{{ $label }}</label>
+                            class="ml-2 text-sm text-zinc-700 cursor-pointer">{{ $label }}</label>
                     </div>
                 @endforeach
             </div>

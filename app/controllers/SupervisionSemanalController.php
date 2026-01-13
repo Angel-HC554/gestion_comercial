@@ -60,7 +60,7 @@ class SupervisionSemanalController extends Controller
 
         // 3. Query Vehículos
         $queryVehiculos = Vehiculo::query()
-            ->select('id', 'no_economico', 'agencia')
+            ->select('id', 'no_economico', 'agencia', 'en_taller')
             ->orderBy('agencia')
             ->orderBy('no_economico');
 
@@ -71,9 +71,9 @@ class SupervisionSemanalController extends Controller
 
         // 4. Eager Loading (Carga optimizada)
         $queryVehiculos->with(['supervisioSemanal' => function ($q) use ($fechaInicioConsulta, $fechaFinConsulta) {
-            $q->whereBetween('created_at', [$fechaInicioConsulta, $fechaFinConsulta])
-                ->select('id', 'vehiculo_id', 'created_at')
-                ->orderBy('created_at', 'desc');
+            $q->whereBetween('fecha_captura', [$fechaInicioConsulta, $fechaFinConsulta])
+                ->select('id', 'vehiculo_id', 'fecha_captura')
+                ->orderBy('fecha_captura', 'desc');
         }]);
 
         $vehiculos = $queryVehiculos->get();
@@ -86,24 +86,30 @@ class SupervisionSemanalController extends Controller
             foreach ($semanasDelMes as $index => $semana) {
                 // Buscamos la supervisión en el rango real de esa semana
                 $supervision = $vehiculo->supervisioSemanal->first(function ($sup) use ($semana) {
-                    return $sup->created_at->between($semana['inicio_real'], $semana['fin_real']);
+                    return $sup->fecha_captura->between($semana['inicio_real'], $semana['fin_real']);
                 });
 
                 if ($supervision) {
                     $status = [
                         'tipo' => 'cumplido',
                         'id' => $supervision->id,
-                        'fecha' => $supervision->created_at->format('d/m/Y')
+                        'fecha' => $supervision->fecha_captura->format('d/m/Y')
                     ];
                 } elseif ($semana['fin_real']->isFuture()) {
                     $status = [
                         'tipo' => 'futuro'
                     ];
                 } else {
-                    $status = [
-                        'tipo' => 'no_cumplido'
-                    ];
-                    $incumplimientos++;
+                    if ($vehiculo->en_taller) {
+                        $status = [
+                            'tipo' => 'taller'
+                        ];
+                    } else{
+                        $status = [
+                            'tipo' => 'no_cumplido'
+                        ];
+                        $incumplimientos++;
+                    }
                 }
 
                 // Index + 1 para que coincida con "Semana 1", "Semana 2", etc.
@@ -185,6 +191,7 @@ class SupervisionSemanalController extends Controller
             $saveData = [
                 'vehiculo_id' => $data['vehiculo_id'],
                 'no_eco' => $data['no_eco'],
+                'fecha_captura' => $data['fecha_captura'] ?? null,
                 'resumen_est' => $data['resumen_est'] ?? null,
                 // 'user_id' => auth()->id(), // Descomentar si ya tienes auth implementado
                 'created_at' => Carbon::now(),
@@ -357,6 +364,16 @@ class SupervisionSemanalController extends Controller
         $ancho  = 85;
         $alto   = 65;
         $espacio = 6;
+        
+        // Descripciones para las fotos de la página 1
+        $descripcionesPagina1 = [
+            0 => 'Frente',
+            1 => 'Trasera',
+            2 => 'Lado Izquierdo',
+            3 => 'Lado Derecho',
+            4 => 'Poliza/Interior',
+            5 => 'Tarjeta/Tablero'
+        ];
 
         for ($i = 0; $i < 6; $i++) {
             // Solo pintamos si existe la imagen
@@ -368,6 +385,12 @@ class SupervisionSemanalController extends Controller
 
                 // Image(file, x, y, w, h, type, link, align, resize, dpi, palign, ismask, imgmask, border)
                 $pdf->Image($fotosProcesadas[$i], $x, $y, $ancho, $alto, '', '', 'T', false, 300, '', false, false, 1, true);
+                
+                // Añadir texto descriptivo debajo de la imagen
+                $pdf->SetFont('Helvetica', 'B', 8);
+                $pdf->SetTextColor(0, 0, 0); // Texto negro
+                $pdf->SetXY($x, $y + $alto + 1);
+                $pdf->Cell($ancho, 5, $descripcionesPagina1[$i], 0, 0, 'C');
             }
         }
 
@@ -380,8 +403,9 @@ class SupervisionSemanalController extends Controller
         $pdf->SetXY(220, 15); // Ajusta según tu plantilla
         $pdf->Cell(50, 5, 'Eco: ' . $supervision->no_eco, 0, 0, 'R');
 
-        $anchoGrande = 75;
-        $altoGrande  = 60;
+        // Mismas dimensiones que la página 1
+        $anchoGrande = 85;
+        $altoGrande  = 65;
         $yFoto = 50;
         $espacioHorizontal = (297 - (3 * $anchoGrande)) / 4; // Espacio entre fotos y márgenes
         
@@ -401,7 +425,7 @@ class SupervisionSemanalController extends Controller
                 $pdf->Image($fotosProcesadas[$i], $x, $yFoto, $anchoGrande, $altoGrande, '', '', '', false, 300, '', false, false, 1);
                 
                 // Añadir texto descriptivo debajo de la imagen
-                $pdf->SetFont('Helvetica', 'B', 10);
+                $pdf->SetFont('Helvetica', 'B', 8);
                 $pdf->SetTextColor(0, 0, 0); // Texto negro
                 $pdf->SetXY($x, $yFoto + $altoGrande + 1);
                 $pdf->Cell($anchoGrande, 5, $descripciones[$i], 0, 1, 'C');
@@ -427,7 +451,7 @@ class SupervisionSemanalController extends Controller
         // Texto General
         $pdf->SetXY(95, $yFoto + 90);
         $pdf->SetTextColor(0, 100, 0);
-        $pdf->Cell(0, 10, "Observaciones:\n" . ($supervision->resumen_est ?? 'Sin observaciones'), 0, 1, 'L');
+        $pdf->Cell(0, 10, "Observaciones:" . ($supervision->resumen_est ?? 'Sin observaciones'), 0, 1, 'L');
 
         // Título Final
         $pdf->SetFont('Helvetica', 'B', 16);
@@ -440,4 +464,257 @@ class SupervisionSemanalController extends Controller
         $pdf->Output('Supervision_' . $supervision->no_eco . '.pdf', 'I');
         exit;
     }
+
+    public function resumenAgenciaasass()
+    {   
+        $claves = [
+            'DW01A' => 'CENTRO', 
+            'DW01B' => 'NORTE', 
+            'DW01C' => 'SUR', 
+            'DW01D' => 'ORIENTE', 
+            'DW01E' => 'PONIENTE', 
+            'DW01G' => 'PROGRESO', 
+            'DW01H' => 'HUNUCMA', 
+            'DW01J' => 'UMAN', 
+            'DW01K' => 'ACANCEH', 
+            'DW01M' => 'CONKAL'
+        ];
+
+        // 1. Configuración de Fechas
+        $mes = request()->get('mes', Carbon::now()->month);
+        $año = request()->get('año', Carbon::now()->year);
+
+        Carbon::setLocale('es');
+
+        $fechaInicioMes = Carbon::create($año, $mes, 1)->startOfDay();
+        $fechaFinMes = $fechaInicioMes->copy()->endOfMonth();
+
+        // 2. Construcción de Semanas Laborales (Lunes a Sábado)
+        // Logica portada exactamente de tu Laravel Controller
+        $inicioSemana = $fechaInicioMes->copy()->startOfWeek(Carbon::MONDAY);
+        $semanasDelMes = [];
+
+        while ($inicioSemana <= $fechaFinMes) {
+            $finSemana = $inicioSemana->copy()->addDays(5)->endOfDay(); // Sábado
+
+            // Recorte visual para que no muestre fechas del mes siguiente en la cabecera
+            // aunque la consulta lógica sí debe buscar en la semana completa
+            if ($finSemana->month != $mes) {
+                $finSemana = $fechaFinMes->copy()->endOfDay();
+            }
+
+            $semanasDelMes[] = [
+                'inicio' => $inicioSemana->copy(),
+                'fin' => $finSemana->copy(),
+                'inicio_real' => $inicioSemana->copy(), // Guardamos el inicio real para la query
+                'fin_real' => $inicioSemana->copy()->addDays(5)->endOfDay() // Guardamos fin real (Sábado)
+            ];
+
+            // Avanzar al siguiente lunes
+            $inicioSemana->addWeek();
+        }
+
+        // Definir rango total para la consulta Eager Loading
+        // Usamos la primera y última semana calculada
+        $fechaInicioConsulta = $semanasDelMes[0]['inicio_real'];
+        $fechaFinConsulta = $semanasDelMes[count($semanasDelMes) - 1]['fin_real'];
+
+        $todosLosVehiculos = Vehiculo::with(['supervisioSemanal' => function ($q) use ($fechaInicioConsulta, $fechaFinConsulta){
+            $q->whereBetween('created_at', [$fechaInicioConsulta, $fechaFinConsulta]);
+        }])
+        ->select('id', 'no_economico', 'agencia', 'en_taller')
+        ->get();
+
+        //Tabla
+        $tablaResumen = [];
+        $hoy = Carbon::now();
+
+        foreach ($claves as $clave => $nombre) {
+            $sufijo = substr($clave, -1);
+            // Filtrar vehiculos que pertenecen a la agencia (que terminen con el sufijo)
+            $vehiculosGrupo = $todosLosVehiculos->filter(function ($v) use ($sufijo){
+                return str_ends_with(trim($v->agencia), $sufijo);
+            });
+
+            // Calculo de totales
+            $totalVehiculos = $vehiculosGrupo->count();
+            $totalEnTaller = $vehiculosGrupo->where('en_taller', true)->count();
+            // Calculo de cumplimientos y pendientes
+            $supervisionesRealizadas = 0;
+            $supervisionesPendientes = 0;
+
+            foreach ($vehiculosGrupo as $vehiculo) {
+                foreach ($semanasDelMes as $semana) {
+                    //verifica si tiene supervision esa semana
+                    $tieneSupervision = $vehiculo->supervisioSemanal->contains(function ($sup) use ($semana){
+                        return $sup->created_at >= $semana['inicio_real'] && $sup->created_at <= $semana['fin_real'];
+                    });
+                    if ($tieneSupervision) {
+                        $supervisionesRealizadas++;
+                    } else {
+                        if ($semana['fin_real']->endOfDay()->isPast()) {
+                            $supervisionesPendientes++;
+                        }
+                    }
+                }
+            }
+
+            $totalEsperadas = $supervisionesRealizadas + $supervisionesPendientes;
+            $porcentaje = 100; //default
+
+            if ($totalEsperadas > 0) {
+                $porcentaje = round(($supervisionesRealizadas / $totalEsperadas) * 100);
+            }
+
+            //armar la fila para el resumen
+            $tablaResumen[] = [
+                'clave' => $clave,
+                'nombre' => $nombre,
+                'total_vehiculos' => $totalVehiculos,
+                'en_taller' => $totalEnTaller,
+                'pendientes' => $supervisionesPendientes,
+                'cumplimiento_str' => "{$supervisionesRealizadas} - {$porcentaje}%",
+                'porcentaje' => $porcentaje
+            ];
+        }
+
+        $nombreMes = $fechaInicioMes->translatedFormat('F Y');
+
+        return view('supervision_semanal.resumen_agencias', [
+            'nombreMes' => ucfirst($nombreMes),
+            'resumen' => $tablaResumen,
+        ]);
+    }
+    public function resumenAgencias()
+{   
+    $claves = [
+        'DW01A' => 'CENTRO', 'DW01B' => 'NORTE', 'DW01C' => 'SUR', 
+        'DW01D' => 'ORIENTE', 'DW01E' => 'PONIENTE', 'DW01G' => 'PROGRESO', 
+        'DW01H' => 'HUNUCMA', 'DW01J' => 'UMAN', 'DW01K' => 'ACANCEH', 
+        'DW01M' => 'CONKAL'
+    ];
+
+    // --- CORRECCIÓN AQUÍ ---
+    // 1. Obtener valores crudos
+    $mesInput = request()->get('mes');
+    $añoInput = request()->get('año');
+
+    // 2. Limpiar y validar: Si viene vacío, nulo o 0, usar fecha actual
+    $mes = $mesInput ? (int)$mesInput : \Carbon\Carbon::now()->month;
+    $año = $añoInput ? (int)$añoInput : \Carbon\Carbon::now()->year;
+
+    \Carbon\Carbon::setLocale('es');
+
+    // 3. Crear fecha asegurando que son enteros (evita el error de timezone)
+    $fechaInicioMes = \Carbon\Carbon::create($año, $mes, 1)->startOfDay();
+    $fechaFinMes = $fechaInicioMes->copy()->endOfMonth();
+
+    // ... (El resto del código sigue igual desde aquí: Construir Array de Semanas)
+    $inicioSemana = $fechaInicioMes->copy()->startOfWeek(\Carbon\Carbon::MONDAY);
+    $semanasDelMes = [];
+
+    while ($inicioSemana <= $fechaFinMes) {
+        $finSemana = $inicioSemana->copy()->addDays(5)->endOfDay();
+        // Ajuste visual para no pasarse de mes
+        if ($finSemana->month != $mes) $finSemana = $fechaFinMes->copy()->endOfDay();
+        
+        // Solo agregamos la semana si tiene días dentro del mes seleccionado
+        if ($inicioSemana->month == $mes || $finSemana->month == $mes) {
+            $semanasDelMes[] = [
+                'inicio_real' => $inicioSemana->copy(),
+                'fin_real' => $finSemana->copy()
+            ];
+        }
+        $inicioSemana->addWeek();
+    }
+
+    // --- PROTECCIÓN CONTRA ARRAY VACÍO ---
+    if (empty($semanasDelMes)) {
+        // Renderizamos un mensaje simple pero válido
+        echo '<div class="p-8 text-center bg-white rounded-lg border border-zinc-200 shadow-sm">
+                <p class="text-zinc-500 font-medium">No hay semanas laborales registradas para este mes.</p>
+                <button hx-get="/supervision-semanal" hx-target="#contenedor-principal" class="mt-4 text-emerald-600 font-bold hover:underline">Volver</button>
+              </div>';
+        return; 
+    }
+
+    // --- LÓGICA DE ÍNDICE SEGURA ---
+    $totalSemanas = count($semanasDelMes);
+    
+    // Semana actual por defecto (si estamos en el mes actual)
+    $semanaPorDefecto = 0;
+    foreach ($semanasDelMes as $idx => $s) {
+        if (\Carbon\Carbon::now()->between($s['inicio_real'], $s['fin_real'])) {
+            $semanaPorDefecto = $idx;
+            break;
+        }
+    }
+
+    $semanaIndex = (int) request()->get('semana_index', $semanaPorDefecto);
+    
+    // Validación de límites (CORREGIDO para evitar el error -1)
+    if ($semanaIndex < 0) $semanaIndex = 0;
+    if ($semanaIndex >= $totalSemanas) $semanaIndex = max(0, $totalSemanas - 1);
+
+    // Selección de fechas
+    $semanaSeleccionada = $semanasDelMes[$semanaIndex];
+    $inicioConsulta = $semanaSeleccionada['inicio_real'];
+    $finConsulta = $semanaSeleccionada['fin_real'];
+
+    // 3. Consulta de Vehículos y Supervisiones
+    $todosLosVehiculos = \App\Models\Vehiculo::with(['supervisioSemanal' => function ($q) use ($inicioConsulta, $finConsulta){
+            $q->whereBetween('fecha_captura', [$inicioConsulta, $finConsulta]);
+        }])
+        ->select('id', 'no_economico', 'agencia', 'en_taller')
+        ->get();
+
+    // 4. Procesar la Matriz
+    $tablaResumen = [];
+    foreach ($claves as $clave => $nombre) {
+        $sufijo = substr($clave, -1);
+        $vehiculosGrupo = $todosLosVehiculos->filter(function ($v) use ($sufijo){
+            return str_ends_with(trim($v->agencia), $sufijo);
+        });
+
+        $totalVehiculos = $vehiculosGrupo->count();
+        $totalEnTaller = $vehiculosGrupo->where('en_taller', 1)->count();
+        $supervisionesRealizadas = 0;
+        $pendientes = 0;
+
+        foreach ($vehiculosGrupo as $vehiculo) {
+            if ($vehiculo->supervisioSemanal->isNotEmpty()) {
+                $supervisionesRealizadas++;
+            } else {
+                if (!$vehiculo->en_taller) $pendientes++; 
+            }
+        }
+        
+        $vehiculosActivos = $totalVehiculos - $totalEnTaller;
+        $porcentaje = ($vehiculosActivos > 0) ? round(($supervisionesRealizadas / $vehiculosActivos) * 100) : 0;
+
+        $tablaResumen[] = [
+            'clave' => $clave,
+            'nombre' => $nombre,
+            'total_vehiculos' => $totalVehiculos,
+            'en_taller' => $totalEnTaller,
+            'pendientes' => $pendientes,
+            'cumplidos' => $supervisionesRealizadas,
+            'porcentaje' => $porcentaje
+        ];
+    }
+
+    $nombreMes = $fechaInicioMes->translatedFormat('F Y');
+
+    // Renderizamos la vista pasando también mes y año para la paginación
+    render('supervision_semanal.partials.resumen_agencias', [
+        'nombreMes' => ucfirst($nombreMes),
+        'resumen' => $tablaResumen,
+        'semanaIndex' => $semanaIndex,
+        'totalSemanas' => $totalSemanas,
+        'rangoSemana' => $inicioConsulta->translatedFormat('d M') . ' - ' . $finConsulta->translatedFormat('d M'),
+        'numeroSemana' => $semanaIndex + 1,
+        'mes' => $mes, // Importante para mantener el contexto
+        'año' => $año  // Importante para mantener el contexto
+    ]);
+}
 }

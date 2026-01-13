@@ -3,7 +3,7 @@
 ])
 
 @section('content')
-    <div x-data="vehiculosApp()" x-init="init()" @import-success.window="handleImportSuccess($event.detail.message)" class="min-h-screen bg-gray-50 pb-10">
+    <div x-data="vehiculosApp()" @import-success.window="handleImportSuccess($event.detail.message)" class="min-h-screen bg-gray-50 pb-10">
 
         <div class="flex items-center justify-start gap-12 mb-6 mx-10 pt-6">
             <h1 class="text-2xl font-bold tracking-tight text-zinc-900">Vehículos</h1>

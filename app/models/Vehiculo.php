@@ -12,7 +12,7 @@ class Vehiculo extends Model
     // protected $table = 'vehiculos';
 
     protected $fillable = [
-        'id', // Ojo: usualmente el ID es auto-incremental y no se pone en fillable, pero lo dejo si lo necesitas manipular.
+        'id',
         'agencia',
         'no_economico',
         'placas',
@@ -25,6 +25,9 @@ class Vehiculo extends Model
         'proceso',
         'alias',
         'rpe_creamod',
+        'ordenes_pendientes',
+        'en_taller',
+        'finalizado',
     ];
 
     // --- RELACIONES ---
@@ -110,9 +113,23 @@ class Vehiculo extends Model
 
     public function tieneSupervisionSemanal()
     {
+        $inicio = Carbon::now()->startOfWeek(Carbon::MONDAY); // lunes
+        $fin    = $inicio->copy()->addDays(5)->endOfDay(); // Sabado
         return $this->supervisioSemanal()
-            ->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()])
+            ->whereBetween('fecha_captura', [$inicio, $fin])
             ->exists();
+    }
+
+    public function obtenerIdSupervisionSemanal()
+    {
+        $inicio = Carbon::now()->startOfWeek(Carbon::MONDAY); // lunes
+        $fin    = $inicio->copy()->addDays(5)->endOfDay(); // Sabado
+        
+        $supervision = $this->supervisioSemanal()
+            ->whereBetween('fecha_captura', [$inicio, $fin])
+            ->first();
+            
+        return $supervision?->id;
     }
 
     // --- ACCESORS (Atributos Calculados) ---

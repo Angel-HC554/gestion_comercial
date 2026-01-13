@@ -12,6 +12,7 @@ columns:
     nullable: true # Lo dejo nullable por si aún no migras la tabla users
   
   no_eco: string
+  fecha_captura: date
   
   # Fotos Obligatorias
   foto_del: string

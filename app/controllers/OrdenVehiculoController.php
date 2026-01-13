@@ -221,7 +221,11 @@ class OrdenVehiculoController extends Controller
             $vehiculo = Vehiculo::where('no_economico', $orden->noeconomico)->first();
 
             if ($vehiculo) {
-                $vehiculo->update(['estado' => 'En Mantenimiento']);
+                $vehiculo->ordenes_pendientes += 1;
+                $vehiculo->en_taller = true;
+                $vehiculo->finalizado = false;
+                $vehiculo->estado = 'En Mantenimiento';
+                $vehiculo->save();
             }
 
             HistorialOrden::create([
@@ -590,11 +594,22 @@ class OrdenVehiculoController extends Controller
 
         $kmSalida = str_replace(',', '', $kmSalidaInput);
         $kmEntrada = (int) $orden->kilometraje;
+
+        $fechaEntrada = $orden->fechafirm;
+
+
         // --- PASO DE LIMPIEZA ---
         if ($kmSalida < $kmEntrada) {
             return response()->json([
                 'status' => 'error',
                 'message' => "El kilometraje de salida no puede ser menor al de entrada (" . number_format($kmEntrada) . ")."
+            ], 400);
+        }
+
+        if ($fechaTerminacion < $fechaEntrada) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "La fecha de terminación no puede ser menor a la fecha de entrada ({$fechaEntrada})."
             ], 400);
         }
 
@@ -612,11 +627,24 @@ class OrdenVehiculoController extends Controller
                 'servicio' => $orden->requiere_servicio,
             ]);
 
-                // --- NUEVO: LIBERAR VEHÍCULO ---
+                // --- LIBERAR VEHÍCULO ---
                 $vehiculo = Vehiculo::where('no_economico', $orden->noeconomico)->first();
                 
                 if ($vehiculo) {
-                    $vehiculo->update(['estado' => 'En Circulacion']);
+                    if ($vehiculo->ordenes_pendientes > 0) {
+                        $vehiculo->ordenes_pendientes -= 1;
+                    }
+
+                    if ($vehiculo->ordenes_pendientes === 0) {
+                        $vehiculo->en_taller = false;
+                        $vehiculo->finalizado = true;
+                        $vehiculo->estado = 'En Circulacion';
+                    } else{
+                        $vehiculo->en_taller = true;
+                        $vehiculo->finalizado = false;
+                        $vehiculo->estado = 'En Mantenimiento';
+                    }
+                    $vehiculo->save();
                 }
                 // -------------------------------
             }
@@ -835,6 +863,19 @@ class OrdenVehiculoController extends Controller
         }
 
         try {
+            if ($orden->status !== 'TERMINADO') {
+                $vehiculo = Vehiculo::where('no_economico', $orden->noeconomico)->first();
+                if ($vehiculo && $vehiculo->ordenes_pendientes > 0) {
+                    $vehiculo->ordenes_pendientes -= 1;
+
+                    if ($vehiculo->ordenes_pendientes === 0) {
+                        $vehiculo->en_taller = false;
+                        $vehiculo->finalizado = true;
+                        $vehiculo->estado = 'En Circulacion';
+                    }
+                    $vehiculo->save();
+                }
+            }
             // Opcional: Si tienes configurada la relación en el modelo, 
             // podrías necesitar borrar archivos relacionados primero o confiar en el "cascade" de la BD.
             // Por ahora, hacemos un delete simple:
