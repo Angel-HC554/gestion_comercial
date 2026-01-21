@@ -1,87 +1,85 @@
 <?php
+app()->set404(function(){
+    response()->page(ViewsPath('errors/404.html', false), 404);
+});
 
+app()->set500(function(){
+    response()->page(ViewsPath('errors/500.html', false), 500);
+});
+// --- 1. RUTAS PÚBLICAS Y DE AUTENTICACIÓN ---
+// La raíz redirige al login
 app()->get('/', function () {
     response()->redirect('/auth/login');
 });
-// Ruta para la página de inicio (Dashboard)
-app()->get('/dashboard', 'HomeController@index');
-app()->get('/api/check-orden-500', 'NotificationController@checkOrden500');
-app()->get('/ordenvehiculos/create', 'OrdenVehiculoController@create');
-app()->post('/ordenvehiculos/store', 'OrdenVehiculoController@store');
-// NUEVA RUTA: Pantalla de éxito/generación de PDF
-app()->get('/ordenvehiculos/generar/{id}', 'OrdenVehiculoController@generar');
-// Generar el DOCX (usado internamente o para debugging)
-app()->post('/ordenes/generar/{id}', 'OrdenVehiculoController@generarOrden');
 
-// Ruta para el botón "Descargar PDF" del modal
-app()->get('/ordenvehiculos/pdf/{id}', 'OrdenVehiculoController@generatePdf');
-// Vista principal
-app()->get('/ordenvehiculos', 'OrdenVehiculoController@index');
+// --- 2. RUTAS PROTEGIDAS (Middleware 'auth.required') ---
+app()->group('/',['middleware' => 'auth.required', function () {
 
-// API de búsqueda (AJAX)
-app()->get('/api/ordenes/search', 'OrdenVehiculoController@search');
-
-// Rutas para editar ordenes de vehículo
-app()->get('/api/ordenes/{id}/historial', 'OrdenVehiculoController@history');
-app()->get('/ordenvehiculos/{id}/edit', 'OrdenVehiculoController@edit');
-app()->put('/ordenvehiculos/{id}', 'OrdenVehiculoController@update');
-app()->put('/ordenvehiculos/modal/{id}', 'OrdenVehiculoController@updateModal');
-app()->post('/ordenvehiculos/upload/{id}', 'OrdenVehiculoController@uploadScan');
-// En _app.php, agrégalo junto a tus otras rutas PUT
-app()->put('/ordenvehiculos/code500/{id}', 'OrdenVehiculoController@updateCode500');
-// NUEVA RUTA PARA ELIMINAR
-app()->delete('/ordenvehiculos/{id}', 'OrdenVehiculoController@destroy');
-
-// --- RUTAS DE VEHICULOS (NUEVAS) ---
-
-// 1. API de Búsqueda (Debe ir ANTES de la ruta {id} para evitar conflictos)
-// Esta ruta es llamada por el fetch() en el AlpineJS del index
-app()->get('/vehiculos/search', 'VehiculoController@search');
-app()->get('/vehiculos', 'VehiculoController@index');
-app()->post('/vehiculos', 'VehiculoController@store');
-app()->post('/vehiculos/import', 'VehiculoController@import');
-app()->get('/vehiculos/export', 'VehiculoController@export');
-app()->get('/vehiculos/{id}', 'VehiculoController@show');
-app()->get('/vehiculos/{id}/historial', 'VehiculoController@historial');
-app()->get('/vehiculo/{id}/prueba-grafica', 'VehiculoController@pruebaHistorialOrdenes');
-
-// Rutas de Supervisión
-// Ruta para generar el reporte PDF de supervisión semanal
-app()->get('/supervisiones/pdf/{id}', 'SupervisionSemanalController@generarReportePdf');
-app()->post('/supervision-semanal', 'SupervisionSemanalController@store');
-app()->get('/supervision-semanal', 'SupervisionSemanalController@index');
-app()->get('/supervision-semanal/resumen-agencias','SupervisionSemanalController@resumenAgencias');
-app()->get('/supervision-diaria/resumen-agencias','SupervisionDiariaController@resumenAgencias');
-app()->post('/supervision-diaria', 'SupervisionDiariaController@store');
-app()->get('/supervision-diaria', 'SupervisionDiariaController@index');
-app()->get('/supervision-diaria/{id}/historial', 'SupervisionDiariaController@historial');
-app()->get('/dashboard-diario', 'DashboardController@index');
-app()->get('/dashboard-semanal', 'DashboardSemanalController@index');
-app()->get('/dashboard-vehiculos', 'DashboardVehiculosController@index');
-
-// RUTA TEMPORAL PARA ASIGNAR ADMIN
-app()->get('/hacerme-admin', function() {
-    // 1. Asegúrate de estar logueado antes de entrar a esta ruta
-    $user = auth()->user();
+    // --- DASHBOARD ---
+    app()->get('/dashboard', 'HomeController@index');
+    app()->get('/dashboard/', 'HomeController@index');
     
-    if (!$user) {
-        response()->json(['error' => 'Primero inicia sesión en el sistema.'], 401);
-    }
+    // --- API & UTILIDADES ---
+    app()->get('/api/check-orden-500', 'NotificationController@checkOrden500');
     
-    // 2. Asignar el rol
-    $user->assign('admin');
-    
-    response()->json([
-        'success' => true,
-        'message' => '¡Rol de ADMIN asignado correctamente a ' . $user->username . '!',
-        'roles_actuales' => $user->roles()
-    ]);
-});
+    // --- ORDENES DE VEHICULOS ---
+    app()->get('/ordenvehiculos/create', 'OrdenVehiculoController@create');
+    app()->post('/ordenvehiculos/store', 'OrdenVehiculoController@store');
+    app()->get('/ordenvehiculos/generar/{id}', 'OrdenVehiculoController@generar');
+    app()->post('/ordenes/generar/{id}', 'OrdenVehiculoController@generarOrden');
+    app()->get('/ordenvehiculos/pdf/{id}', 'OrdenVehiculoController@generatePdf');
+    app()->get('/ordenvehiculos', 'OrdenVehiculoController@index');
+    app()->get('/api/ordenes/search', 'OrdenVehiculoController@search');
+    app()->get('/api/ordenes/{id}/historial', 'OrdenVehiculoController@history');
+    app()->get('/ordenvehiculos/{id}/edit', 'OrdenVehiculoController@edit');
+    app()->put('/ordenvehiculos/{id}', 'OrdenVehiculoController@update');
+    app()->put('/ordenvehiculos/modal/{id}', 'OrdenVehiculoController@updateModal');
+    app()->post('/ordenvehiculos/upload/{id}', 'OrdenVehiculoController@uploadScan');
+    app()->put('/ordenvehiculos/code500/{id}', 'OrdenVehiculoController@updateCode500');
+    app()->delete('/ordenvehiculos/{id}', 'OrdenVehiculoController@destroy');
 
-// Página principal de usuarios
-app()->get('/users', 'UserController@index');
-// Endpoint que devuelve SOLO las filas (HTML) para HTMX
-app()->get('/users/search', 'UserController@search');
-app()->post('/users', 'UserController@store');
-app()->get('/users/{id}/edit', 'UserController@edit');
-app()->put('/users/{id}', 'UserController@update');
+    // --- VEHICULOS ---
+    app()->get('/vehiculos/search', 'VehiculoController@search');
+    app()->get('/vehiculos', 'VehiculoController@index');
+    app()->post('/vehiculos', 'VehiculoController@store');
+    app()->post('/vehiculos/import', 'VehiculoController@import');
+    app()->get('/vehiculos/export', 'VehiculoController@export');
+    app()->get('/vehiculos/{id}', 'VehiculoController@show');
+    app()->get('/vehiculos/{id}/historial', 'VehiculoController@historial');
+
+    // --- SUPERVISIONES ---
+    app()->get('/supervisiones/pdf/{id}', 'SupervisionSemanalController@generarReportePdf');
+    app()->post('/supervision-semanal', 'SupervisionSemanalController@store');
+    app()->get('/supervision-semanal',['middleware' => 'is:admin', 'SupervisionSemanalController@index']);
+    app()->get('/supervision-semanal/resumen-agencias','SupervisionSemanalController@resumenAgencias');
+    
+    app()->get('/supervision-diaria/resumen-agencias',['middleware' => 'is:admin', 'SupervisionDiariaController@resumenAgencias']);
+    app()->post('/supervision-diaria', 'SupervisionDiariaController@store');
+    app()->get('/supervision-diaria',['middleware' => 'is:admin', 'SupervisionDiariaController@index']);
+    app()->get('/supervision-diaria/{id}/historial', 'SupervisionDiariaController@historial');
+
+    // --- DASHBOARDS ESPECIFICOS ---
+    app()->get('/dashboard-diario', ['middleware' => 'is:admin', 'DashboardController@index']);
+    app()->get('/dashboard-semanal', ['middleware' => 'is:admin', 'DashboardSemanalController@index']);
+    app()->get('/dashboard-vehiculos',['middleware' => 'is:admin', 'DashboardVehiculosController@index']);
+
+    // --- USUARIOS ---
+    app()->get('/users', ['middleware' => 'is:admin', 'UserController@index']);
+    app()->get('/users/search', ['middleware' => 'is:admin', 'UserController@search']);
+    app()->post('/users', ['middleware' => 'is:admin', 'UserController@store']);
+    app()->get('/users/{id}/edit', ['middleware' => 'is:admin', 'UserController@edit']);
+    app()->put('/users/{id}', ['middleware' => 'is:admin', 'UserController@update']);
+
+    // --- UTILS ADMIN ---
+    app()->get('/hacerme-admin', function() {
+        // Como ya estamos dentro del grupo protegido, auth()->user() siempre devolverá un usuario[cite: 67].
+        $user = auth()->user();
+        $user->assign('admin');
+        response()->json([
+            'success' => true,
+            'message' => '¡Rol de ADMIN asignado correctamente a ' . ($user->user ?? $user->username) . '!',
+            'roles_actuales' => $user->roles()
+        ]);
+    });
+
+}]); // Fin del grupo protegido

@@ -3,7 +3,7 @@
 ])
 
 @section('content')
-<div class="min-h-screen bg-gray-50 pb-10">
+<div class="min-h-screen pb-10">
     <div class="flex h-full flex-1 flex-col gap-4 mx-6 md:mx-10 pt-6">
         
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">

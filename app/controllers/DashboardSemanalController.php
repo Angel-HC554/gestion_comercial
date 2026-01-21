@@ -20,7 +20,7 @@ class DashboardSemanalController extends Controller
 
         // --- 2. KPI: Cumplimiento Semana Actual ---
         // Contamos supervisiones únicas por vehículo en este rango
-        $supervisionesRealizadas = SupervisionSemanal::whereBetween('created_at', [$inicioSemana, $finSemana])
+        $supervisionesRealizadas = SupervisionSemanal::whereBetween('fecha_captura', [$inicioSemana, $finSemana])
                                     ->distinct('vehiculo_id')
                                     ->count('vehiculo_id');
 
@@ -40,7 +40,7 @@ class DashboardSemanalController extends Controller
             $graficaSemanas[] = $label;
 
             // Valor Eje Y
-            $count = SupervisionSemanal::whereBetween('created_at', [$start, $end])
+            $count = SupervisionSemanal::whereBetween('fecha_captura', [$start, $end])
                         ->distinct('vehiculo_id')
                         ->count('vehiculo_id');
             $graficaValores[] = $count;
@@ -49,7 +49,7 @@ class DashboardSemanalController extends Controller
         // --- 4. Gráfica 2: Cumplimiento por Agencia (Semana Actual) ---
         // Esto requiere un JOIN o cargar relaciones. Haremos la versión Eloquent simple.
         $supervisionesConVehiculo = SupervisionSemanal::with('vehiculo')
-                                    ->whereBetween('created_at', [$inicioSemana, $finSemana])
+                                    ->whereBetween('fecha_captura', [$inicioSemana, $finSemana])
                                     ->get();
 
         $agenciaStats = [];

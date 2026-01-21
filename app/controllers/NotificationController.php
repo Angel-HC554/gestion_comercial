@@ -8,7 +8,7 @@ class NotificationController extends Controller
     {
         // 1. Verificación de Seguridad: Solo usuarios con el permiso/rol
         if (!auth()->user()->can('generar 500')) { // O verifica el rol directamente
-            return response()->json(['alert' => false]);
+            return response()->json(['alert' => false, 'count' => 0]);
         }
 
         // 2. Consulta: ¿Existe alguna orden con orden_500 = 'SI' y que NO haya sido vista?

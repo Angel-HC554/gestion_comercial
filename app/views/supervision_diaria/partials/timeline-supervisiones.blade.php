@@ -13,7 +13,7 @@
             No hay registros de supervisión para este vehículo aún.
         </div>
     @else
-        <div class="relative border-l-4 border-slate-300 ml-3 md:ml-6 space-y-8">
+        <div class="relative border-l-4 border-zinc-300 ml-3 md:ml-6 space-y-8">
             
             @foreach($supervisiones as $sup)
                 <div class="relative pl-8 md:pl-12 group">
@@ -39,7 +39,7 @@
                             </div>
                         </div>
 
-                        <div class="p-4 grid grid-cols-3 gap-4 text-sm">
+                        <div class="p-4 grid grid-cols-4 gap-4 text-sm">
                             <div>
                                 <p class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Kilometraje</p>
                                 <p class="text-slate-700 font-mono text-base">{{ number_format($sup->kilometraje) }} km</p>
@@ -67,13 +67,26 @@
                             <div>
                                 <p class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Hora</p>
                                 <div class="flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>
                                     <span class="text-slate-700">
                                         {{ $sup->hora_inicio ? \Carbon\Carbon::parse($sup->hora_inicio)->format('g:i a') : '--' }} - 
                                         {{ $sup->hora_fin ? \Carbon\Carbon::parse($sup->hora_fin)->format('g:i a') : '--' }}
                                     </span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Archivo</p>
+                                <div class="flex items-center gap-2">
+                                    <a href="{{ $sup->escaneo_url ? $sup->escaneo_url : '#' }}" target="_blank">
+                                        <span class="text-emerald-700 underline font-bold hover:text-emerald-500 cursor-pointer flex gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                                            </svg>
+                                            {{ $sup->escaneo_url ? 'Ver archivo' : '--' }}
+                                        </span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -99,7 +112,7 @@
         </div>
 
         <div class="text-center mt-6">
-             <span class="text-xs text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">Fin de los registros recientes</span>
+             <span class="text-xs text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">Fin de los registros recientes</span>
         </div>
     @endif
 </div>

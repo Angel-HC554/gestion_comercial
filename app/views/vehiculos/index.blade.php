@@ -3,7 +3,7 @@
 ])
 
 @section('content')
-    <div x-data="vehiculosApp()" @import-success.window="handleImportSuccess($event.detail.message)" class="min-h-screen bg-gray-50 pb-10">
+    <div x-data="vehiculosApp()" @import-success.window="handleImportSuccess($event.detail.message)" class="min-h-screen pb-10">
 
         <div class="flex items-center justify-start gap-12 mb-6 mx-10 pt-6">
             <h1 class="text-2xl font-bold tracking-tight text-zinc-900">Vehículos</h1>
@@ -96,8 +96,8 @@
                     class="flex flex-col h-full bg-white rounded-xl shadow-md border border-zinc-300 shadow-zinc-300 hover:shadow-gray-600 cursor-pointer transition-all duration-150 hover:translate-y-2 group">
 
                     <div class="w-full h-48 overflow-hidden rounded-t-xl relative bg-gray-200">
-                        <img src="https://http2.mlstatic.com/D_NQ_NP_785948-MLM92803177440_092025-O-chevrolet-silverado-54-2500-cab-reg-ls-4x4-at.webp"
-                            alt="vehiculo cfe"
+                        <img :src="v.foto || 'https://placehold.co/460x260?text=Sin+foto'"
+                            :alt="`Foto ${v.marca} ${v.modelo || ''}`"
                             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
                     </div>
 

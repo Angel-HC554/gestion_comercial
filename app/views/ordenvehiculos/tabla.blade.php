@@ -5,7 +5,7 @@
 <div class="mx-auto py-6" x-data="ordenesTable('{{ $noEconomico }}')" @open-finish-modal.window="openModal('status', $event.detail)" x-cloak>
     @csrf
 
-    <div class="bg-white p-4 rounded-lg shadow-sm border-t-4 border-emerald-600/40 mb-6 flex flex-wrap gap-4 items-end">
+    <div class="bg-white p-4 rounded-lg shadow-sm border border-zinc-300 border-t-emerald-600/40 border-t-4 mb-6 flex flex-wrap gap-4 items-end">
         <div class="flex flex-col">
             <label class="text-sm font-medium text-zinc-700 mb-1">Desde</label>
             <input type="date" x-model="filters.fecha_inicio" @blur="fetchData()" @change="fetchData()"
@@ -60,7 +60,7 @@
     <div class="bg-white rounded-lg shadow overflow-hidden border border-zinc-400">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-zinc-400 text-sm">
-                <thead class="bg-emerald-600/85 text-white">
+                <thead class="bg-emerald-600/70 text-white">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">No.
                             Orden
@@ -101,10 +101,16 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span x-show="!orden.orden_500 || orden.orden_500 === 'NO'"
                                     class="text-zinc-400 text-xs">NO</span>
+                                @if(auth()->user()->can('generar 500'))
                                 <button x-show="orden.orden_500 && orden.orden_500 !== 'NO'"
                                     @click="openModal('code500', orden)"
                                     class="text-emerald-700 font-bold hover:underline cursor-pointer"
                                     x-text="orden.orden_500"></button>
+                                @else
+                                <span x-show="orden.orden_500 && orden.orden_500 !== 'NO'"
+                                    class="text-zinc-700 font-bold"
+                                    x-text="orden.orden_500"></span>
+                                @endif
                             </td>
 
                             <td class="px-6 py-4 whitespace-nowrap">
@@ -139,14 +145,17 @@
                                     </svg>
                                 </button>
 
-                                <a :href="'/ordenvehiculos/' + orden.id + '/edit'"
+                                @if(auth()->user()->is('admin'))
+                                <a :href="'/ordenvehiculos/' + orden.id + '/edit?return_url=/{{ urlencode(request()->getPath()) }}'"
                                     class="shadow-xs border border-gray-400 text-gray-700 bg-gray-50 p-1.5 rounded-md hover:bg-indigo-100 hover:text-indigo-600 transition duration-200">
                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.768 3.732z" />
                                     </svg>
                                 </a>
+                                @endif
 
+                                @if(auth()->user()->is('admin'))
                                 <button @click="openModal('delete', orden)"
                                     class="shadow-xs cursor-pointer border border-gray-400 text-gray-700 bg-gray-50 p-1.5 rounded-md hover:bg-red-100 hover:text-red-600 transition duration-200">
                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -154,6 +163,7 @@
                                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
                                 </button>
+                                @endif
                             </td>
                         </tr>
                     </template>
@@ -239,7 +249,7 @@
             <div class="relative">
                 <span class="absolute left-3 top-2 text-zinc-400">#</span>
                 <input type="text" x-model="tempData.orden_500" placeholder="Ej. 500-1234"
-                    class="pl-8 w-full border-gray-300 rounded-md focus:ring-emerald-600 focus:border-emerald-600 p-2 shadow-sm font-bold text-zinc-800">
+                    class="pl-8 w-full border-gray-300 rounded-md focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 p-2 border-2 font-bold text-zinc-800">
             </div>
         </div>
 

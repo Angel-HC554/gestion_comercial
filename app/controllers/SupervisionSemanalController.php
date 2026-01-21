@@ -17,8 +17,12 @@ class SupervisionSemanalController extends Controller
     public function index()
     {
         // 1. Configuración de Fechas
-        $mes = request()->get('mes', Carbon::now()->month);
-        $año = request()->get('año', Carbon::now()->year);
+        $mesInput = request()->get('mes', Carbon::now()->month);
+        $añoInput = request()->get('año', Carbon::now()->year);
+
+        // Validamos: Si viene vacío, null o 0, usamos la fecha actual
+        $mes = ($mesInput && is_numeric($mesInput)) ? (int)$mesInput : Carbon::now()->month;
+        $año = ($añoInput && is_numeric($añoInput)) ? (int)$añoInput : Carbon::now()->year;
 
         Carbon::setLocale('es');
 
@@ -35,7 +39,7 @@ class SupervisionSemanalController extends Controller
 
             // Recorte visual para que no muestre fechas del mes siguiente en la cabecera
             // aunque la consulta lógica sí debe buscar en la semana completa
-            if ($finSemana->month != $mes) {
+            if ($finSemana->gt($fechaFinMes)) {
                 $finSemana = $fechaFinMes->copy()->endOfDay();
             }
 
@@ -193,7 +197,7 @@ class SupervisionSemanalController extends Controller
                 'no_eco' => $data['no_eco'],
                 'fecha_captura' => $data['fecha_captura'] ?? null,
                 'resumen_est' => $data['resumen_est'] ?? null,
-                // 'user_id' => auth()->id(), // Descomentar si ya tienes auth implementado
+                'user_id' => auth()->id(),
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ];

@@ -48,6 +48,7 @@
 
 <body class="font-sans text-zinc-800 antialiased bg-zinc-100" x-data="{ mobileMenuOpen: false, notificationOpen: false }">
 
+    <div class="min-h-screen flex flex-col">
     <header class="sticky top-0 z-40 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
         <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
 
@@ -107,14 +108,17 @@
 
                             <a href="/vehiculos"
                                 class="flex items-center gap-3 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 hover:text-emerald-700 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke-width="1.5" stroke="currentColor" class="size-6">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                                <svg xmlns="http://www.w3.org/2000/svg" 
+                                    height="24" width="24" 
+                                    viewBox="0 -960 960 960" 
+                                    fill="currentColor" 
+                                    class="w-6 h-6">
+                                    <path d="M90-100q-12.38 0-21.19-8.81T60-130v-310l81.16-193q6.27-15.41 19.71-24.47 13.44-9.07 29.9-9.07h344.61q16.37 0 30 9.07 13.64 9.06 20 24.47l80.77 193v310q0 12.38-8.8 21.19-8.81 8.81-21.2 8.81h-24.61q-12.75 0-21.38-8.81-8.62-8.81-8.62-21.19v-48.08H144.61V-130q0 12.38-8.8 21.19Q127-100 114.61-100H90Zm55.08-399.61h435.38l-44.54-106.93H190.23l-45.15 106.93ZM120-238.08h486.15v-201.54H120v201.54Zm101.24-48.46q21.84 0 37.03-15 15.19-15 15.19-36.94 0-21.95-15.28-37.31-15.28-15.36-37.12-15.36-21.83 0-37.02 15.36-15.19 15.36-15.19 37.31 0 21.94 15.28 36.94 15.28 15 37.11 15Zm283.85 0q21.83 0 37.03-15 15.19-15 15.19-36.94 0-21.95-15.29-37.31-15.28-15.36-37.11-15.36t-37.02 15.36q-15.2 15.36-15.2 37.31 0 21.94 15.29 36.94 15.28 15 37.11 15ZM720-216.92v-327.85l-73.77-177.15H246.62l11.07-26.46q6.37-15.41 20-24.48 13.64-9.06 30-9.06H650q16.27 0 29.83 9.04 13.55 9.04 19.78 24.5L780-556.92v304.61q0 14.69-10.35 25.04-10.34 10.35-25.04 10.35H720Zm115.38-116.93v-327.84L762-837.31H363.92L375-863.77q6.36-15.41 20-24.47 13.64-9.07 30-9.07h340.77q16.27 0 29.82 9.04 13.56 9.04 19.79 24.5l80 190.31v304.23q0 14.69-10.34 25.04-10.35 10.34-25.04 10.34h-24.62Zm-472.3-5Z"/>
                                 </svg>
                                 Vehículos
                             </a>
 
+                            @if(auth()->user()->is('admin'))
                             <a href="/dashboard-vehiculos"
                                 class="flex items-center gap-3 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 hover:text-emerald-700 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -147,9 +151,11 @@
                                 </svg>
                                 Diario
                             </a>
+                            @endif
                         </div>
                     </div>
 
+                    @if(auth()->user()->is('admin'))
                     <div class="relative" x-data="{ open: false }" @click.away="open = false">
                     <button @click="open = !open"
                             class="hover:bg-zinc-50 px-2 py-2 flex items-center gap-1 text-sm font-medium text-zinc-600 hover:text-zinc-900 focus:outline-none group cursor-pointer">
@@ -186,6 +192,7 @@
                         </a>
                         </div>
                     </div>
+                    @endif
                 </nav>
             </div>
 
@@ -213,6 +220,7 @@
                         x-transition:leave-start="transform opacity-100 scale-100"
                         x-transition:leave-end="transform opacity-0 scale-95"
                         class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-xl ring-1 ring-zinc-900/5 focus:outline-none z-50">
+
                         <div class="p-4">
                             <div class="flex justify-between items-center mb-2">
                                 <h3 class="font-medium text-gray-900">Notificaciones</h3>
@@ -394,9 +402,16 @@
         </div>
     </div>
 
-    <main class="py-2 px-5">
+    <main class="flex-1 py-2 px-5">
         @yield('content')
     </main>
+
+    <footer class="border-t border-zinc-200 bg-white/80 backdrop-blur-sm py-4">
+            <div class="text-center text-xs text-zinc-500">
+                2026 Desarrollado por Luis Angel Hoil Canche
+            </div>
+        </footer>
+    </div>
 
     @toastContainer
 

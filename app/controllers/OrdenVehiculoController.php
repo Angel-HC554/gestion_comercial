@@ -8,6 +8,7 @@ use App\Models\Vehiculo;
 use App\Models\VehiculoSalidaTaller;
 use App\Models\OrdenArchivo;
 use App\Models\HistorialOrden;
+use App\Models\User;
 use clsTinyButStrong;
 
 class OrdenVehiculoController extends Controller
@@ -127,22 +128,11 @@ class OrdenVehiculoController extends Controller
             'placas'       => $v->placas,
             'marca'        => $v->marca,
             'modelo'       => $v->modelo,
-            // ¡ESTO ES LO NUEVO! Enviamos el último KM al frontend
             'ultimo_km'    => $k['kilometraje'] ?? 0 
         ];
     });
 
-        // 2. DATOS DE EJEMPLO: Vehículos (Simulando tu tabla 'vehiculos')
-        //$vehiculos = Vehiculo::query()->select('no_economico', 'placas', 'marca', 'modelo')->get();
-
-        // 3. DATOS DE EJEMPLO: Usuarios (Simulando tu tabla 'users')
-        // Nota: 'usuario' aquí simula ser el RPE
-        $users = [
-            ['name' => 'JUAN PEREZ LOPEZ', 'usuario' => '98765'],
-            ['name' => 'MARIA GONZALEZ', 'usuario' => '12345'],
-            ['name' => 'PEDRO PARAM', 'usuario' => '54321'],
-            ['name' => 'ADMINISTRADOR SISTEMA', 'usuario' => '11111']
-        ];
+        $users = User::select('name', 'user')->get();
 
         // 4. Enviamos todo a la vista
         // 'ordenEditar' va null porque estamos CREANDO
@@ -264,7 +254,26 @@ class OrdenVehiculoController extends Controller
         echo "<p>Aquí irá la vista para descargar el PDF.</p>";
         echo "<a href='/ordenvehiculos/create'>Crear otra</a>";
     }
+
     public function generarOrden($id)
+    {
+        // Llamamos a la lógica interna
+        $resultado = $this->_crearArchivoDocx($id);
+
+        if (!$resultado) {
+             return response()->json(['status' => 'error', 'message' => 'Orden no encontrada o error al generar'], 404);
+        }
+
+        // Respondemos JSON
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Documento generado correctamente',
+            'orden_id' => $id,
+            'file_url' => '/ordenes/descargar-docx/' . $id
+        ]);
+    }
+
+    public function generarOrdennn($id)
     {
         $orden = OrdenVehiculo::find($id);
 
@@ -376,8 +385,103 @@ class OrdenVehiculoController extends Controller
         ]);
     }
 
+    /**
+     * Función interna auxiliar: Solo genera el archivo físico, NO retorna respuesta HTTP.
+     */
+    private function _crearArchivoDocx($id)
+    {
+        $orden = OrdenVehiculo::find($id);
 
-    public function generatePdf($id)
+        if (!$orden) {
+            return false;
+        }
+
+        // 1. Iniciar TBS y OpenTBS
+        $TBS = new clsTinyButStrong;
+        $TBS->Plugin(TBS_INSTALL, \clsOpenTBS::class);
+
+        // 2. Rutas
+        $basePath = dirname(__DIR__, 2);
+        $templatePath = $basePath . '/public/plantillas/orden_vehiculo.docx';
+
+        if (!file_exists($templatePath)) {
+            // Puedes lanzar excepción o loguear error
+            return false;
+        }
+
+        $TBS->LoadTemplate($templatePath, OPENTBS_ALREADY_UTF8);
+
+        // 3. Asignación de Datos (Copiado de tu lógica original)
+        $TBS->MergeField('pro.ordenq', $orden->id);
+        $TBS->MergeField('pro.noorden', $orden->id);
+        $TBS->MergeField('pro.area', strtoupper($orden->area));
+        $TBS->MergeField('pro.zona', strtoupper($orden->zona));
+        $TBS->MergeField('pro.departamento', strtoupper($orden->departamento));
+        $TBS->MergeField('pro.noeconomico', $orden->noeconomico);
+        $TBS->MergeField('pro.marca', strtoupper($orden->marca));
+        $TBS->MergeField('pro.placas', $orden->placas);
+        $TBS->MergeField('pro.taller', strtoupper($orden->taller ?? ''));
+        $TBS->MergeField('pro.kilometraje', $orden->kilometraje);
+        $TBS->MergeField('pro.fecharecep', $orden->fecharecep);
+
+        // Radio Buttons
+        $radioOptions = ['radiocom', 'llantaref', 'autoestereo', 'gatoh', 'llavecruz', 'extintor', 'botiquin', 'escalera', 'escalerad'];
+        $contador = 1;
+        foreach ($radioOptions as $option) {
+            $val = $orden->$option ?? 'No';
+            $valorSi = ($val === 'Si') ? ' X' : '';
+            $valorNo = ($val === 'No') ? ' X' : '';
+            $TBS->MergeField('pro.rs' . $contador, 'Si' . $valorSi);
+            $TBS->MergeField('pro.rn' . $contador, 'No' . $valorNo);
+            $contador++;
+        }
+
+        // Gasolina
+        $gasPath = $basePath . '/public/plantillas/gasolina/';
+        $gasImg = '';
+        switch ((string)$orden->gasolina) {
+            case '0': $gasImg = $gasPath . '0.png'; break;
+            case '25': $gasImg = $gasPath . '25.png'; break;
+            case '50': $gasImg = $gasPath . '50.png'; break;
+            case '75': $gasImg = $gasPath . '75.png'; break;
+            case '100': $gasImg = $gasPath . '100.png'; break;
+        }
+        $TBS->VarRef['x'] = $gasImg;
+
+        // Checkboxes
+        for ($i = 1; $i <= 20; $i++) {
+            $field = 'vehicle' . $i;
+            $TBS->MergeField('pro.c' . $i, $orden->$field ?? '');
+        }
+
+        // Firmas
+        $TBS->MergeField('pro.observaciones', strtoupper($orden->observacion));
+        $TBS->MergeField('pro.fechafirm', $orden->fechafirm);
+        $TBS->MergeField('pro.areausuaria', strtoupper($orden->areausuaria));
+        $TBS->MergeField('pro.rpeusuaria', $orden->rpeusuaria);
+        $TBS->MergeField('pro.jefedpto', strtoupper($orden->autoriza));
+        $TBS->MergeField('pro.rpejefedpto', $orden->rpejefedpt);
+        $TBS->MergeField('pro.responsablepv', strtoupper($orden->resppv));
+        $TBS->MergeField('pro.responsablepvrpe', $orden->rperesppv);
+
+        $TBS->PlugIn(OPENTBS_DELETE_COMMENTS);
+
+        // 4. Guardar archivo
+        $fileName = 'orden_vehiculo_' . $orden->id . '.docx';
+        $outputDir = $basePath . '/storage/orden_vehiculos/';
+
+        if (!is_dir($outputDir)) {
+            mkdir($outputDir, 0777, true);
+        }
+
+        $docxFilePath = $outputDir . $fileName;
+        $TBS->Show(OPENTBS_FILE, $docxFilePath);
+        
+        return true; // Solo indica éxito, no imprime nada
+    }
+
+
+    public function generatePdfff($id)
     {
         $basePath = dirname(__DIR__, 2); // Raíz
         $inputDir = $basePath . '/storage/orden_vehiculos/';
@@ -430,6 +534,54 @@ class OrdenVehiculoController extends Controller
         ], 500);
     }
 
+    public function generatePdf($id)
+    {
+        $basePath = dirname(__DIR__, 2);
+        $inputDir = $basePath . '/storage/orden_vehiculos/';
+        $outputDir = $basePath . '/storage/pdf_exports/';
+
+        $docxFile = 'orden_vehiculo_' . $id . '.docx';
+        $docxPath = $inputDir . $docxFile;
+
+        // CORRECCIÓN AQUÍ:
+        if (!file_exists($docxPath)) {
+            // Usamos la función PRIVADA que no retorna JSON ni imprime nada
+            $creado = $this->_crearArchivoDocx($id);
+            
+            if (!$creado || !file_exists($docxPath)) {
+                return response()->json(['status' => 'error', 'message' => 'No se pudo generar el archivo base DOCX'], 404);
+            }
+        }
+
+        if (!is_dir($outputDir)) {
+            mkdir($outputDir, 0777, true);
+        }
+
+        // ... El resto de tu lógica de LibreOffice se mantiene igual ...
+        $sofficePath = getenv('LIBREOFFICE_PATH');
+        if (!$sofficePath) {
+            $sofficePath = 'C:\Program Files\LibreOffice\program\soffice.exe'; 
+        }
+
+        $command = "\"{$sofficePath}\" --headless --convert-to pdf \"{$docxPath}\" --outdir \"{$outputDir}\"";
+        exec($command, $output, $returnVar);
+
+        if ($returnVar === 0) {
+            $pdfFileName = str_replace('.docx', '.pdf', $docxFile);
+            $pdfPath = $outputDir . $pdfFileName;
+
+            if (file_exists($pdfPath)) {
+                return response()->download($pdfPath, $pdfFileName);
+            }
+        }
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Error al convertir PDF. Verifica la ruta de LibreOffice.',
+            'debug' => $output
+        ], 500);
+    }
+
     public function edit($id)
     {
         // Get the order to edit
@@ -462,19 +614,16 @@ class OrdenVehiculoController extends Controller
         ];
 
         // Get users data (same as in create method)
-        $users = [
-            ['name' => 'JUAN PEREZ LOPEZ', 'usuario' => '98765'],
-            ['name' => 'MARIA GONZALEZ', 'usuario' => '12345'],
-            ['name' => 'PEDRO PARAM', 'usuario' => '54321'],
-            ['name' => 'ADMINISTRADOR SISTEMA', 'usuario' => '11111']
-        ];
+        $users = User::select('name', 'user')->get();
 
+        $returnUrl = request()->get('return_url');
         // Render the edit view with the order data
         return render('ordenvehiculos.edit', [
             'id' => $orden->id,
             'vehiculos' => $vehiculos,
             'users' => $users,
-            'ordenEditar' => $orden
+            'ordenEditar' => $orden,
+            'returnUrl' => $returnUrl ?: '/ordenvehiculos'
         ]);
     }
 
@@ -553,6 +702,13 @@ class OrdenVehiculoController extends Controller
         // 5. Update the order
         try {
             $orden->update($data);
+            $basePath = dirname(__DIR__, 2);
+            $oldFile = $basePath . '/storage/orden_vehiculos/orden_vehiculo_' . $orden->id . '.docx';
+
+            if (file_exists($oldFile)) {
+                @unlink($oldFile);
+            }
+            
             HistorialOrden::create([
                 'orden_vehiculo_id' => $orden->id,
                 'tipo_evento' => 'orden_actualizada',

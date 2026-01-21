@@ -1,32 +1,88 @@
-<!DOCTYPE html>
 <html>
     <head>
-        <title>Internal Server Error</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link
-            href="https://fonts.googleapis.com/icon?family=Material+Icons"
-            rel="stylesheet"
-        />
-        <link
-            rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
-        />
+        <title>500</title>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap">
+        <link rel="shortcut icon" href="/assets/img/logo_cfe.svg" type="image/x-icon">
+
         <style>
             body {
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                flex-direction: column !important;
-                height: 95vh !important;
+                background-color: rgb(0,30,38);
+                color: white;
+                margin: 0;
+                padding: 0;
+                font-family: "DM Sans", "Segoe UI", sans-serif;
+            }
+
+            .error-shell {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 24px;
+                text-align: center;
+                padding: 40px 16px;
+                box-sizing: border-box;
+            }
+
+            .error-logo {
+                width: 110px;
+                height: auto;
+                filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.45));
+                background: rgba(255, 255, 255, 0.05);
+                padding: 12px;
+            }
+
+            h1 {
+                margin: 0;
+                font-size: clamp(2.3rem, 4vw, 3.5rem);
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: #34be6d;
+                border-right: 1px solid #4c4f55;
+                padding-right: 18px;
+            }
+
+            .message-block {
+                max-width: 380px;
+                font-size: 1rem;
+                color: #cdd4e1;
+                line-height: 1.6;
+            }
+
+            .actions {
+                display: flex;
+                justify-content: center;
+                gap: 18px;
+                flex-wrap: wrap;
+            }
+
+            .actions a {
+                color: #fff;
+                text-decoration: none;
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                padding: 10px 22px;
+                border-radius: 999px;
+                transition: transform 0.3s ease, border-color 0.3s ease;
+            }
+
+            .actions a:hover {
+                transform: translateY(-2px);
+                border-color: #34be6d;
             }
         </style>
     </head>
-
     <body>
-        <h2>
-            Error 5<span role="img" aria-label="O">&#x1f635;</span
-            ><span role="img" aria-label="O">&#x1f635;</span>
-        </h2>
-        <p>Internal Server Error. Please try again later.</p>
+        <div class="error-shell">
+            <img class="error-logo" src="/assets/img/logo_cfe.svg" alt="Logo" />
+            <div style="display:flex;align-items:center;gap:18px;">
+                <h1>500</h1>
+                <p aria-hidden="true" style="margin:0; color:#4c4f55;">Error interno</p>
+            </div>
+            <p class="message-block">Está ocurriendo un problema en el servidor. Ya estamos trabajando para solucionarlo, intenta de nuevo más tarde o vuelve al inicio.</p>
+            <div class="actions">
+                <a href="/">Ir al inicio</a>
+            </div>
+        </div>
     </body>
 </html>

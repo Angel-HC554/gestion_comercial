@@ -1,7 +1,7 @@
 @extends('layouts.app-layout', ['title' => 'Resumen Diario por Agencias'])
 
 @section('content')
-<div class="min-h-screen bg-gray-50 pb-10">
+<div class="min-h-screen pb-10">
     <div class="flex h-full flex-1 flex-col gap-4 mx-6 md:mx-10 pt-6 animate-in fade-in zoom-in duration-300">
         
         {{-- HEADER SUPERIOR --}}

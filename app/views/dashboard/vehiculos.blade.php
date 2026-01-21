@@ -5,7 +5,7 @@
 @section('content')
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-<div class="min-h-screen bg-zinc-50 p-6 md:p-10 space-y-8">
+<div class="min-h-screen p-6 md:p-10 space-y-8">
 
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -96,7 +96,7 @@
                                     <td class="px-4 py-3 font-semibold text-zinc-900">{{ $vehiculo['noeconomico'] }}</td>
                                     <td class="px-4 py-3 text-zinc-500">{{ $vehiculo['marca'] }} · {{ $vehiculo['placas'] }}</td>
                                     <td class="px-4 py-3 text-zinc-500">{{ $vehiculo['taller'] ?? 'N/D' }}</td>
-                                    <td class="px-4 py-3 text-zinc-500">{{ $vehiculo['fecha_ingreso']->format('d M Y') ?? ($vehiculo['fecha_ingreso'] ? \Carbon\Carbon::parse($vehiculo['fecha_ingreso'])->format('d M Y') : 'Sin fecha') }}</td>
+                                    <td class="px-4 py-3 text-zinc-500">{{ $vehiculo['fecha_ingreso'] ? \Carbon\Carbon::parse($vehiculo['fecha_ingreso'])->format('d M Y') : 'Sin fecha' }}</td>
                                     <td class="px-4 py-3">
                                         @if($vehiculo['link'])
                                             <a href="{{ $vehiculo['link'] }}" class="text-emerald-600 text-xs font-semibold hover:underline">Ver vehículo</a>

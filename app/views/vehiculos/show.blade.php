@@ -1,5 +1,5 @@
 @extends('layouts.app-layout', [
-    'title' => 'Información del vehículo'
+    'title' => 'Información del vehículo',
 ])
 
 @section('content')
@@ -26,12 +26,12 @@
         <div class="mx-6 md:mx-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             <div class="lg:col-span-1">
-                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-md">
+                <div class="rounded-xl border border-zinc-300 bg-white p-5 shadow-md">
                     <div
                         class="flex items-start gap-4 bg-gradient-to-t from-emerald-600 to-emerald-900 text-white rounded-t-lg -m-5 mb-2 p-4 md:p-5">
                         <div class="h-20 w-36 shrink-0 overflow-hidden rounded-md bg-gray-100 ring-1 ring-white/20">
-                            <img src="https://media.ed.edmunds-media.com/chevrolet/silverado-1500/2026/oem/2026_chevrolet_silverado-1500_crew-cab-pickup_high-country_fq_oem_2_1600.jpg"
-                                alt="vehiculo" class="h-full w-full object-cover">
+                            <img src="{{ $vehiculo->foto_url }}"
+                                alt="foto del vehículo" class="h-full w-full object-cover">
                         </div>
                         <div>
                             <div class="text-xl font-semibold text-white">
@@ -80,8 +80,8 @@
 
             <div class="lg:col-span-2 space-y-8">
 
-                <div class="rounded-xl border border-gray-200 bg-white shadow-md">
-                    <div class="border-b border-gray-200 px-6 pt-4">
+                <div class="rounded-xl border border-zinc-300 bg-white shadow-md">
+                    <div class="border-b border-zinc-300 px-6 pt-4">
                         <nav class="flex space-x-4">
                             <button @click="tab = 'estado'"
                                 :class="tab === 'estado' ? 'bg-emerald-600 text-white' :
@@ -102,9 +102,23 @@
 
                         <div x-show="tab === 'estado'" x-cloak>
                             @php
-                                // 1. Definir estatus y colores de fondo (Badge)
-                                $estatus = $vehiculo->estado_mantenimiento;
+                                // Obtener info centralizada del modelo vehiculo
+                                $info = $vehiculo->info_mantenimiento;
 
+                                // Extraer variables
+                                $estatus = $info['estatus_general'];
+                                $estadoKm = $info['estatus_km'];
+                                $estadoFecha = $info['estatus_tiempo'];
+                                $proximo = $info['km_proximo_servicio'];
+                                $kmFaltantes = $info['km_faltantes'];
+                                $proximaFecha = $info['fecha_proximo_servicio'];
+                                $diasRestantes = $info['dias_restantes'];
+                                $kmUltimo = $info['km_ultimo_mantenimiento'];
+                                $intervalo_de_km = $info['intervalo_de_km'];
+                                $intervalo_de_meses = $info['intervalo_de_meses'];
+
+                                // Datos visuales extra
+                                $kmData = $vehiculo->ultimoKilometraje();
                                 $coloresBadge = [
                                     'verde' => 'bg-green-600',
                                     'amarillo' => 'bg-yellow-500',
@@ -129,147 +143,177 @@
                                     'gris' => 'text-gray-400',
                                 ];
 
-                                // 3. Cálculos de KM
-                                $kmData = $vehiculo->ultimoKilometraje();
-                                $kmUltimo = $vehiculo->latestMantenimiento?->kilometraje;
+                                // Recuperamos los intervalos de la configuración del modelo
+                                $intKm = $info['intervalo_de_km'] > 0 ? $info['intervalo_de_km'] : 10000;
+                                $intMeses = $info['intervalo_de_meses'] > 0 ? $info['intervalo_de_meses'] : 6;
 
-                                // Cálculo de próximo servicio
-                                $proximo = $kmUltimo 
-                                ? ($kmUltimo + 10000) 
-                                : (($kmData['kilometraje'] !== 0 ? ceil($kmData['kilometraje'] / 10000) * 10000 : 0) ?: 10000);
+                                // --- 1. CÁLCULO KM ---
+                                // Cuánto se ha recorrido desde el último servicio
+                                $kmRecorridosDesdeServicio = $info['km_actual'] - $info['km_ultimo_mantenimiento'];
+                                // Porcentaje de uso (0 a 100%)
+                                $porcentajeKm = ($kmRecorridosDesdeServicio / $intKm) * 100;
+                                $porcentajeKm = max(0, min(100, $porcentajeKm));
 
-                                $kmFaltantes = $proximo - $kmData['kilometraje'];
-
-                                // 4. Cálculos de FECHA (Nuevo)
-                                $fechaUltimo = $vehiculo->latestMantenimiento?->fecha_terminacion;
-                                $proximaFecha = null;
-                                $diasRestantes = null;
-                                $estadoFecha = 'verde'; // Estado individual de la fecha
-
-                                if ($fechaUltimo) {
-                                    $fechaCarbon = \Carbon\Carbon::parse($fechaUltimo);
-                                    $proximaFecha = $fechaCarbon->copy()->addMonths(3); // 3 Meses
-                                    $diasRestantes = \Carbon\Carbon::now()->diffInDays($proximaFecha, false); // false para negativos
-                                    
-                                    // Determinar color específico de la fecha para pintarlo en la UI
-                                    if ($diasRestantes < 0) $estadoFecha = 'rojo_pasado';
-                                    elseif ($diasRestantes <= 7) $estadoFecha = 'rojo';
-                                    elseif ($diasRestantes <= 21) $estadoFecha = 'amarillo';
+                                // Colores Barra KM
+                                $colorBarraKm = 'bg-emerald-500';
+                                if ($porcentajeKm > 75) {
+                                    $colorBarraKm = 'bg-yellow-500';
+                                }
+                                if ($porcentajeKm > 90 || $kmFaltantes < 0) {
+                                    $colorBarraKm = 'bg-red-500';
                                 }
 
-                                // Determinar color específico del KM
-                                $estadoKm = 'verde';
-                                if ($kmFaltantes < 0) $estadoKm = 'rojo_pasado';
-                                elseif ($kmFaltantes <= 1000) $estadoKm = 'rojo';
-                                elseif ($kmFaltantes <= 2000) $estadoKm = 'amarillo';
+                                // --- 2. CÁLCULO TIEMPO (MESES Y DÍAS) ---
+                                $textoTiempo = 'Sin registro de fecha';
+                                $porcentajeTiempo = 0;
+                                $colorBarraTiempo = 'bg-gray-200';
+
+                                if ($proximaFecha) {
+                                    $diasTotalesIntervalo = $intMeses * 30; // Estimado
+                                    $diasTranscurridos = $diasTotalesIntervalo - $diasRestantes;
+
+                                    $porcentajeTiempo = ($diasTranscurridos / $diasTotalesIntervalo) * 100;
+                                    $porcentajeTiempo = max(0, min(100, $porcentajeTiempo));
+
+                                    // --- CORRECCIÓN AQUÍ: Usamos diff() nativo de Carbon ---
+                                    // Esto calcula exacto usando calendario real
+                                    $hoy = \Carbon\Carbon::now()->startOfDay();
+                                    $target = $proximaFecha->copy()->startOfDay();
+
+                                    // Obtenemos la diferencia desglosada (años, meses, días)
+                                    $diff = $hoy->diff($target);
+
+                                    // Convertimos años a meses para mostrar "12 meses" en lugar de "1 año"
+                                    $mesesFaltan = $diff->y * 12 + $diff->m;
+                                    $diasFaltan = $diff->d;
+
+                                    // Convertir días restantes a "Meses y Días" para el usuario
+                                    if ($diasRestantes < 0) {
+                                        $textoTiempo = 'Vencido hace ' . abs(intval($diasRestantes)) . ' días';
+                                        $colorBarraTiempo = 'bg-red-500';
+                                    } else {
+                                        if ($mesesFaltan > 0) {
+                                            $textoTiempo =
+                                                'Faltan ' .
+                                                intval($mesesFaltan) .
+                                                ' meses y ' .
+                                                intval($diasFaltan) .
+                                                ' días';
+                                        } else {
+                                            $textoTiempo = 'Faltan ' . intval($diasFaltan) . ' días';
+                                        }
+
+                                        // Colores Barra Tiempo
+                                        $colorBarraTiempo = 'bg-emerald-500';
+                                        if ($porcentajeTiempo > 75) {
+                                            $colorBarraTiempo = 'bg-yellow-500';
+                                        }
+                                        if ($porcentajeTiempo > 90) {
+                                            $colorBarraTiempo = 'bg-red-500';
+                                        }
+                                    }
+                                }
+
                             @endphp
 
-                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                                <div class="flex-1">
-                                    <h2 class="text-sm font-medium text-gray-700 mb-1">Kilometraje actual</h2>
-                                    <p class="text-2xl font-bold text-gray-800">
-                                        @if ($kmData['kilometraje'] !== 0)
-                                            {{ number_format($kmData['kilometraje']) }} <span
-                                                class="text-sm font-normal text-gray-600">km</span>
-                                            <div class="text-sm text-gray-500 mt-1">
-                                                {{-- Muestra Fecha --}}
-                                                {{ $kmData['fecha'] ? \Carbon\Carbon::parse($kmData['fecha'])->format('d/m/Y') : '' }}
-
-                                                {{-- RECUPERADO: Muestra Hora si existe --}}
-                                                @if ($kmData['hora_fin'])
-                                                    {{ \Carbon\Carbon::parse($kmData['hora_fin'])->format('H:i') }}
-                                                @endif
-                                            </div>
-                                        @else
-                                            <span class="text-gray-500">Sin registro</span>
-                                        @endif
-                                    </p>
-                                </div>
-
-                                <div class="flex-1">
-                                    <h2 class="text-sm font-medium text-gray-400 mb-1">Ultimo servicio</h2>
-                                    <p class="text-2xl font-bold text-gray-500">
-                                        @if ($kmUltimo)
-                                            {{ number_format($kmUltimo) }} <span
-                                                class="text-sm font-normal text-gray-600">km</span>
-
-                                            {{-- RECUPERADO: Fecha de terminación del servicio --}}
-                                            <div class="text-sm text-gray-500 mt-1">
-                                                {{ $vehiculo->latestMantenimiento?->fecha_terminacion ? \Carbon\Carbon::parse($vehiculo->latestMantenimiento->fecha_terminacion)->format('d/m/Y') : 'Sin fecha' }}
-                                            </div>
-                                        @else
-                                            <span class="text-gray-500">Sin registro</span>
-                                        @endif
-                                    </p>
-                                </div>
-
-                                <div class="flex-1 text-right sm:text-left">
-                                    <h2 class="text-sm font-medium text-gray-400 mb-2">Próximo servicio</h2>
-    
-                                <div class="space-y-3">
-                                    {{-- BLOQUE 1: KILOMETRAJE --}}
-                                <div class="flex items-start justify-end sm:justify-start gap-2">
-                                    <div class="mt-1 text-gray-400">
-                                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-                                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                       </svg>
-                                    </div>
-
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-700">
-                                            Por Kilometraje:
-                                        </p>
-                                        @if ($kmData['kilometraje'] !== 0)
-                                            <p class="text-base {{ $claseTexto[$estadoKm] ?? 'text-gray-800' }}">
-                                                {{ number_format($proximo) }} km
-                                            </p>
-                                            <span class="block text-xs {{ $estadoKm !== 'verde' ? $claseTexto[$estadoKm] : 'text-gray-500' }}">
-                                                @if($kmFaltantes < 0)
-                                                    ¡Excedido por {{ number_format(abs($kmFaltantes)) }} km!
-                                                @else
-                                                    Faltan: {{ number_format($kmFaltantes) }} km
-                                                @endif
-                                            </span>
-                                        @else
-                                            <span class="text-gray-400">—</span>
-                                        @endif
-                                    </div>
-                                </div>
-
-                                {{-- BLOQUE 2: TIEMPO (Solo si hay historial) --}}
-                             @if ($proximaFecha)
-                                <div class="flex items-start justify-end sm:justify-start gap-2 border-t border-gray-100 pt-2">
-                                     <div class="mt-1 text-gray-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-                                          <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v7.5" />
-                                        </svg>
-                                    </div>
-                                
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-700">
-                                            Por Fecha:
-                                        </p>
-                                        <p class="text-base {{ $claseTexto[$estadoFecha] ?? 'text-gray-800' }}">
-                                            {{ $proximaFecha->format('d/m/Y') }}
-                                        </p>
-                                        <span class="block text-xs {{ $estadoFecha !== 'verde' ? $claseTexto[$estadoFecha] : 'text-gray-500' }}">
-                                            @if($diasRestantes < 0)
-                                                ¡Vencido hace {{ abs(intval($diasRestantes)) }} días!
+                                {{-- TARJETA 1: ODÓMETRO (Dato Duro) --}}
+                                <div
+                                    class="flex items-center p-4 bg-gray-50 rounded-lg border border-zinc-300 shadow-sm relative overflow-hidden">
+                                    <div class="relative z-10 w-full">
+                                        <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">
+                                            Kilometraje Actual</h2>
+                                        <div class="flex items-baseline gap-1">
+                                            @if ($kmData['kilometraje'] !== 0)
+                                                <span
+                                                    class="text-3xl font-extrabold text-gray-800">{{ number_format($kmData['kilometraje']) }}</span>
+                                                <span class="text-sm font-medium text-gray-600">km</span>
                                             @else
-                                                Faltan: {{ intval($diasRestantes) }} días
+                                                <span class="text-xl text-gray-400">Sin registro</span>
                                             @endif
-                                        </span>
+                                        </div>
+                                        <div class="mt-2 text-xs text-gray-500">
+                                            Última lectura:
+                                            {{ $kmData['fecha'] ? \Carbon\Carbon::parse($kmData['fecha'])->format('d/m/Y') : '--' }}
+                                        </div>
+                                    </div>
+                                    {{-- Icono fondo --}}
+                                    <div class="absolute right-2 bottom-5 opacity-10 text-gray-800">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="#000000" width="100px" height="100px" viewBox="-1 0 19 19" class="cf-icon-svg"><path d="M16.417 9.583A7.917 7.917 0 1 1 8.5 1.666a7.917 7.917 0 0 1 7.917 7.917zm-3.948-1.455-.758-1.955a.816.816 0 0 0-.726-.498H6.054a.816.816 0 0 0-.727.498L4.57 8.128a1.43 1.43 0 0 0-1.052 1.375v2.046a.318.318 0 0 0 .317.317h.496v1.147a.238.238 0 0 0 .238.237h.892a.238.238 0 0 0 .237-.237v-1.147h5.644v1.147a.238.238 0 0 0 .237.237h.892a.238.238 0 0 0 .238-.237v-1.147h.496a.318.318 0 0 0 .317-.317V9.503a1.43 1.43 0 0 0-1.052-1.375zm-7.445.582a.792.792 0 1 0 .792.792.792.792 0 0 0-.792-.792zm5.96-2.402a.192.192 0 0 1 .137.094l.65 1.676H5.267l.65-1.676a.192.192 0 0 1 .136-.094h4.93zm1.04 2.402a.792.792 0 1 0 .792.792.792.792 0 0 0-.791-.792z"/></svg>
                                     </div>
                                 </div>
-                             @endif
-                        </div>
-                    </div>
 
-                    <div class="shrink-0">
-                        <div
-                            class="inline-flex items-center px-4 py-4 rounded-full text-sm font-semibold {{ $coloresBadge[$estatus] ?? 'bg-gray-400' }} text-white shadow-sm">
-                            {{ $textosBadge[$estatus] ?? 'Indefinido' }}
+                                {{-- TARJETA 2: REFERENCIA --}}
+                                <div
+                                    class="flex flex-col justify-center p-4 bg-white rounded-lg border border-zinc-300 shadow-sm">
+                                    <h2
+                                        class="text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2 border-b border-gray-100 pb-1">
+                                        Datos de Mantenimiento
+                                    </h2>
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-xs text-gray-500">Último Servicio:</span>
+                                            <span class="text-sm font-bold text-gray-700">
+                                                {{ $kmUltimo ? number_format($kmUltimo) . ' km' : '0 km' }}
+                                            </span>
+                                        </div>
+                                        <div class="flex justify-between items-center mb-6">
+                                            <span class="text-xs text-gray-500">Fecha Último:</span>
+                                            <span class="text-sm font-bold text-gray-700">
+                                                {{ $vehiculo->latestMantenimiento?->fecha_terminacion ? \Carbon\Carbon::parse($vehiculo->latestMantenimiento->fecha_terminacion)->format('d/m/Y') : 'N/A' }}
+                                            </span>
+                                        </div>
+                                        <div class="flex justify-between items-center bg-blue-50 px-2 py-1 rounded">
+                                            <span class="text-xs text-blue-600 font-medium">Regla aplicada:</span>
+                                            <span class="text-xs font-bold text-blue-800">
+                                                Cada {{ number_format($intKm) }} km / {{ $intMeses }} meses
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- TARJETA 3: ESTADO DE SALUD (Las Barras) --}}
+                                <div
+                                    class="flex flex-col justify-center p-4 bg-white rounded-lg border border-zinc-300 {{ $estadoKm === 'rojo' || $estadoFecha === 'rojo' ? 'border-red-500' : ($estadoKm === 'amarillo' || $estadoFecha === 'amarillo' ? 'border-l-yellow-400' : 'border-l-emerald-500') }} border-l-8 shadow-sm">
+                                    <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-600 mb-3 border-b border-gray-100 pb-1">Próximo
+                                        Servicio</h2>
+
+                                    {{-- 1. BARRA KILOMETRAJE --}}
+                                    <div class="mb-4">
+                                        <div class="flex justify-between text-xs mb-1">
+                                            <span class="font-bold text-gray-700">Kilometraje</span>
+                                            <span
+                                                class="{{ $kmFaltantes < 0 ? 'text-red-600 font-bold' : 'text-gray-600' }}">
+                                                {{ $kmFaltantes < 0 ? 'Excedido ' . number_format(abs($kmFaltantes)) . ' km' : 'Faltan ' . number_format($kmFaltantes) . ' km' }}
+                                            </span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                            <div class="{{ $colorBarraKm }} h-2 rounded-full transition-all duration-1000"
+                                                style="width: {{ $porcentajeKm }}%"></div>
+                                        </div>
+                                        <div class="text-xs text-gray-600 mt-1 text-right">
+                                            Meta: {{ number_format($proximo) }} km
+                                        </div>
+                                    </div>
+
+                                    {{-- 2. BARRA TIEMPO (MESES) --}}
+                                    <div>
+                                        <div class="flex justify-between text-xs mb-1">
+                                            <span class="font-bold text-gray-700">Tiempo</span>
+                                            <span
+                                                class="{{ $diasRestantes < 0 ? 'text-red-600 font-bold' : 'text-gray-600' }}">
+                                                {{ $textoTiempo }}
+                                            </span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                            <div class="{{ $colorBarraTiempo }} h-2 rounded-full transition-all duration-1000"
+                                                style="width: {{ $porcentajeTiempo }}%"></div>
+                                        </div>
+                                        @if ($proximaFecha)
+                                            <div class="text-xs text-gray-600 mt-1 text-right">Meta:
+                                                {{ $proximaFecha->format('d/m/Y') }}</div>
+                                        @endif
                                     </div>
                                 </div>
 
@@ -347,13 +391,11 @@
                     </div>
                 </div>
 
-
-
             </div>
         </div>
         <div class="lg:col-span-2 space-y-8 mx-6 mt-5 md:mx-10">
-            <div class="rounded-xl border border-gray-200 bg-white shadow-md">
-                <div class="border-b border-gray-200 px-6 pt-4">
+            <div class="rounded-xl border border-zinc-300 bg-white shadow-md">
+                <div class="border-b border-zinc-300 px-6 pt-4">
                     <nav class="flex space-x-4 overflow-x-auto">
                         <button @click="tabHistorial = 'analisis'"
                             :class="tabHistorial === 'analisis' ? 'bg-emerald-600 text-white' :
@@ -367,12 +409,14 @@
                             class="px-4 py-2 rounded-t-md text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer">
                             Listado de órdenes
                         </button>
+                        @if (!auth()->user()->is('oficinista'))
                         <button @click="tabHistorial = 'semanal'"
-                            :class="tabHistorial === 'semanal' ? 'bg-emerald-600 text-white' :
+                        :class="tabHistorial === 'semanal' ? 'bg-emerald-600 text-white' :
                                 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
                             class="px-4 py-2 rounded-t-md text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer">
                             Supervisión Semanal
                         </button>
+                        @endif
                         <button @click="tabHistorial = 'diaria'"
                             :class="tabHistorial === 'diaria' ? 'bg-emerald-600 text-white' :
                                 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
@@ -384,7 +428,13 @@
 
                 <div class="p-6">
                     <div x-show="tabHistorial === 'analisis'" x-cloak>
-                        @include('vehiculos.grafica', ['chartData' => $chartData])
+                        @if ($ordenes->isEmpty())
+                            <div class="p-4 bg-blue-50 text-blue-700 rounded-lg text-center border border-blue-200">
+                                No hay registros de ordenes para este vehículo aún.
+                            </div>
+                        @else
+                            @include('vehiculos.grafica', ['chartData' => $chartData])
+                        @endif
                     </div>
 
                     <div x-show="tabHistorial === 'historial'" x-cloak>
@@ -401,6 +451,7 @@
                         @include('ordenvehiculos.tabla', ['noEconomico' => $vehiculo->no_economico])
                     </div>
 
+                    @if(!auth()->user()->is('oficinista'))
                     <div x-show="tabHistorial === 'semanal'" x-cloak>
                         {{-- CASO 1: VEHÍCULO EN MANTENIMIENTO --}}
                         @if ($vehiculo->estado === 'En Mantenimiento')
@@ -448,8 +499,11 @@
                             <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r shadow-sm">
                                 <div class="flex items-center">
                                     <div class="shrink-0">
-                                        <svg class="h-5 w-5 text-emerald-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                        <svg class="h-5 w-5 text-emerald-500" xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd"
+                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                clip-rule="evenodd" />
                                         </svg>
                                     </div>
                                     <div class="ml-3 flex-1 flex justify-start items-center gap-4">
@@ -457,10 +511,13 @@
                                             La supervisión semanal ya fue realizada para este vehículo.
                                         </p>
                                         <p class="mt-2 text-md md:mt-0 md:ml-6 hover:underline">
-                                            <a href="{{ '/supervisiones/pdf/'. $id_supervision }}" target="_blank" 
-                                               class="whitespace-nowrap font-bold text-emerald-700 hover:text-emerald-600 flex items-center gap-1">
-                                                Ver supervisión PDF <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
-                                                    <path fill-rule="evenodd" d="M5.22 14.78a.75.75 0 0 0 1.06 0l7.22-7.22v5.69a.75.75 0 0 0 1.5 0v-7.5a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0 0 1.5h5.69l-7.22 7.22a.75.75 0 0 0 0 1.06Z" clip-rule="evenodd" />
+                                            <a href="{{ '/supervisiones/pdf/' . $id_supervision }}" target="_blank"
+                                                class="whitespace-nowrap font-bold text-emerald-700 hover:text-emerald-600 flex items-center gap-1">
+                                                Ver supervisión PDF <svg xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 20 20" fill="currentColor" class="size-5">
+                                                    <path fill-rule="evenodd"
+                                                        d="M5.22 14.78a.75.75 0 0 0 1.06 0l7.22-7.22v5.69a.75.75 0 0 0 1.5 0v-7.5a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0 0 1.5h5.69l-7.22 7.22a.75.75 0 0 0 0 1.06Z"
+                                                        clip-rule="evenodd" />
                                                 </svg>
                                             </a>
                                         </p>
@@ -475,8 +532,9 @@
                             ])
                         @endif
                     </div>
+                    @endif
 
-                    <div x-show="tabHistorial === 'diaria'" x-cloak x-data="{subTab: 'form'}">
+                    <div x-show="tabHistorial === 'diaria'" x-cloak x-data="{ subTab: 'form' }">
                         {{-- CASO 1: VEHÍCULO EN MANTENIMIENTO (Bloqueo) --}}
                         @if ($vehiculo->estado === 'En Mantenimiento')
                             <div class="bg-amber-50 border-l-4 border-amber-500 p-6 rounded-r shadow-sm">
@@ -520,39 +578,53 @@
                             {{-- INCLUIMOS EL FORMULARIO --}}
                         @else
                             <div class="flex justify-center mb-6">
-                                <div class="bg-gray-100 p-1 rounded-lg inline-flex shadow-inner">
-                                    <button 
-                                        @click="subTab = 'form'"
-                                        :class="subTab === 'form' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                                <div class="border border-zinc-300 bg-gray-100 p-1 rounded-lg inline-flex shadow-inner">
+                                    <button @click="subTab = 'form'"
+                                        :class="subTab === 'form' ? 'bg-white text-emerald-700 shadow-sm' :
+                                            'text-gray-500 hover:text-gray-700'"
                                         class="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 cursor-pointer">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                                            </path>
+                                        </svg>
                                         Nueva Supervisión
                                     </button>
 
-                                    <button 
-                                        @click="subTab = 'historial'"
+                                    <button @click="subTab = 'historial'"
                                         hx-get="/supervision-diaria/{{ $vehiculo->id }}/historial"
-                                        hx-target="#historial-container"
-                                        hx-indicator="#loading-history"
+                                        hx-target="#historial-container" hx-indicator="#loading-history"
                                         hx-trigger="click once"
-                                        :class="subTab === 'historial' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                                        :class="subTab === 'historial' ? 'bg-white text-emerald-700 shadow-sm' :
+                                            'text-gray-500 hover:text-gray-700'"
                                         class="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 cursor-pointer">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
                                         Ver Historial
                                     </button>
                                 </div>
                             </div>
-                            <div x-show="subTab === 'form'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                            <div x-show="subTab === 'form'" x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 translate-y-2"
+                                x-transition:enter-end="opacity-100 translate-y-0">
                                 @include('components.super_diaria_form', [
                                     'vehiculo_id' => $vehiculo->id,
                                     'no_economico' => $vehiculo->no_economico,
                                 ])
                             </div>
-                            <div x-show="subTab === 'historial'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                            <div x-show="subTab === 'historial'" x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 translate-y-2"
+                                x-transition:enter-end="opacity-100 translate-y-0">
                                 <div id="loading-history" class="htmx-indicator flex justify-center py-10">
-                                    <svg class="animate-spin h-8 w-8 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    <svg class="animate-spin h-8 w-8 text-emerald-600" xmlns="http://www.w3.org/2000/svg"
+                                        fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10"
+                                            stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                        </path>
                                     </svg>
                                 </div>
                                 <div id="historial-container"></div>

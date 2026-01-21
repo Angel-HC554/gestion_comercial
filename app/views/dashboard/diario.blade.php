@@ -5,7 +5,7 @@
 @section('content')
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-<div class="min-h-screen bg-gray-50 p-6 md:p-10">
+<div class="min-h-screen p-6 md:p-10">
     
     <div class="flex flex-col md:flex-row justify-between items-center mb-8">
         <div>

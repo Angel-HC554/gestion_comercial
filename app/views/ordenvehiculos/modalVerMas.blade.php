@@ -118,7 +118,7 @@
 
                         <div>
                             <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Observaciones de la orden</p>
-                            <div class="bg-amber-50 rounded-lg border border-amber-100 p-5">
+                            <div class="bg-amber-100 rounded-lg border border-amber-300 p-5">
                                 <p x-text="selectedOrden?.observacion || 'No se han registrado observaciones para esta orden.'"
                                     class="text-sm text-zinc-700 leading-relaxed"></p>
                             </div>
@@ -128,6 +128,28 @@
 
                     <!-- Escaneos Tab -->
                     <div x-show="activeTab === 'escaneos'" class="h-full overflow-y-auto">
+                        <template x-if="selectedOrden?.orden_500 == 'SI'">
+                            <div class="bg-amber-50 border-l-4 border-amber-400 p-4 mb-5 rounded-r-lg">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        <svg class="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <div class="ml-3">
+                                        <h3 class="text-sm font-bold text-amber-800">
+                                            Falta Código de Orden 500
+                                        </h3>
+                                        <div class="mt-2 text-sm text-amber-700">
+                                            <p>
+                                                Aún no se ha asignado el código para esta orden. Es necesario agregarlo para habilitar la subida del escaneo.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <template x-if="selectedOrden?.orden_500 !== 'SI'">
                         <div class="h-full">
                             <div class="mb-5">
                                 <label class="block text-sm font-bold text-zinc-700 mb-2">Archivo:</label>
@@ -156,6 +178,7 @@
                                 </button>
                             </div>
                         </div>
+                        </template>
                     </div>
 
                     <!-- Historial Tab -->

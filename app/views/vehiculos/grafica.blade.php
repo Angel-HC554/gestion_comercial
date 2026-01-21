@@ -5,9 +5,7 @@
     {{-- Encabezado de la sección --}}
     <div class="mb-6">
         <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
-            </svg>
+            <img src="/assets/img/car_gear.svg" alt="auto" class="w-7 h-7">
             Evolución de Kilometraje e Incidentes
         </h3>
     </div>
@@ -66,11 +64,27 @@
                     <p class="text-sm text-gray-700 italic" x-text="selectedPoint?.observacion || 'Sin observaciones'"></p>
                 </div>
 
-                <div class="mt-4 text-right">
-                    <a :href="'/ordenvehiculos/' + selectedPoint?.id + '/edit'" target="_blank"
-                        class="inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700 font-semibold hover:underline">
-                        Ver Documento Completo &rarr;
-                    </a>
+                <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex items-center gap-2">
+                        <template x-if="selectedPoint?.servicio">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-yellow-200 text-black">
+                                La orden se realizó por servicio km / tiempo
+                            </span>
+                        </template>
+                    </div>
+                    <div class="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-4">
+                        <template x-if="selectedPoint?.archivo?.ruta_archivo">
+                            <a :href="selectedPoint.archivo.ruta_archivo" target="_blank"
+                                class="inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700 font-semibold hover:underline">
+                                Ver Documento &rarr;
+                            </a>
+                        </template>
+                        <template x-if="!selectedPoint?.archivo?.ruta_archivo">
+                            <span class="text-sm text-gray-400 italic cursor-not-allowed">
+                                Sin documento escaneado
+                            </span>
+                        </template>
+                    </div>
                 </div>
             </div>
         </div>

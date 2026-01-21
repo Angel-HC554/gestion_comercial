@@ -66,7 +66,7 @@ class Vehiculo extends Model
             'id'                 // Local key en OrdenVehiculo
         )
         ->select('vehiculo_salidas_taller.*')
-        ->where('vehiculo_salidas_taller.servicio', true) // Asegúrate que tu gestor de BD soporte booleanos o usa 1
+        ->where('vehiculo_salidas_taller.servicio', true)
         ->latest('kilometraje');
     }
 
@@ -82,7 +82,7 @@ class Vehiculo extends Model
     public function scopeConSupervisionSemanalEstaSemana($query)
     {
         return $query->whereHas('supervisioSemanal', function ($q) {
-            $q->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+            $q->whereBetween('fecha_captura', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
         });
     }
 
@@ -134,104 +134,68 @@ class Vehiculo extends Model
 
     // --- ACCESORS (Atributos Calculados) ---
 
-    // Se accede como: $vehiculo->estado_mantenimiento
-    public function getEstadoMantenimientoAttribute()
+    /**
+     * Retorna la configuración de mantenimiento según la tabla del cliente.
+     * Prioridad: Modelo específico > Marca > Default
+     */
+    private function getReglasMantenimiento()
     {
-        //kilometraje
-        $intervaloKm = 10000;
-        $kmventanaRoja = 1000;
-        $kmventanaAmarilla = 2000;
-        //Tiempo
-        $mesesIntervalo = 3;
-        $diasVentanaRoja = 7;
-        $diasVentanaAmarilla = 21;
-        $margenServicio = 500;
+        // Normalizamos a mayúsculas para evitar errores de "Nissan" vs "NISSAN"
+        $marca = strtoupper($this->marca);
+        $modelo = strtoupper($this->modelo);
 
-        // Eager loading: usa las relaciones cargadas si existen
-        $supervision = $this->getRelationValue('latestSupervision') ?? $this->latestSupervision()->first();
-        $mantenimiento = $this->getRelationValue('latestMantenimiento') ?? $this->latestMantenimiento()->first();
-
-        // Validación inicial, si no hay supervisión, retorna gris
-        if (!$supervision || $supervision->kilometraje === null) {
-            return 'gris';
+        // 1. Reglas por MODELO (Casos específicos de la imagen)
+        // LOGAN: 10,000 KM / 12 MESES
+        if (str_contains($modelo, 'LOGAN')) {
+            return ['km' => 10000, 'meses' => 12];
         }
 
-        $kmActual = $supervision->kilometraje;
-        $kmUltimoMantenimiento = $mantenimiento?->kilometraje ?? 0;
-
-        // 1. Servicio reciente: Si hay mantenimiento y la diferencia es mínima, es verde automáticamente
-        if ($mantenimiento && abs($kmActual - $kmUltimoMantenimiento) <= $margenServicio) {
-            return 'verde';
+        // AVEO: 12,000 KM / 12 MESES
+        if (str_contains($modelo, 'AVEO')) {
+            return ['km' => 12000, 'meses' => 12];
         }
 
-        //evaluacion de kilometraje, calculamos cuando toca el siguiente
-        if ($mantenimiento) {
-            $proximoMantenimiento = $kmUltimoMantenimiento + $intervaloKm;
-        } else {
-            // Si nunca ha tenido mtto, calculamos basado en el intervalo puro
-            $proximoMantenimiento = ceil($kmActual / $intervaloKm) * $intervaloKm;
-            if ($proximoMantenimiento == 0) $proximoMantenimiento = $intervaloKm;
+        // 2. Reglas por MARCA (Generales)
+        
+        // CHEVROLET (Silverado y otros no Aveo): La imagen dice 6,000 / 12,000 / 24,000
+        // Esto significa que el intervalo base es cada 6,000 KM.
+        if (str_contains($marca, 'CHEVROLET') || str_contains($marca, 'CHEVY')) {
+            return ['km' => 6000, 'meses' => 12];
         }
 
-        $kmFaltantes = $proximoMantenimiento - $kmActual;
-
-        //Determinar color por km
-        $colorKm = 'verde';
-        if ($kmFaltantes < 0) {
-            $colorKm = 'rojo_pasado';
-        } elseif ($kmFaltantes <= $kmventanaRoja){
-            $colorKm = 'rojo';
-        } elseif ($kmFaltantes <= $kmventanaAmarilla){
-            $colorKm = 'amarillo';
+        // NISSAN: 10,000 KM / 6 MESES
+        if (str_contains($marca, 'NISSAN')) {
+            return ['km' => 10000, 'meses' => 6];
         }
 
-        $colorTiempo = 'verde';
-
-        if ($mantenimiento && $mantenimiento->fecha_terminacion) {
-            $fechaUltimo = Carbon::parse($mantenimiento->fecha_terminacion);
-            $fechaLimite = $fechaUltimo->copy()->addMonths($mesesIntervalo);
-            $hoy = Carbon::today();
-
-            // Dias faltantes (negativo si ya paso)
-            $diasFaltantes = $hoy->diffInDays($fechaLimite, false);
-
-            if ($diasFaltantes < 0) {
-                $colorTiempo = 'rojo_pasado';
-            } elseif ($diasFaltantes <= $diasVentanaRoja){
-                $colorTiempo = 'rojo';
-            } elseif ($diasFaltantes <= $diasVentanaAmarilla){
-                $colorTiempo = 'amarillo';
-            }
+        // RAM: 10,000 KM / 12 MESES
+        if (str_contains($marca, 'RAM') || str_contains($marca, 'DODGE')) {
+            return ['km' => 10000, 'meses' => 12];
         }
 
-        //Evaluacion final
-        //Orden de gravedad por prioridad
-        if ($colorKm === 'rojo_pasado' || $colorTiempo === 'rojo_pasado') {
-            return 'rojo_pasado';
+        // MG: 10,000 KM / 6 MESES
+        if (str_contains($marca, 'MG')) {
+            return ['km' => 10000, 'meses' => 6];
         }
 
-        if ($colorKm === 'rojo' || $colorTiempo === 'rojo') {
-            return 'rojo';
-        }
-
-        if ($colorKm === 'amarillo' || $colorTiempo === 'amarillo') {
-            return 'amarillo';
-        }
-        return 'verde';
+        // 3. Default (Para cualquier otro carro no listado, ej: Ford, Toyota)
+        // Usamos el estándar más común que tenías antes
+        return ['km' => 10000, 'meses' => 6]; 
     }
 
     // Se accede como: $vehiculo->info_mantenimiento
     public function getInfoMantenimientoAttribute()
     {
         // --- CONFIGURACIÓN ---
-        $intervaloKm = 10000;
+        $reglas = $this->getReglasMantenimiento();
+        $intervaloKm = $reglas['km'];
         $kmVentanaRoja = 1000;
         $kmVentanaAmarilla = 2000;
         
-        $mesesIntervalo = 3;
+        $mesesIntervalo = $reglas['meses'];
         $diasVentanaRoja = 7;
         $diasVentanaAmarilla = 21;
-        $margenServicio = 500; // Margen de tolerancia post-servicio
+        $margenServicio = 50; // Margen de tolerancia post-servicio
 
         // --- CARGA DE DATOS ---
         // Usamos relaciones cacheadas o cargamos
@@ -245,22 +209,30 @@ class Vehiculo extends Model
             'estatus_tiempo' => 'verde', // Color texto tiempo
             'km_actual' => 0,
             'km_ultimo_mantenimiento' => 0,
-            'km_proximo_servicio' => 10000,
+            'km_proximo_servicio' => $intervaloKm,
             'km_faltantes' => 0,
             'fecha_ultimo_servicio' => null,
             'fecha_proximo_servicio' => null,
             'dias_restantes' => null,
-            'tiene_info' => false
+            'tiene_info' => false,
+            'intervalo_de_km' => $intervaloKm,
+            'intervalo_de_meses' => $mesesIntervalo
         ];
 
         if (!$supervision || $supervision->kilometraje === null) {
             return $data; // Retorna vacío si no hay supervisión
         }
 
-        $data['tiene_info'] = true;
-        $data['km_actual'] = $supervision->kilometraje;
+        $kmSupervision = $supervision->kilometraje ?? 0;
         $kmUltimoMantenimiento = $mantenimiento?->kilometraje ?? 0;
+        $data['km_actual'] = max($kmSupervision, $kmUltimoMantenimiento);
+
         $data['km_ultimo_mantenimiento'] = $kmUltimoMantenimiento;
+        // Validamos que exista al menos algún dato para mostrar info
+        if ($data['km_actual'] === 0) {
+             return $data; 
+        }
+        $data['tiene_info'] = true;
         
         if ($mantenimiento && $mantenimiento->fecha_terminacion) {
              $data['fecha_ultimo_servicio'] = $mantenimiento->fecha_terminacion;
@@ -322,5 +294,62 @@ class Vehiculo extends Model
         }
 
         return $data;
+    }
+
+    public function getFotoUrlAttribute()
+    {
+        // 1. Definir el catálogo
+        $modelos_fotos = [
+            'aveo'      => 'aveo.png',
+            'silverado' => 'silverado.jpg',
+            'f-150'     => 'f-150.png',
+            'frontier'  => 'frontier.jpg',
+            'logan'     => 'logan.jpg',
+            'mg'        => 'mg5.webp',
+            'np300'     => 'np300.webp',
+            'ram'       => 'ram.jpg',
+            's10'       => 'S10.jpg'
+        ];
+
+        // 2. Normalizar a minúsculas (PHP Nativo)
+        $modelo = strtolower($this->modelo ?? '');
+        $marca  = strtolower($this->marca ?? '');
+        
+        $fotoKey = null;
+
+        // 3. Lógica de coincidencia (Usando str_contains nativo de PHP 8)
+        // Nota: Si usas PHP 7, cambia str_contains(A, B) por: strpos(A, B) !== false
+        foreach ($modelos_fotos as $key => $filename) {
+            // Si el modelo (ej: "ford f-150") contiene la clave (ej: "f-150")
+            if ($key && str_contains($modelo, $key)) {
+                $fotoKey = $key;
+                break;
+            }
+        }
+
+        if (!$fotoKey) {
+        if (str_contains($marca, 'chevrolet')) {
+            $fotoKey = 'silverado';
+        } elseif (str_contains($marca, 'mg')) {
+            $fotoKey = 'mg';
+        } elseif (str_contains($marca, 'nissan')) {
+            $fotoKey = 'np300';
+        } elseif (str_contains($marca, 'renault')) {
+            $fotoKey = 'logan';
+        }   
+        }   
+
+        // 5. Retornar URL
+        $archivo = $fotoKey ? ($modelos_fotos[$fotoKey] ?? null) : null;
+        
+        return $archivo 
+            ? "/assets/img/vehiculos_default_fotos/{$archivo}" 
+            : "/assets/img/vehiculos_default_fotos/default.jpg";
+    }
+
+    public function getEstadoMantenimientoAttribute()
+    {
+        $info = $this->info_mantenimiento;
+        return $info['estatus_general'] ?? 'gris';
     }
 }

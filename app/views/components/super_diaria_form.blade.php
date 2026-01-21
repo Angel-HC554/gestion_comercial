@@ -1,12 +1,12 @@
-<div class="bg-white rounded-lg shadow-sm border border-zinc-200 overflow-hidden"
+<div class="bg-white rounded-lg shadow-sm border border-zinc-300 overflow-hidden"
      x-data="supervisionDiariaApp('{{ $vehiculo_id }}', '{{ $no_economico }}')">
     
-    <div class="px-6 py-3 border-b border-zinc-200 bg-gray-50 flex justify-between items-center">
+    <div class="px-6 py-3 border-b border-zinc-300 bg-gray-50 flex justify-between items-center">
         <div>
             <h3 class="text-lg font-bold text-emerald-800">Supervisión Diaria</h3>
             <p class="text-sm text-zinc-500">Vehículo: <span class="font-bold text-zinc-700">{{ $no_economico }}</span></p>
         </div>
-        <div class="text-sm font-medium text-zinc-400">
+        <div class="text-sm font-medium text-zinc-600">
             Paso <span x-text="step"></span> de 4
         </div>
     </div>
@@ -57,7 +57,7 @@
                     </div>
                 </div>
                 <div>
-                    <div>
+                    <div class="mx-10">
                         @include('components.gasolina-slider', ['gasolina' => 0])
                     </div>
                 </div>
@@ -127,7 +127,7 @@
             </div>
         </div>
 
-        <div class="mt-8 pt-4 border-t border-zinc-100 flex justify-between">
+        <div class="mt-8 pt-4 border-t border-zinc-200 flex justify-between">
             <button type="button" 
                 x-show="step > 1" 
                 @click="step--"

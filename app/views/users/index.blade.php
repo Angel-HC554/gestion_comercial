@@ -48,11 +48,11 @@
 
                     @csrf <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-zinc-700">Usuario (ID)</label>
+                            <label class="block text-sm font-medium text-zinc-700">Usuario (R.P.E.)</label>
                             <input type="text" name="user" required pattern="[A-Za-z0-9]+"
                                 title="Solo letras y números" placeholder="Usuario"
                                 class="w-full border-2 border-gray-300 px-2 py-2 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-sm">
-                            <small class="text-xs text-zinc-500 mt-1 block">Identificador alfanumérico único.</small>
+                            <small class="text-xs text-zinc-500 mt-1 block">Identificador único.</small>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-zinc-700">Nombre</label>
@@ -75,7 +75,7 @@
                         </div>
 
                         <div class="border-t border-gray-200 pt-4">
-                            <h3 class="text-sm font-medium text-zinc-900 mb-2">Roles adicionales</h3>
+                            <h3 class="text-sm font-medium text-zinc-900 mb-2">Permiso adicional</h3>
                             <div class="flex items-center gap-2">
                                 <input id="generar500" type="checkbox" name="rol_extra" value="generar500"
                                     class="h-4 w-4 text-emerald-600 focus:ring-emerald-600 border-gray-300 rounded cursor-pointer">

@@ -72,7 +72,7 @@
     buscarUsuario(nombre, campoRpe) {
         let user = this.usersDB.find(u => u.name == nombre);
         if (user) {
-            this[campoRpe] = user.usuario;
+            this[campoRpe] = user.user;
         }
     },
 
@@ -432,7 +432,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mx-5 mb-8">
             <datalist id="users-list">
-                <template x-for="user in usersDB" :key="user.usuario">
+                <template x-for="user in usersDB" :key="user.user">
                     <option :value="user.name"></option>
                 </template>
             </datalist>

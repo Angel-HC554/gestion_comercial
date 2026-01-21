@@ -76,7 +76,7 @@ auth()->createRoles([
         'ver ordenes',
         'crear ordenes',
         'editar ordenes',
-        'eliminar ordenes', // Admin es el único que puede borrar
+        'eliminar ordenes',
         'gestionar usuarios',
         'generar 500'
     ],
