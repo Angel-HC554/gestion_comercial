@@ -695,6 +695,12 @@
                         this.modals[type] = false;
                         if (type === 'upload') this.modals.more = false; // Cerrar también el modal "ver mas"
 
+                        // Limpiar inputs si fue upload
+                        if (type === 'upload' && this.$refs.fileInput) {
+                            this.$refs.fileInput.value = '';
+                            this.tempData.comentarios = '';
+                        }
+
                         Swal.fire({
                             title: '¡Éxito!',
                             position: "top",
@@ -702,20 +708,14 @@
                             icon: 'success',
                             timer: 1500,
                             showConfirmButton: false
+                        }).then(() => {
+                            if (type === 'status') {
+                                window.location.reload();
+                            } else {
+                                // Si no es status, simplemente refrescamos los datos de la tabla
+                                this.fetchData();
+                            }
                         });
-
-                        // Limpiar inputs si fue upload
-                        if (type === 'upload' && this.$refs.fileInput) {
-                            this.$refs.fileInput.value = '';
-                            this.tempData.comentarios = '';
-                        }
-
-                        if (type === 'status') {
-                            window.location.reload();
-                            return;
-                        }
-
-                        this.fetchData();
                     })
                     .catch(error => {
                         console.error('Error:', error);
