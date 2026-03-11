@@ -1,0 +1,5 @@
+tablename: areas_usuarios
+columns:
+  user_id: integer
+  area_id: integer
+  subarea_id: integer

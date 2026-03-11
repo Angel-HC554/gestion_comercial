@@ -18,14 +18,14 @@
     placa: '{{ old('placas', $ordenEditar->placas ?? ($preseleccionado['placas'] ?? '')) }}',
     kilometraje: '{{ old('kilometraje', $ordenEditar->kilometraje ?? '') }}',
     marca: '{{ old('marca', $ordenEditar->marca ?? (isset($preseleccionado) ? $preseleccionado['marca'] . ' ' . $preseleccionado['modelo'] : '')) }}',
-    areausuaria: '{{ old('areausuaria', $ordenEditar->areausuaria ?? '') }}',
-    rpeusuaria: '{{ old('rpeusuaria', $ordenEditar->rpeusuaria ?? '') }}',
-    autoriza: '{{ old('autoriza', $ordenEditar->autoriza ?? '') }}',
-    rpejefedpt: '{{ old('rpejefedpt', $ordenEditar->rpejefedpt ?? '') }}',
-    resppv: '{{ old('resppv', $ordenEditar->resppv ?? '') }}',
-    rperesppv: '{{ old('rperesppv', $ordenEditar->rperesppv ?? '') }}',
+    areausuaria: '{{ old('areausuaria', $ordenEditar->detallePropio->areausuaria ?? '') }}',
+    rpeusuaria: '{{ old('rpeusuaria', $ordenEditar->detallePropio->rpeusuaria ?? '') }}',
+    autoriza: '{{ old('autoriza', $ordenEditar->detallePropio->autoriza ?? '') }}',
+    rpejefedpt: '{{ old('rpejefedpt', $ordenEditar->detallePropio->rpejefedpt ?? '') }}',
+    resppv: '{{ old('resppv', $ordenEditar->detallePropio->resppv ?? '') }}',
+    rperesppv: '{{ old('rperesppv', $ordenEditar->detallePropio->rperesppv ?? '') }}',
 
-    gas: {{ $ordenEditar->gasolina ?? 50 }},
+    gas: {{ $ordenEditar->detalle_propio->gasolina ?? 50 }},
 
     validateFecha(el) {
                 // Si no hay fecha, no hacemos nada
@@ -177,7 +177,7 @@
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Área</label>
                 <input type="text" name="area" list="areas-list" required
                     class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
-                    value="{{ old('area', $ordenEditar->area ?? '') }}" placeholder="Escribe el área">
+                    value="{{ old('area', $ordenEditar->detallePropio->area ?? '') }}" placeholder="Escribe el área">
                 <datalist id="areas-list">
                     <option value="DW01"></option>
                     <option value="DW01A"></option>
@@ -197,14 +197,14 @@
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Zona</label>
                 <input type="text" name="zona" required
                     class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
-                    value="{{ old('zona', $ordenEditar->zona ?? 'MERIDA') }}">
+                    value="{{ old('zona', $ordenEditar->detallePropio->zona ?? 'MERIDA') }}">
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Departamento</label>
                 <input type="text" name="departamento" required
                     class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
-                    value="{{ old('departamento', $ordenEditar->departamento ?? 'COMERCIAL') }}">
+                    value="{{ old('departamento', $ordenEditar->detallePropio->departamento ?? 'COMERCIAL') }}">
             </div>
         </div>
 
@@ -224,13 +224,13 @@
 
             <div>
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Marca</label>
-                <input type="text" name="marca" required x-model="marca"
+                <input type="text" name="marca" required x-model="marca" readonly
                     class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Placas</label>
-                <input type="text" name="placas" required x-model="placa"
+                <input type="text" name="placas" required x-model="placa" readonly
                     class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">
             </div>
         </div>
@@ -240,7 +240,7 @@
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Taller</label>
                 <input type="text" name="taller"
                     class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
-                    value="{{ old('taller', $ordenEditar->taller ?? '') }}" placeholder="Nombre del taller">
+                    value="{{ old('taller', $ordenEditar->detallePropio->taller ?? '') }}" placeholder="Nombre del taller">
             </div>
 
             <div>
@@ -284,13 +284,13 @@
                     <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha Gen.</label>
                     <input type="date" name="fechafirm" x-bind:max="maxDate" @blur="validateFecha($el)"
                         class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
-                        value="{{ old('fechafirm', $ordenEditar->fechafirm ?? date('Y-m-d')) }}">
+                        value="{{ old('fechafirm', $ordenEditar->detallePropio->fechafirm ?? date('Y-m-d')) }}">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha Recep.</label>
                     <input type="date" name="fecharecep" x-bind:max="maxDate" @blur="validateFecha($el)"
                         class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors"
-                        value="{{ old('fecharecep', $ordenEditar->fecharecep ?? '') }}">
+                        value="{{ old('fecharecep', $ordenEditar->detallePropio->fecharecep ?? '') }}">
                 </div>
             </div>
         </div>
@@ -325,13 +325,13 @@
                                 <label class="inline-flex items-center">
                                     <input type="radio" name="{{ $item['name'] }}" value="Si"
                                         class="form-radio text-emerald-600 focus:ring-emerald-500"
-                                        {{ isset($ordenEditar) && trim($ordenEditar->{$item['name']}) == 'Si' ? 'checked' : '' }}>
+                                        {{ isset($ordenEditar) && trim($ordenEditar->detallePropio->{$item['name']}) == 'Si' ? 'checked' : '' }}>
                                     <span class="ml-2 text-sm text-zinc-700">Sí</span>
                                 </label>
                                 <label class="inline-flex items-center">
                                     <input type="radio" name="{{ $item['name'] }}" value="No"
                                         class="form-radio text-emerald-600 focus:ring-emerald-500"
-                                        {{ (isset($ordenEditar) && trim($ordenEditar->{$item['name']}) == 'No') || !isset($ordenEditar) ? 'checked' : '' }}>
+                                        {{ (isset($ordenEditar) && trim($ordenEditar->detallePropio->{$item['name']}) == 'No') || !isset($ordenEditar) ? 'checked' : '' }}>
                                     <span class="ml-2 text-sm text-zinc-700">No</span>
                                 </label>
                             </div>
@@ -339,7 +339,7 @@
                     @endforeach
                 </div>
                 <div class="flex items-start justify-end">
-                    @include('components.gasolina-slider', ['gasolina' => $ordenEditar->gasolina ?? 0])
+                    @include('components.gasolina-slider', ['gasolina' => $ordenEditar->detallePropio->gasolina ?? 0])
                 </div>
             </div>
         </div>
@@ -378,7 +378,7 @@
                     <div class="flex items-center">
                         <input type="checkbox" name="{{ $key }}" value="X" id="{{ $key }}"
                             class="w-4 h-4 text-emerald-600 border-zinc-300 rounded focus:ring-emerald-500 cursor-pointer"
-                            {{ isset($ordenEditar) && $ordenEditar->$key == 'X' ? 'checked' : '' }}>
+                            {{ isset($ordenEditar) && $ordenEditar->detallePropio->$key == 'X' ? 'checked' : '' }}>
                         <label for="{{ $key }}"
                             class="ml-2 text-sm text-zinc-700 cursor-pointer">{{ $label }}</label>
                     </div>
@@ -390,7 +390,7 @@
             <div>
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Observaciones</label>
                 <textarea name="observacion" rows="3" required
-                    class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">{{ old('observacion', $ordenEditar->observacion ?? '') }}</textarea>
+                    class="appearance-none block w-full px-2 py-2 border-2 border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 sm:text-sm text-gray-600 transition-colors">{{ old('observacion', $ordenEditar->detallePropio->observacion ?? '') }}</textarea>
             </div>
 
             <div class="space-y-4 flex justify-evenly">

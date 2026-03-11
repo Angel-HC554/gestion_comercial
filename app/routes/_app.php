@@ -21,10 +21,14 @@ app()->group('/',['middleware' => 'auth.required', function () {
     
     // --- API & UTILIDADES ---
     app()->get('/api/check-orden-500', 'NotificationController@checkOrden500');
+    app()->get('/api/check-orden-arrendado', 'NotificationController@checkOrdenArrendado');
+    app()->get('/api/check-cita-asignada', 'NotificationController@checkCitaAsignada');
     
     // --- ORDENES DE VEHICULOS ---
     app()->get('/ordenvehiculos/create', 'OrdenVehiculoController@create');
+    app()->get('/ordenvehiculos/create_arrendado', 'OrdenVehiculoController@create_arrendado');
     app()->post('/ordenvehiculos/store', 'OrdenVehiculoController@store');
+    app()->post('/ordenvehiculos/store_arrendado', 'OrdenVehiculoController@store_arrendado');
     app()->get('/ordenvehiculos/generar/{id}', 'OrdenVehiculoController@generar');
     app()->post('/ordenes/generar/{id}', 'OrdenVehiculoController@generarOrden');
     app()->get('/ordenvehiculos/pdf/{id}', 'OrdenVehiculoController@generatePdf');
@@ -32,11 +36,17 @@ app()->group('/',['middleware' => 'auth.required', function () {
     app()->get('/api/ordenes/search', 'OrdenVehiculoController@search');
     app()->get('/api/ordenes/{id}/historial', 'OrdenVehiculoController@history');
     app()->get('/ordenvehiculos/{id}/edit', 'OrdenVehiculoController@edit');
+    app()->get('/ordenvehiculos/arrendado/{id}/edit', 'OrdenVehiculoController@edit_arrendado');
     app()->put('/ordenvehiculos/{id}', 'OrdenVehiculoController@update');
+    app()->post('/ordenvehiculos/arrendado/update/{id}', 'OrdenVehiculoController@update_arrendado');
     app()->put('/ordenvehiculos/modal/{id}', 'OrdenVehiculoController@updateModal');
     app()->post('/ordenvehiculos/upload/{id}', 'OrdenVehiculoController@uploadScan');
     app()->put('/ordenvehiculos/code500/{id}', 'OrdenVehiculoController@updateCode500');
     app()->delete('/ordenvehiculos/{id}', 'OrdenVehiculoController@destroy');
+    app()->get('/ordenvehiculos/pdf-arrendado/{id}', 'OrdenVehiculoController@generarPdfArrendado');
+    app()->put('/ordenvehiculos/arrendado/{id}/atendido', 'OrdenVehiculoController@marcarAtendidoArrendado');
+    app()->put('/ordenvehiculos/arrendado/{id}/asignar-cita', 'OrdenVehiculoController@asignarCitaArrendado');
+    app()->put('/ordenvehiculos/arrendado/{id}/ingresar-taller', 'OrdenVehiculoController@ingresarTallerArrendado');
 
     // --- VEHICULOS ---
     app()->get('/vehiculos/search', 'VehiculoController@search');
@@ -46,6 +56,8 @@ app()->group('/',['middleware' => 'auth.required', function () {
     app()->get('/vehiculos/export', 'VehiculoController@export');
     app()->get('/vehiculos/{id}', 'VehiculoController@show');
     app()->get('/vehiculos/{id}/historial', 'VehiculoController@historial');
+    app()->get('/vehiculos/{id}/documentos', 'VehiculoController@getDocumentos');
+    app()->post('/vehiculos/{id}/documentos', 'VehiculoController@storeDocumento');
 
     // --- SUPERVISIONES ---
     app()->get('/supervisiones/pdf/{id}', 'SupervisionSemanalController@generarReportePdf');
@@ -69,6 +81,18 @@ app()->group('/',['middleware' => 'auth.required', function () {
     app()->post('/users', ['middleware' => 'is:admin', 'UserController@store']);
     app()->get('/users/{id}/edit', ['middleware' => 'is:admin', 'UserController@edit']);
     app()->put('/users/{id}', ['middleware' => 'is:admin', 'UserController@update']);
+    app()->get('/api/subareas-options', ['middleware' => 'is:admin', 'UserController@getSubareasOptions']);
+    app()->post('/users/{id}/assignments', 'UserController@addAssignment');
+    app()->delete('/users/{id}/assignments/{assignmentId}', 'UserController@removeAssignment');
+    // --- AREAS ---
+    app()->get('/areas', ['middleware' => 'is:admin', 'AreaController@index']);
+    app()->post('/areas', ['middleware' => 'is:admin', 'AreaController@storeArea']);
+    app()->put('/areas/{id}', ['middleware' => 'is:admin', 'AreaController@updateArea']);
+    app()->delete('/areas/{id}', ['middleware' => 'is:admin', 'AreaController@deleteArea']);
+    
+    app()->get('/areas/{id}/subareas', ['middleware' => 'is:admin', 'AreaController@getSubareas']);
+    app()->post('/areas/{id}/subareas', ['middleware' => 'is:admin', 'AreaController@storeSubarea']);
+    app()->delete('/subareas/{id}', ['middleware' => 'is:admin', 'AreaController@deleteSubarea']);
 
     // --- UTILS ADMIN ---
     app()->get('/hacerme-admin', function() {

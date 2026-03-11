@@ -17,14 +17,21 @@
         </div>
         
         <div class="mt-4 flex gap-4 text-xs text-gray-500 justify-center">
-            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-emerald-500"></span> Mantenimiento Preventivo</div>
+            {{-- <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-emerald-500"></span> Mantenimiento Preventivo</div> --}}
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-emerald-500"></span> Orden</div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Mantenimiento</div>
             <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-500"></span> Hojalatería / Golpe</div>
         </div>
     </div>
 
     {{-- Tarjeta de Detalles (Aparece al hacer click) --}}
     <div x-show="selectedPoint" x-transition 
-            class="bg-white rounded-xl shadow-lg border-l-4 border-emerald-500 p-6 relative overflow-hidden">
+            class="bg-white rounded-xl shadow-lg border-l-4 p-6 relative overflow-hidden"
+            :class="{
+         'border-red-500': selectedPoint?.es_golpe,
+         'border-yellow-500': !selectedPoint?.es_golpe && selectedPoint?.servicio,
+         'border-emerald-500': !selectedPoint?.es_golpe && !selectedPoint?.servicio
+     }">
         
         <div class="absolute top-0 right-0 p-4">
             <button @click="selectedPoint = null" class="text-gray-400 hover:text-gray-600 cursor-pointer">
@@ -68,7 +75,7 @@
                     <div class="flex items-center gap-2">
                         <template x-if="selectedPoint?.servicio">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-yellow-200 text-black">
-                                La orden se realizó por servicio km / tiempo
+                                La orden se realizó por mantenimiento preventivo: Ciclo de kilometraje o meses cumplido
                             </span>
                         </template>
                     </div>
@@ -120,15 +127,23 @@
 
                 renderChart() {
                     const canvas = document.getElementById('kmChart');
-                    if (!canvas) return; // Si cambiamos de tab muy rápido y no existe el canvas
+                    if (!canvas) return;
 
                     const ctx = canvas.getContext('2d');
                     
                     const labels = this.chartData.map(d => d.fecha);
                     const kms = this.chartData.map(d => d.km);       
                     
-                    const pointColors = this.chartData.map(d => d.es_golpe ? '#EF4444' : '#10B981');
-                    const pointRadiuses = this.chartData.map(d => d.es_golpe ? 8 : 5);
+                    const pointColors = this.chartData.map(d => {
+                        if (d.es_golpe) return '#EF4444';
+                        if (d.servicio) return '#F59E0B';
+                        return '#10B981';
+                    });
+                    const pointRadiuses = this.chartData.map(d => {
+                        if (d.es_golpe) return 8;
+                        if (d.servicio) return 6;
+                        return 5;
+                    });
                     const pointStyles = this.chartData.map(d => d.es_golpe ? 'rectRot' : 'circle');
 
                     // Destruir instancia anterior si existe para evitar superposiciones

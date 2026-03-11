@@ -77,10 +77,18 @@
 
             <select x-model="estado"
                 class="w-full sm:w-64 h-9 border-2 border-zinc-300 rounded-md px-2 py-1 text-zinc-500 focus:ring-emerald-600 focus:border-emerald-600 text-sm cursor-pointer">
-                <option value="">Todos</option>
+                <option value="">Estado (Todos)</option>
                 @foreach ($estados as $est)
                     <option value="{{ $est }}" class="text-zinc-700">{{ $est }}</option>
                 @endforeach
+            </select>
+
+            <select x-model="mantenimiento"
+            class="w-full sm:w-64 h-9 border-2 border-zinc-300 rounded-md px-2 py-1 text-zinc-500 focus:ring-emerald-600 focus:border-emerald-600 text-sm cursor-pointer">
+                <option value="">Alerta mantenimiento (Todos)</option>
+                <!-- <option value="verde">🟢 Al día</option> -->
+                <option value="amarillo">🟡 Próximo a vencer</option>
+                <option value="urgente">🔴 Mantenimiento Urgente</option>
             </select>
 
             <button @click="resetFilters"
@@ -198,25 +206,23 @@
                     <form @submit.prevent="saveVehiculo">
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Agencia</label>
-                                <select x-model="form.agencia"
-                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:ring-emerald-600 focus:border-emerald-600">
-                                    <option value="DW01">DW01</option>
-                                    <option value="DW01A">DW01A</option>
-                                    <option value="DW01B">DW01B</option>
-                                    <option value="DW01C">DW01C</option>
-                                    <option value="DW01D">DW01D</option>
-                                    <option value="DW01E">DW01E</option>
-                                    <option value="DW01G">DW01G</option>
-                                    <option value="DW01H">DW01H</option>
-                                    <option value="DW01J">DW01J</option>
-                                    <option value="DW01K">DW01K</option>
-                                    <option value="DW01M">DW01M</option>
-                                </select>
+                                <label class="block text-sm font-medium text-gray-700">Departamento</label>
+                                <input type="text" x-model="form.departamento" placeholder="Departamento"
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Ubicación</label>
+                                <input type="text" x-model="form.ubicacion" placeholder="Ubicación"
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">No. económico</label>
                                 <input type="text" x-model="form.no_economico" placeholder="No. económico"
+                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Serie</label>
+                                <input type="text" x-model="form.serie" placeholder="Serie"
                                     class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
                             </div>
                             <div>
@@ -245,18 +251,8 @@
                                     class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" placeholder="2025" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Proceso</label>
-                                <input type="text" x-model="form.proceso" placeholder="Proceso"
-                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Alias</label>
-                                <input type="text" x-model="form.alias" placeholder="Alias"
-                                    class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">RPE Crea/Mod</label>
-                                <input type="text" x-model="form.rpe_creamod" placeholder="RPE Crea/Mod"
+                                <label class="block text-sm font-medium text-gray-700">RPE Responsable</label>
+                                <input type="text" x-model="form.rpe_responsable" placeholder="RPE Responsable"
                                     class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:outline-none focus:ring-emerald-600 focus:border-emerald-600" />
                             </div>
                             <div>
@@ -266,8 +262,6 @@
                                     <option value="">Seleccione...</option>
                                     <option value="En circulacion">En circulación</option>
                                     <option value="En mantenimiento">En mantenimiento</option>
-                                    <option value="Fuera de circulacion por falla pendiente">Fuera de circulación por falla
-                                        pendiente</option>
                                     <option value="Fuera de circulacion">Fuera de circulación</option>
                                 </select>
                             </div>
@@ -277,7 +271,7 @@
                                     class="mt-1 block w-full rounded-md border-zinc-300 border-2 focus:ring-emerald-600 focus:border-emerald-600">
                                     <option value="">Seleccione...</option>
                                     <option value="Arrendado">Arrendado</option>
-                                    <option value="Propio (CFE)">Propio (CFE)</option>
+                                    <option value="Propio">Propio (CFE)</option>
                                 </select>
                             </div>
                         </div>
@@ -337,6 +331,7 @@
                 // Filtros
                 search: '',
                 estado: '',
+                mantenimiento: '',
 
                 // Modales y Formularios
                 modals: {
@@ -349,21 +344,26 @@
                 flashType: 'success',
 
                 form: {
-                    agencia: 'DW01',
+                    departamento: '',
+                    ubicacion: '',
                     no_economico: '',
+                    serie: '',
                     placas: '',
                     tipo_vehiculo: '',
                     marca: '',
                     modelo: '',
                     año: '',
-                    proceso: '',
-                    alias: '',
-                    rpe_creamod: '',
+                    rpe_responsable: '',
                     estado: '',
                     propiedad: ''
                 },
 
                 init() {
+                    const params = new URLSearchParams(window.location.search);
+                    if (params.has('mantenimiento')) {
+                        this.mantenimiento = params.get('mantenimiento');
+                    }
+
                     this.fetchVehiculos();
 
                     // Watchers manuales (Alpine 'x-effect' o $watch)
@@ -372,6 +372,10 @@
                         this.fetchVehiculos();
                     });
                     this.$watch('estado', () => {
+                        this.page = 1;
+                        this.fetchVehiculos();
+                    });
+                    this.$watch('mantenimiento', () => {
                         this.page = 1;
                         this.fetchVehiculos();
                     });
@@ -384,7 +388,8 @@
                         const params = new URLSearchParams({
                             page: this.page,
                             search: this.search,
-                            estado: this.estado
+                            estado: this.estado,
+                            mantenimiento: this.mantenimiento
                         });
 
                         const response = await fetch(`/vehiculos/search?${params}`);
@@ -417,24 +422,29 @@
                 resetFilters() {
                     this.search = '';
                     this.estado = '';
+                    this.mantenimiento = '';
                     this.page = 1;
-                    // Fetch se disparará automáticamente por el $watch
+                    if (window.history.replaceState) {
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('mantenimiento');
+                        window.history.replaceState({ path: url.href }, '', url.href);
+                    }
                 },
 
                 // Acciones de Modal
                 openNewModal() {
                     // Reset form
                     this.form = {
-                        agencia: 'DW01',
+                        departamento: '',
+                        ubicacion: '',
                         no_economico: '',
+                        serie: '',
                         placas: '',
                         tipo_vehiculo: '',
                         marca: '',
                         modelo: '',
                         año: '',
-                        proceso: '',
-                        alias: '',
-                        rpe_creamod: '',
+                        rpe_responsable: '',
                         estado: '',
                         propiedad: ''
                     };

@@ -23,8 +23,7 @@
                         </button>
                         <button @click="activeTab = 'escaneos'"
                             :class="{ 'border-emerald-500 text-emerald-600': activeTab === 'escaneos', 'border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300': activeTab !== 'escaneos' }"
-                            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm cursor-pointer">
-                            Subir escaneo
+                            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm cursor-pointer" x-text="selectedOrden?.tipo_vehiculo === 'arrendado' ? 'Subir Evidencia' : 'Subir escaneo'">
                         </button>
                         <button @click="activeTab = 'historial'"
                             :class="{ 'border-emerald-500 text-emerald-600': activeTab === 'historial', 'border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300': activeTab !== 'historial' }"
@@ -50,13 +49,17 @@
                                         orden</p>
                                     <p x-text="'#' + (selectedOrden?.id || 'N/A')"
                                         class="text-2xl font-bold text-zinc-900"></p>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase mt-1"
+                                        :class="selectedOrden?.tipo_vehiculo === 'arrendado' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'">
+                                        <span x-text="selectedOrden?.tipo_vehiculo || 'Propio'"></span>
+                                    </span>
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Fecha
                                             de creación</p>
-                                        <p x-text="selectedOrden?.fechafirm || 'N/A'"
+                                        <p x-text="formatearFecha(selectedOrden?.tipo_vehiculo === 'propio' ? selectedOrden?.detalle_propio?.fechafirm : selectedOrden?.detalle_arrendado?.fecha_gen)"
                                             class="text-sm font-medium text-zinc-700"></p>
                                     </div>
                                     <div>
@@ -76,24 +79,26 @@
                                     Archivos Adjuntos
                                 </p>
 
-                                <a :href="'/ordenvehiculos/pdf/' + selectedOrden?.id"
-                                    class="w-full md:w-auto flex items-center justify-center md:justify-start px-4 py-2 text-sm font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-300 rounded-lg transition-colors">
-                                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                <template x-if="selectedOrden?.tipo_vehiculo">
+                                    <div>
+                                        <a :href="'/ordenvehiculos/pdf' + (selectedOrden.tipo_vehiculo === 'arrendado' ? '-arrendado' : '') + '/' + selectedOrden.id" 
+                                            class="w-full md:w-auto flex items-center justify-center md:justify-start px-4 py-2 text-sm font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-300 rounded-lg transition-colors">
+                                            <svg class="h-7 w-7 text-sky-500 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M8.267 14.68c-.184 0-.308.018-.372.036v1.178c.076.018.171.023.302.023.479 0 .774-.242.774-.651 0-.366-.254-.586-.704-.586zm3.487.012c-.2 0-.33.018-.407.036v2.61c.077.018.201.018.313.018.817.006 1.349-.444 1.349-1.396.006-.83-.479-1.268-1.255-1.268z"/>
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM9.498 16.19c-.309.29-.765.42-1.296.42a2.23 2.23 0 0 1-.308-.018v1.426H7v-3.936A7.558 7.558 0 0 1 8.219 14c.557 0 .953.106 1.22.319.254.202.426.533.426.923-.001.392-.131.723-.367.948zm3.807 1.355c-.42.349-1.059.515-1.84.515-.468 0-.799-.03-1.024-.06v-3.917A7.947 7.947 0 0 1 11.66 14c.757 0 1.249.136 1.633.426.415.308.675.799.675 1.504 0 .763-.279 1.29-.663 1.615zM17 14.77h-1.632v.84h1.094v.661h-1.094v1.71h-.846V14h2.478v.77z"/>
                                             </svg>
-                                    Doc generado
-                                </a>
+                                            Doc generado
+                                        </a>
+                                    </div>
+                                </template>
 
                                 <div class="w-full md:w-auto">
                                     <template x-if="selectedOrden?.archivo && selectedOrden.archivo.ruta_archivo">
                                         <a :href="selectedOrden.archivo.ruta_archivo" target="_blank"
                                             class="w-full md:w-auto flex items-center justify-center md:justify-start px-4 py-2 text-sm font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-300 rounded-lg transition-colors">
-                                            <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                            <svg class="h-7 w-7 text-orange-500 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M8.267 14.68c-.184 0-.308.018-.372.036v1.178c.076.018.171.023.302.023.479 0 .774-.242.774-.651 0-.366-.254-.586-.704-.586zm3.487.012c-.2 0-.33.018-.407.036v2.61c.077.018.201.018.313.018.817.006 1.349-.444 1.349-1.396.006-.83-.479-1.268-1.255-1.268z"/>
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM9.498 16.19c-.309.29-.765.42-1.296.42a2.23 2.23 0 0 1-.308-.018v1.426H7v-3.936A7.558 7.558 0 0 1 8.219 14c.557 0 .953.106 1.22.319.254.202.426.533.426.923-.001.392-.131.723-.367.948zm3.807 1.355c-.42.349-1.059.515-1.84.515-.468 0-.799-.03-1.024-.06v-3.917A7.947 7.947 0 0 1 11.66 14c.757 0 1.249.136 1.633.426.415.308.675.799.675 1.504 0 .763-.279 1.29-.663 1.615zM17 14.77h-1.632v.84h1.094v.661h-1.094v1.71h-.846V14h2.478v.77z"/>
                                             </svg>
                                             Doc entregado taller
                                         </a>
@@ -101,13 +106,12 @@
 
                                     <template x-if="!selectedOrden?.archivo">
                                         <span
-                                            class="w-full md:w-auto flex items-center justify-center md:justify-start px-4 py-2 text-sm text-gray-400 bg-gray-50 border border-gray-100 rounded-lg cursor-not-allowed">
+                                            class="w-full md:w-auto flex items-center justify-center md:justify-start px-4 py-2 text-sm text-gray-400 bg-gray-50 border border-gray-100 rounded-lg cursor-not-allowed" x-text="selectedOrden?.tipo_vehiculo === 'arrendado' ? 'Sin evidencia subida' : 'Sin escaneo subido'">
                                             <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24"
                                                 stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                             </svg>
-                                            Sin escaneo subido
                                         </span>
                                     </template>
                                 </div>
@@ -119,7 +123,7 @@
                         <div>
                             <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Observaciones de la orden</p>
                             <div class="bg-amber-100 rounded-lg border border-amber-300 p-5">
-                                <p x-text="selectedOrden?.observacion || 'No se han registrado observaciones para esta orden.'"
+                                <p x-text="selectedOrden?.tipo_vehiculo === 'propio' ? selectedOrden.detalle_propio?.observacion : 'Sin observaciones' || 'No se han registrado observaciones para esta orden.'"
                                     class="text-sm text-zinc-700 leading-relaxed"></p>
                             </div>
                         </div>
@@ -153,7 +157,7 @@
                         <div class="h-full">
                             <div class="mb-5">
                                 <label class="block text-sm font-bold text-zinc-700 mb-2">Archivo:</label>
-                                <input type="file" accept=".pdf" x-ref="fileInput"
+                                <input type="file" accept=".pdf,.jpg,.jpeg,.png" x-ref="fileInput"
                                     class="block w-full text-sm text-zinc-500
                                             file:rounded-md file:text-sm file:font-semibold
                                             file:bg-emerald-50 file:text-emerald-700
@@ -169,12 +173,11 @@
 
                             <div class="flex justify-end">
                                 <button @click="saveAction('upload')"
-                                    class="bg-emerald-600 text-white px-4 py-2 rounded-md text-sm font-normal hover:bg-emerald-700 flex items-center shadow-sm transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 cursor-pointer">
+                                    class="bg-emerald-600 text-white px-4 py-2 rounded-md text-sm font-normal hover:bg-emerald-700 flex items-center shadow-sm transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 cursor-pointer" x-text="selectedOrden?.tipo_vehiculo === 'arrendado' ? 'Subir Evidencia' : 'Subir Escaneo'">
                                     <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                     </svg>
-                                    Subir Escaneo
                                 </button>
                             </div>
                         </div>

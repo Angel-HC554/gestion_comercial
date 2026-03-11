@@ -81,11 +81,11 @@
 
         <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
             <div class="mb-6">
-                <h3 class="text-lg font-bold text-zinc-900">Top Agencias Cumplidas</h3>
-                <p class="text-sm text-zinc-500">Agencias con mayor actividad esta semana.</p>
+                <h3 class="text-lg font-bold text-zinc-900">Top Departamentos Cumplidos</h3>
+                <p class="text-sm text-zinc-500">Departamentos con mayor actividad esta semana.</p>
             </div>
-            @if(count(json_decode($agenciaValues)) > 0)
-                <div id="chart-agencies"></div>
+            @if(count(json_decode($departamentoValues)) > 0)
+                <div id="chart-departamentos"></div>
             @else
                 <div class="flex flex-col items-center justify-center h-64 text-zinc-400">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
@@ -130,10 +130,10 @@
 
         // --- Gráfica 2: Donut Agencias ---
         // Solo renderizar si hay datos
-        if (document.querySelector("#chart-agencies")) {
-            const optionsAgencies = {
-                series: {!! $agenciaValues !!},
-                labels: {!! $agenciaLabels !!},
+        if (document.querySelector("#chart-departamentos")) {
+            const optionsDepartamentos = {
+                series: {!! $departamentoValues !!},
+                labels: {!! $departamentoLabels !!},
                 chart: {
                     type: 'donut',
                     height: 320,
@@ -159,7 +159,7 @@
                 },
                 legend: { position: 'bottom' }
             };
-            new ApexCharts(document.querySelector("#chart-agencies"), optionsAgencies).render();
+            new ApexCharts(document.querySelector("#chart-departamentos"), optionsDepartamentos).render();
         }
     });
 </script>

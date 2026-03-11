@@ -1,4 +1,4 @@
-@extends('layouts.app-layout', ['title' => 'Resumen Diario por Agencias'])
+@extends('layouts.app-layout', ['title' => 'Resumen Diario por Departamentos'])
 
 @section('content')
 <div class="min-h-screen pb-10">
@@ -7,7 +7,7 @@
         {{-- HEADER SUPERIOR --}}
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
             <div>
-                <h2 class="text-2xl font-bold text-zinc-900">Resumen Diario por Agencias</h2>
+                <h2 class="text-2xl font-bold text-zinc-900">Resumen Diario por Departamentos</h2>
                 <p class="text-sm text-zinc-500">
                     Acumulado del mes: <span class="font-semibold text-emerald-600 capitalize">{{ $nombreMes }}</span>
                 </p>
@@ -28,8 +28,7 @@
             <table class="w-full border-collapse">
                 <thead>
                     <tr class="bg-zinc-50 border-b border-zinc-200">
-                        <th class="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Clave</th>
-                        <th class="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider border-r border-zinc-200">Nombre</th>
+                        <th class="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Departamento</th>
                         <th class="py-3 px-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">Flotilla</th>
                         <th class="py-3 px-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">En Taller</th>
                         <th class="py-3 px-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">Faltas Acumuladas</th>
@@ -38,13 +37,8 @@
                 </thead>
                 <tbody class="divide-y divide-zinc-100 bg-white">
                     @foreach($resumen as $fila)
-                        <tr class="hover:bg-zinc-50 transition-colors group">
-                            {{-- CLAVE --}}
-                            <td class="py-3 px-4 text-sm font-mono font-medium text-zinc-600 bg-zinc-50/50">
-                                {{ $fila['clave'] }}
-                            </td>
-                            
-                            {{-- NOMBRE --}}
+                        <tr class="hover:bg-zinc-50 transition-colors group">                            
+                            {{-- Departamento --}}
                             <td class="py-3 px-4 text-sm font-bold text-zinc-800 border-r border-zinc-100">
                                 {{ $fila['nombre'] }}
                             </td>

@@ -52,19 +52,20 @@ class DashboardSemanalController extends Controller
                                     ->whereBetween('fecha_captura', [$inicioSemana, $finSemana])
                                     ->get();
 
-        $agenciaStats = [];
+        $departamentoStats = [];
         foreach ($supervisionesConVehiculo as $sup) {
-            $agencia = $sup->vehiculo->agencia ?? 'Sin Agencia';
-            if (!isset($agenciaStats[$agencia])) {
-                $agenciaStats[$agencia] = 0;
+            // Buscamos el departamento en lugar de la agencia
+            $departamento = $sup->vehiculo->departamento ?? 'Sin Departamento';
+            if (!isset($departamentoStats[$departamento])) {
+                $departamentoStats[$departamento] = 0;
             }
-            $agenciaStats[$agencia]++;
+            $departamentoStats[$departamento]++;
         }
         
         // Ordenar de mayor a menor y tomar top 5
-        arsort($agenciaStats);
-        $topAgenciasLabels = array_keys(array_slice($agenciaStats, 0, 5));
-        $topAgenciasValues = array_values(array_slice($agenciaStats, 0, 5));
+        arsort($departamentoStats);
+        $topDepartamentosLabels = array_keys(array_slice($departamentoStats, 0, 5));
+        $topDepartamentosValues = array_values(array_slice($departamentoStats, 0, 5));
 
         render('dashboard.semanal', [
             'totalVehiculos' => $totalVehiculos,
@@ -76,8 +77,9 @@ class DashboardSemanalController extends Controller
             // Datos Gráficas
             'historiaLabels' => json_encode($graficaSemanas),
             'historiaValues' => json_encode($graficaValores),
-            'agenciaLabels' => json_encode($topAgenciasLabels),
-            'agenciaValues' => json_encode($topAgenciasValues),
+            // Pasamos las nuevas variables de departamentos
+            'departamentoLabels' => json_encode($topDepartamentosLabels),
+            'departamentoValues' => json_encode($topDepartamentosValues),
         ]);
     }
 }

@@ -151,7 +151,7 @@
         <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
             <div class="p-6 border-b border-zinc-100 flex items-center justify-between">
                 <div>
-                    <p class="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Próximos mantenimientos</p>
+                    <p class="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Próximos a vencer</p>
                     <h3 class="text-xl font-bold text-zinc-900">A la vista</h3>
                 </div>
                 <span class="text-sm font-semibold text-emerald-600">{{ $proximosMantenimientoCount }} vehículos</span>

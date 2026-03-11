@@ -1,0 +1,40 @@
+increments: false
+columns:
+  # VINCULACIÓN CON LA TABLA PADRE
+  id_orden:
+    type: integer
+    unsigned: true
+    primary: true
+     # En SQL esto sería: FOREIGN KEY (id_orden) REFERENCES ordenes_global(id)
+
+  # --- DATOS ESPECÍFICOS ---
+  mun_estado_origen: string
+  mun_estado_servicio: string
+  no_serie: string
+  
+  tipo_servicio: string
+
+  fecha_gen:
+    type: date
+
+  # Fotos
+  foto_circulacion: string
+  foto_odometro: string
+  foto_llanta_del_pil:
+    type: string
+    nullable: true
+  foto_llanta_del_cop: 
+    type: string
+    nullable: true
+  foto_llanta_tra_pil:
+    type: string
+    nullable: true
+  foto_llanta_tra_cop: 
+    type: string
+    nullable: true
+  fecha_cita:
+    type: date
+    nullable: true
+  taller:
+    type: string
+    nullable: true

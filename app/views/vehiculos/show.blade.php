@@ -55,8 +55,8 @@
                             <span class="text-gray-600">{{ $vehiculo->propiedad ?? '—' }}</span>
                         </div>
                         <div class="flex text-sm flex-col">
-                            <span class="font-semibold text-gray-700">Agencia:</span>
-                            <span class="text-gray-600">{{ $vehiculo->agencia ?? '—' }}</span>
+                            <span class="font-semibold text-gray-700">Departamento:</span>
+                            <span class="text-gray-600">{{ $vehiculo->departamento ?? '—' }}</span>
                         </div>
                         <div class="flex text-sm flex-col">
                             <span class="font-semibold text-gray-700">No. Económico:</span>
@@ -66,14 +66,10 @@
                             <span class="font-semibold text-gray-700">Placas:</span>
                             <span class="text-gray-600">{{ $vehiculo->placas ?? '—' }}</span>
                         </div>
-                        <div class="flex text-sm flex-col">
-                            <span class="font-semibold text-gray-700">Alias:</span>
-                            <span class="text-gray-600">{{ $vehiculo->alias ?? '—' }}</span>
-                        </div>
-                        <div class="flex text-sm flex-col">
-                            <span class="font-semibold text-gray-700">Proceso:</span>
-                            <span class="text-gray-600">{{ $vehiculo->proceso ?? '—' }}</span>
-                        </div>
+                    </div>
+                    <div class="flex text-sm flex-col mt-3">
+                            <span class="font-semibold text-gray-700">Ubicación:</span>
+                            <span class="text-gray-600">{{ $vehiculo->ubicacion ?? '—' }}</span>
                     </div>
                 </div>
             </div>
@@ -423,6 +419,12 @@
                             class="px-4 py-2 rounded-t-md text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer">
                             Supervisión Diaria
                         </button>
+                        <button @click="tabHistorial = 'expediente'"
+                            :class="tabHistorial === 'expediente' ? 'bg-emerald-600 text-white' :
+                                'text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                            class="px-4 py-2 rounded-t-md text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer">
+                            Expediente
+                        </button>
                     </nav>
                 </div>
 
@@ -442,7 +444,9 @@
                             <h3 class="text-lg font-semibold leading-6 text-emerald-800">
                                 Todas las órdenes del vehículo
                             </h3>
-                            <a href="/ordenvehiculos/create?vehiculo_id={{ $vehiculo->id }}&return_url=/{{ urlencode(request()->getPath()) }}"
+                            <a href="{{ $vehiculo->propiedad === 'Arrendado'
+                                ? '/ordenvehiculos/create_arrendado?vehiculo_id=' . $vehiculo->id . '&return_url=/' . urlencode(request()->getPath())
+                                : '/ordenvehiculos/create?vehiculo_id=' . $vehiculo->id . '&return_url=/' . urlencode(request()->getPath()) }}"
                                 class="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition ease-in-out duration-150">
                                 Crear Orden
                             </a>
@@ -631,7 +635,9 @@
                             </div>
                         @endif
                     </div>
-
+                    <div x-show="tabHistorial === 'expediente'" x-cloak>
+                        @include('vehiculos.expediente')
+                    </div>
                 </div>
             </div>
         </div>

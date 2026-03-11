@@ -71,8 +71,7 @@
         <table class="w-full border-collapse">
             <thead>
                 <tr class="bg-zinc-50 border-b border-zinc-200">
-                    <th class="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Clave</th>
-                    <th class="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider border-r border-zinc-200">Nombre</th>
+                    <th class="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider border-r border-zinc-200">Departamento</th>
                     <th class="py-3 px-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">Vehículos</th>
                     <th class="py-3 px-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">En Taller</th>
                     <th class="py-3 px-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">Pendientes</th>
@@ -82,13 +81,8 @@
             <tbody class="divide-y divide-zinc-100 bg-white">
                 @foreach($resumen as $fila)
                     <tr class="hover:bg-zinc-50 transition-colors group">
-                        {{-- CLAVE --}}
+                        {{-- DEPTO --}}
                         <td class="py-3 px-4 text-sm font-mono font-medium text-zinc-600 bg-zinc-50/50">
-                            {{ $fila['clave'] }}
-                        </td>
-                        
-                        {{-- NOMBRE --}}
-                        <td class="py-3 px-4 text-sm font-bold text-zinc-800 border-r border-zinc-100">
                             {{ $fila['nombre'] }}
                         </td>
                         
@@ -146,7 +140,7 @@
         <svg class="w-5 h-5 text-blue-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         <div class="text-sm text-blue-800">
             <p class="font-bold">¿Cómo se calcula?</p>
-            <p>El porcentaje se basa en los vehículos <strong>activos</strong>. Los vehículos en <strong>taller</strong> se restan del total y no afectan tu cumplimiento.</p>
+            <p>El porcentaje se basa en los vehículos <strong>activos</strong>. Los vehículos en <strong>taller</strong> se restan del total y no afectan el cumplimiento.</p>
         </div>
     </div>
 </div>

@@ -14,11 +14,9 @@ class SupervisionDiariaController extends Controller
     public function index()
     {
         // 1. Configuración de Fechas
-        // En Leaf usamos request()->get() para parámetros GET de la URL
         $mes = request()->get('mes', Carbon::now()->month);
         $año = request()->get('año', Carbon::now()->year);
 
-        // Establecer locale al español para que los nombres de meses salgan en español
         Carbon::setLocale('es');
 
         $fechaInicio = Carbon::createFromDate($año, $mes, 1)->startOfMonth();
@@ -34,20 +32,19 @@ class SupervisionDiariaController extends Controller
             $tempDate->addDay();
         }
 
-        // 3. Query Base de Vehículos
+        // 3. Query Base de Vehículos (ACTUALIZADO: departamento y ubicación)
         $queryVehiculos = Vehiculo::query()
-            ->select('id', 'no_economico', 'agencia')
-            ->orderBy('agencia')
+            ->select('id', 'no_economico', 'departamento', 'ubicacion', 'en_taller')
+            ->orderBy('departamento')
             ->orderBy('no_economico');
 
-        // Filtro por Agencia
-        $agenciaFilter = request()->get('agencia');
-        if ($agenciaFilter) {
-            $queryVehiculos->where('agencia', $agenciaFilter);
+        // Filtro por Departamento
+        $departamentoFilter = request()->get('departamento');
+        if ($departamentoFilter) {
+            $queryVehiculos->where('departamento', $departamentoFilter);
         }
 
-        // 4. Eager Loading (Carga Ansiosa) Eficiente
-        // Cargamos SOLO las supervisiones que corresponden al mes seleccionado
+        // 4. Eager Loading Eficiente
         $queryVehiculos->with(['supervisioDiaria' => function ($q) use ($fechaInicio, $fechaFin) {
             $q->whereBetween('fecha', [
                 $fechaInicio->format('Y-m-d'), 
@@ -57,8 +54,7 @@ class SupervisionDiariaController extends Controller
 
         $vehiculos = $queryVehiculos->get();
 
-        // 5. Procesamiento de la Matriz (Lógica de Negocio)
-        // Hoy lo usamos para saber si un día vacío es "falta" o "futuro"
+        // 5. Procesamiento de la Matriz
         $hoy = Carbon::now()->startOfDay();
 
         $vehiculosProcesados = $vehiculos->map(function ($vehiculo) use ($diasDelMes, $mes, $año, $hoy) {
@@ -66,13 +62,10 @@ class SupervisionDiariaController extends Controller
             $incumplimientos = 0;
 
             foreach ($diasDelMes as $dia) {
-                // Creamos objeto fecha para el día específico de la iteración
                 $fechaIteracion = Carbon::createFromDate($año, $mes, $dia)->startOfDay();
 
-                // Buscamos en la colección cargada (en memoria, no hace querys extra)
-                // Asumimos que SupervisionDiaria tiene el cast 'fecha' => 'date' en el modelo
                 $tieneSupervision = $vehiculo->supervisioDiaria->contains(function ($sup) use ($fechaIteracion) {
-                    return $sup->fecha->isSameDay($fechaIteracion);
+                    return Carbon::parse($sup->fecha)->isSameDay($fechaIteracion);
                 });
 
                 if ($tieneSupervision) {
@@ -80,23 +73,24 @@ class SupervisionDiariaController extends Controller
                 } elseif ($fechaIteracion->isFuture()) {
                     $status = 'futuro';
                 } else {
-                    // Si es hoy o pasado y no tiene supervisión
-                    $status = 'no_cumplido';
-                    $incumplimientos++;
+                    if ($vehiculo->en_taller) {
+                         $status = 'taller'; // Agregamos estado taller como en el semanal
+                    } else {
+                         $status = 'no_cumplido';
+                         $incumplimientos++;
+                    }
                 }
 
-                // Guardamos el status usando el número de día como clave
                 $statusDias[$dia] = $status;
             }
 
-            // Inyectamos propiedades temporales al objeto vehículo para la vista
             $vehiculo->setAttribute('status_dias', $statusDias);
             $vehiculo->setAttribute('total_incumplimientos', $incumplimientos);
 
             return $vehiculo;
         });
 
-        // 6. Filtro de Cumplimiento (Post-Procesamiento)
+        // 6. Filtro de Cumplimiento
         $cumplimientoFilter = request()->get('cumplimiento');
         if ($cumplimientoFilter == 'no_cumple') {
             $vehiculosProcesados = $vehiculosProcesados->filter(function ($vehiculo) {
@@ -104,19 +98,21 @@ class SupervisionDiariaController extends Controller
             });
         }
 
-        // 7. Datos para los selectores de filtros
-        $agencias = Vehiculo::distinct()->orderBy('agencia')->pluck('agencia');
+        // 7. Datos para los selectores de filtros (Departamentos únicos)
+        $departamentos = Vehiculo::whereNotNull('departamento')
+            ->where('departamento', '!=', '')
+            ->distinct()
+            ->orderBy('departamento')
+            ->pluck('departamento');
 
         // 8. Renderizar Vista
-        // Asumo que crearás una carpeta 'supervision_diaria' dentro de views
         render('supervision_diaria.index', [
             'vehiculos' => $vehiculosProcesados,
             'diasDelMes' => $diasDelMes,
-            'nombreMes' => ucfirst($nombreMes), // Primera letra mayúscula
-            'agencias' => $agencias,
-            // Pasamos los filtros actuales para mantenerlos seleccionados en el HTML
+            'nombreMes' => ucfirst($nombreMes),
+            'departamentos' => $departamentos,
             'filtrosActuales' => [
-                'agencia' => $agenciaFilter,
+                'departamento' => $departamentoFilter,
                 'cumplimiento' => $cumplimientoFilter,
                 'mes' => $mes,
                 'año' => $año
@@ -216,14 +212,7 @@ class SupervisionDiariaController extends Controller
 
     public function resumenAgencias()
     {
-        $claves = [
-            'DW01A' => 'CENTRO', 'DW01B' => 'NORTE', 'DW01C' => 'SUR', 
-            'DW01D' => 'ORIENTE', 'DW01E' => 'PONIENTE', 'DW01G' => 'PROGRESO', 
-            'DW01H' => 'HUNUCMA', 'DW01J' => 'UMAN', 'DW01K' => 'ACANCEH', 
-            'DW01M' => 'CONKAL'
-        ];
-
-        // 1. Configuración de Fechas (Blindada igual que el semanal)
+        // 1. Configuración de Fechas
         $mesInput = request()->get('mes');
         $añoInput = request()->get('año');
         $mes = $mesInput ? (int)$mesInput : \Carbon\Carbon::now()->month;
@@ -235,55 +224,44 @@ class SupervisionDiariaController extends Controller
         $nombreMes = $fechaInicioMes->translatedFormat('F Y');
 
         // 2. Consulta de Vehículos y Supervisiones Diarias
-        // Cargamos todas las supervisiones del mes seleccionado
         $todosLosVehiculos = Vehiculo::with(['supervisioDiaria' => function ($q) use ($fechaInicioMes, $fechaFinMes){
                 $q->whereBetween('fecha', [$fechaInicioMes->format('Y-m-d'), $fechaFinMes->format('Y-m-d')]);
             }])
-            ->select('id', 'no_economico', 'agencia', 'en_taller')
+            ->select('id', 'no_economico', 'departamento', 'en_taller')
             ->get();
 
-        // 3. Procesamiento
+        // 3. Procesamiento (ACTUALIZADO: Agrupación por departamento)
         $tablaResumen = [];
-        $hoy = \Carbon\Carbon::now()->endOfDay(); // Para comparar días pasados
+        $hoy = \Carbon\Carbon::now()->endOfDay(); 
 
-        foreach ($claves as $clave => $nombre) {
-            $sufijo = substr($clave, -1);
-            
-            // Filtro por Agencia
-            $vehiculosGrupo = $todosLosVehiculos->filter(function ($v) use ($sufijo){
-                return str_ends_with(trim($v->agencia), $sufijo);
-            });
+        $gruposPorDepartamento = $todosLosVehiculos->groupBy('departamento');
+
+        foreach ($gruposPorDepartamento as $nombreDepto => $vehiculosGrupo) {
+            $nombre = $nombreDepto ?: 'SIN DEPARTAMENTO';
 
             $totalVehiculos = $vehiculosGrupo->count();
             $totalEnTaller = $vehiculosGrupo->where('en_taller', 1)->count();
             
-            // Contadores
             $totalSupervisionesHechas = 0;
-            $totalDiasFaltantes = 0; // Acumulador de días no supervisados
-            $totalDiasEsperados = 0; // Base para el porcentaje
+            $totalDiasFaltantes = 0;
+            $totalDiasEsperados = 0;
 
-            // Iteramos vehículos ACTIVOS (los de taller se ignoran para el % de cumplimiento)
             foreach ($vehiculosGrupo as $vehiculo) {
                 if ($vehiculo->en_taller) {
-                    continue; // Saltamos lógica de cumplimiento
+                    continue; 
                 }
 
-                // Recorremos CADA DÍA del mes para ver si cumplió
                 $iteradorDia = $fechaInicioMes->copy();
                 
                 while ($iteradorDia->lte($fechaFinMes)) {
-                    // Si el día es futuro, paramos de contar "esperados" para este vehículo
                     if ($iteradorDia->isFuture()) {
                         $iteradorDia->addDay();
                         continue;
                     }
 
-                    $totalDiasEsperados++; // Hoy o pasado cuenta como "Debió supervisarse"
+                    $totalDiasEsperados++; 
 
-                    // Buscamos si existe supervisión en esa fecha
                     $cumplioDia = $vehiculo->supervisioDiaria->contains(function ($sup) use ($iteradorDia) {
-                        // Asumiendo que 'fecha' es Date/Carbon en el modelo, o string Y-m-d
-                        // Si es string: return substr($sup->fecha, 0, 10) == $iteradorDia->format('Y-m-d');
                         return \Carbon\Carbon::parse($sup->fecha)->isSameDay($iteradorDia);
                     });
 
@@ -297,28 +275,28 @@ class SupervisionDiariaController extends Controller
                 }
             }
 
-            // Cálculo de Porcentaje (Basado en DÍAS, no en vehículos)
-            // Ejemplo: 10 vehículos x 5 días pasados = 50 supervisiones esperadas.
             $porcentaje = ($totalDiasEsperados > 0) 
                 ? round(($totalSupervisionesHechas / $totalDiasEsperados) * 100) 
                 : 0; 
             
-            // Si no hay días esperados (ej. principio de mes futuro), ponemos 100% o 0% según prefieras.
-            // Si es mes futuro completo, activos > 0 pero esperados = 0 -> 0%
             if ($totalDiasEsperados == 0 && $totalVehiculos > 0) $porcentaje = 0;
 
             $tablaResumen[] = [
-                'clave' => $clave,
                 'nombre' => $nombre,
                 'total_vehiculos' => $totalVehiculos,
                 'en_taller' => $totalEnTaller,
-                'pendientes' => $totalDiasFaltantes, // Aquí mostramos DÍAS acumulados faltantes
+                'pendientes' => $totalDiasFaltantes, 
                 'cumplidos' => $totalSupervisionesHechas,
                 'porcentaje' => $porcentaje
             ];
         }
 
-        // Renderizamos la vista (Crearemos una nueva específica para diaria)
+        // Ordenar alfabéticamente
+        usort($tablaResumen, function($a, $b) {
+            return strcmp($a['nombre'], $b['nombre']);
+        });
+
+        // Renderizamos
         render('supervision_diaria.partials.resumen_agencias', [
             'nombreMes' => ucfirst($nombreMes),
             'resumen' => $tablaResumen,

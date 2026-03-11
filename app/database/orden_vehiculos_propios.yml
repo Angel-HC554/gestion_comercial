@@ -1,0 +1,64 @@
+increments: false
+columns:
+  # VINCULACIÓN CON LA TABLA PADRE
+  id_orden:
+    type: integer
+    unsigned: true
+    primary: true
+    # En SQL esto sería: FOREIGN KEY (id_orden) REFERENCES ordenes_global(id)
+
+  # --- DATOS ESPECÍFICOS ---
+  area: string
+  zona: string
+  departamento: string
+  
+  taller:
+    type: string
+    nullable: true
+
+  fecharecep:
+    type: date
+    nullable: true
+
+  # Campos de inventario
+  radiocom: string
+  llantaref: string
+  autoestereo: string
+  gatoh: string
+  llavecruz: string
+  extintor: string
+  botiquin: string
+  escalera: string
+  escalerad: string
+  gasolina: string
+
+  # Checkboxes (vehicle1 al 20)
+  vehicle1: string
+  vehicle2: string
+  vehicle3: string
+  vehicle4: string
+  vehicle5: string
+  vehicle6: string
+  vehicle7: string
+  vehicle8: string
+  vehicle9: string
+  vehicle10: string
+  vehicle11: string
+  vehicle12: string
+  vehicle13: string
+  vehicle14: string
+  vehicle15: string
+  vehicle16: string
+  vehicle17: string
+  vehicle18: string
+  vehicle19: string
+  vehicle20: string
+
+  observacion: text
+  fechafirm: date
+  areausuaria: string
+  rpeusuaria: string
+  autoriza: string
+  rpejefedpt: string
+  resppv: string
+  rperesppv: string

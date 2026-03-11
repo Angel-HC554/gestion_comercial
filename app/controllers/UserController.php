@@ -3,6 +3,9 @@
 namespace App\Controllers;
 
 use App\Models\User;
+use App\Models\Area;
+use App\Models\Subarea;
+use App\Models\AreaUsuario;
 use Leaf\Helpers\Password;
 
 class UserController extends Controller
@@ -12,7 +15,11 @@ class UserController extends Controller
      */
     public function index()
     {
-        render('users.index');
+        $areas = Area::all();
+
+        render('users.index', [
+            'areas' => $areas
+        ]);
     }
 
     public function search()
@@ -55,6 +62,69 @@ class UserController extends Controller
         //
     }
 
+    public function getSubareasOptions()
+    {
+        // HTMX envía el valor del select como parámetro GET con el nombre del input ('area_id')
+        $areaId = request()->get('area_id');
+        
+        $subareas = Subarea::where('area_id', $areaId)->get();
+        
+        // Construimos el HTML de las opciones manualmente (es más rápido que crear una vista parcial)
+        $html = '<option value="">Seleccione una ubicación...</option>';
+        
+        foreach ($subareas as $sub) {
+            $html .= '<option value="' . $sub->id . '">' . $sub->nombre . '</option>';
+        }
+        
+        // Retornamos el HTML directo
+        return response()->markup($html);
+    }
+
+    public function addAssignment($id)
+    {
+        $data = request()->body();
+        
+        if (empty($data['area_id']) || empty($data['subarea_id'])) {
+            return response()->markup("Error: Falta seleccionar área o ubicación", 400);
+        }
+
+        // Evitar duplicados
+        $exists = AreaUsuario::where('user_id', $id)
+                    ->where('area_id', $data['area_id'])
+                    ->where('subarea_id', $data['subarea_id'])
+                    ->exists();
+
+        if (!$exists) {
+            AreaUsuario::create([
+                'user_id'    => $id,
+                'area_id'    => $data['area_id'],
+                'subarea_id' => $data['subarea_id']
+            ]);
+        }
+
+        // Devolvemos la tabla actualizada
+        return $this->renderAssignmentsTable($id);
+    }
+
+    public function removeAssignment($id, $assignmentId)
+    {
+        AreaUsuario::where('id', $assignmentId)->where('user_id', $id)->delete();
+        return $this->renderAssignmentsTable($id);
+    }
+
+    private function renderAssignmentsTable($userId)
+    {
+        // Cargamos relaciones para mostrar nombres
+        $assignments = AreaUsuario::with(['area', 'subarea'])
+                        ->where('user_id', $userId)
+                        ->get();
+
+        // Renderizamos solo el pedacito de HTML de la tabla
+        render('users.partials.assignments_table', [
+            'assignments' => $assignments,
+            'userId' => $userId
+        ]);
+    }
     /**
      * Store a newly created resource in storage.
      */
@@ -81,12 +151,37 @@ class UserController extends Controller
         }
 
         try {
+            db()->transaction(function () use ($data, $roles){
             $newUser = new User();
             $newUser->name = $data['name'];
             $newUser->user = $data['user'];
             $newUser->password = Password::hash($data['password']);
             $newUser->leaf_auth_user_roles = json_encode(array_values(array_unique($roles)));
             $newUser->save();
+
+            // B. Asignar area y subarea
+                $areas = $data['areas'] ?? [];
+                $subareas = $data['subareas'] ?? [];
+                $processedCombinations = [];
+
+                if (!empty($areas) && is_array($areas)) {
+                    foreach ($areas as $index => $areaId) {
+                        $subareaId = $subareas[$index] ?? null;
+
+                        if (!empty($areaId) && !empty($subareaId)) {
+                            $comboKey = "{$areaId}-{$subareaId}";
+                            if (!in_array($comboKey, $processedCombinations)) {
+                                AreaUsuario::create([
+                                    'user_id'    => $newUser->id,
+                                    'area_id'    => $areaId,
+                                    'subarea_id' => $subareaId
+                                ]);
+                                $processedCombinations[] = $comboKey;
+                            }
+                        }
+                    }
+                }
+            });
 
             return response()->json(['message' => 'Usuario creado correctamente'], 201);
 
@@ -109,8 +204,14 @@ class UserController extends Controller
     public function edit($id)
     {
         $user = User::find($id);
+        $roles = json_decode($user->leaf_auth_user_roles, true) ?? [];
+        $areas = Area::all();
+        $assignments = AreaUsuario::with('area', 'subarea')->where('user_id', $id)->get();
         return render('users.edit',[
-            'user' => $user
+            'user' => $user,
+            'userRoles' => $roles,
+            'areas' => $areas,
+            'assignments' => $assignments
         ]);
     }
 

@@ -13,8 +13,10 @@ class Vehiculo extends Model
 
     protected $fillable = [
         'id',
-        'agencia',
+        'departamento',
+        'ubicacion',
         'no_economico',
+        'serie',
         'placas',
         'tipo_vehiculo',
         'marca',
@@ -22,9 +24,7 @@ class Vehiculo extends Model
         'año',
         'estado',
         'propiedad',
-        'proceso',
-        'alias',
-        'rpe_creamod',
+        'rpe_responsable',
         'ordenes_pendientes',
         'en_taller',
         'finalizado',

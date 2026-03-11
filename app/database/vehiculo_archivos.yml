@@ -1,0 +1,5 @@
+tablename: vehiculo_archivos
+columns:
+  vehiculo_id: integer
+  nombre: string
+  ruta_archivo: string

@@ -18,12 +18,12 @@
                 
                 <div class="flex flex-row w-full md:w-auto justify-between">
                     <div class="w-full">
-                        <label class="text-sm font-bold text-zinc-700 mb-1">Agencia:</label>
-                        <select name="agencia" class="w-full h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none transition-shadow">
-                            <option value="">Todas</option>
-                            @foreach($agencias as $agencia)
-                                <option value="{{ $agencia }}" {{ ($filtrosActuales['agencia'] ?? '') == $agencia ? 'selected' : '' }}>
-                                    {{ $agencia }}
+                        <label class="text-sm font-bold text-zinc-700 mb-1">Departamento:</label>
+                        <select name="departamento" class="w-full h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none transition-shadow">
+                            <option value="">Todos los Departamentos</option>
+                            @foreach($departamentos as $depto)
+                                <option value="{{ $depto }}" {{ ($filtrosActuales['departamento'] ?? '') == $depto ? 'selected' : '' }}>
+                                    {{ $depto }}
                                 </option>
                             @endforeach
                         </select>
@@ -49,7 +49,7 @@
 
                 <a href="/supervision-diaria/resumen-agencias?mes={{ $filtrosActuales['mes'] }}&año={{ $filtrosActuales['año'] }}" 
                     class="w-full md:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer no-underline">
-                    Ver Resumen por Agencias
+                    Ver Resumen por departamentos
                 </a>
             </div>
         </form>
@@ -70,7 +70,7 @@
             <table class="tabla-matriz">
                 <thead>
                     <tr>
-                        <th class="bg-zinc-100 text-zinc-700 font-bold uppercase text-xs tracking-wider">Agencia</th>
+                        <th class="bg-zinc-100 text-zinc-700 font-bold uppercase text-xs tracking-wider">Departamento / Ubicación</th>
                         <th class="bg-zinc-100 text-zinc-700 font-bold uppercase text-xs tracking-wider shadow-r">Vehículo</th>
                         @foreach($diasDelMes as $dia)
                             <th class="bg-zinc-50 text-zinc-500 font-medium text-xs">{{ $dia }}</th>
@@ -80,7 +80,11 @@
                 <tbody class="divide-y divide-zinc-100">
                     @forelse($vehiculos as $vehiculo)
                         <tr class="hover:bg-zinc-50 transition-colors">
-                            <td class="font-medium text-zinc-600 text-sm">{{ $vehiculo->agencia }}</td>
+                            <td class="font-medium text-zinc-600 text-sm">{{ $vehiculo->departamento }}
+                                @if($vehiculo->ubicacion)
+                                    <br><span class="text-xs text-zinc-400">{{ $vehiculo->ubicacion }}</span>
+                                @endif
+                            </td>
                             <td class="font-bold text-zinc-800 text-sm border-r border-zinc-200 shadow-sm">{{ $vehiculo->no_economico }}</td>
                             
                             @foreach($vehiculo->status_dias as $status)

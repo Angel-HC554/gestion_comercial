@@ -1,0 +1,18 @@
+tablename: areas
+columns:
+  nombre: string
+  
+seeds:
+  data:
+    - nombre: 'MEDICION'
+    - nombre: 'COMERCIAL'
+    - nombre: 'SUBESTACIONES'
+    - nombre: 'DISTRIBUCION'
+    - nombre: 'CCC'
+    - nombre: 'CCD'
+    - nombre: 'ALMACEN'
+    - nombre: 'COMUNICACIONES Y CONTROL'
+    - nombre: 'CONSTRUCCION'
+    - nombre: 'PLANEACION'
+    - nombre: 'SUPERINTENDENCIA'
+    - nombre: 'TRABAJO'

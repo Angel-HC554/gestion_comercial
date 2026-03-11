@@ -1,0 +1,27 @@
+tablename: subareas
+columns:
+  area_id: integer
+  nombre: string
+seeds:
+  data:
+    - area_id: 2
+      nombre: 'CENTRO'
+    - area_id: 2
+      nombre: 'NORTE'
+    - area_id: 2
+      nombre: 'SUR'
+    - area_id: 2
+      nombre: 'ORIENTE'
+    - area_id: 2
+      nombre: 'PONIENTE'
+    - area_id: 2
+      nombre: 'PROGRESO'
+    - area_id: 2
+      nombre: 'HUNUCMA'
+    - area_id: 2
+      nombre: 'UMAN'
+    - area_id: 2
+      nombre: 'ACANCEH'
+    - area_id: 2
+      nombre: 'CONKAL'
+  

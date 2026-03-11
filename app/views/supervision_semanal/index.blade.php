@@ -17,12 +17,12 @@
             <div class="flex flex-col md:flex-row gap-4 items-end md:items-center bg-white rounded-lg border-t-4 border-t-emerald-600 shadow-sm p-4 border border-zinc-200">
                 
                 <div class="flex flex-col w-full md:w-auto">
-                    <label class="text-sm font-bold text-zinc-700 mb-1">Agencia:</label>
-                    <select name="agencia" class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none">
-                        <option value="">Todas las Agencias</option>
-                        @foreach($agencias as $agencia)
-                            <option value="{{ $agencia }}" {{ ($filtrosActuales['agencia'] ?? '') == $agencia ? 'selected' : '' }}>
-                                {{ $agencia }}
+                    <label class="text-sm font-bold text-zinc-700 mb-1">Proceso:</label>
+                    <select name="departamento" class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none">
+                        <option value="">Todos los procesos</option>
+                        @foreach($departamentos as $depto)
+                            <option value="{{ $depto }}" {{ ($filtrosActuales['departamento'] ?? '') == $depto ? 'selected' : '' }}>
+                                {{ $depto }}
                             </option>
                         @endforeach
                     </select>
@@ -73,7 +73,7 @@
             <table class="tabla-matriz">
                 <thead>
                     <tr>
-                        <th class="bg-zinc-100 text-zinc-700 font-bold uppercase text-xs tracking-wider">Agencia</th>
+                        <th class="bg-zinc-100 text-zinc-700 font-bold uppercase text-xs tracking-wider">Departamento / Ubicación</th>
                         <th class="bg-zinc-100 text-zinc-700 font-bold uppercase text-xs tracking-wider shadow-r">Vehículo</th>
                         @foreach($semanasDelMes as $i => $semana)
                             <th class="bg-zinc-50 text-zinc-600 font-medium text-xs border-b-2 border-zinc-300">
@@ -88,7 +88,9 @@
                 <tbody class="divide-y divide-zinc-100">
                     @forelse($vehiculos as $vehiculo)
                         <tr class="hover:bg-zinc-50 transition-colors">
-                            <td class="font-medium text-zinc-600 text-sm">{{ $vehiculo->agencia }}</td>
+                            <td class="font-medium text-zinc-600 text-sm">{{ $vehiculo->departamento }}
+                                @if($vehiculo->ubicacion) <br><span class="text-xs text-zinc-400">{{ $vehiculo->ubicacion }}</span> @endif
+                            </td>
                             <td class="font-bold text-zinc-800 text-sm border-r border-zinc-200 shadow-sm">{{ $vehiculo->no_economico }}</td>
                             
                             @foreach($vehiculo->status_semanas as $status)

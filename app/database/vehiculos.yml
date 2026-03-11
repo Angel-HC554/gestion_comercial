@@ -1,17 +1,17 @@
 columns:
-  agencia: string
-  
   # Es string porque a veces los números económicos tienen letras o ceros a la izquierda
   no_economico: 
     type: string
     unique: true
+  serie:
+    type: string
   
+  departamento: string
+  ubicacion: string
   placas: string
   tipo_vehiculo: string
   marca: string
   modelo: string
-  
-  # En validación es digits:4, integer es lo correcto
   año: integer
 
   # Contador de órdenes activas
@@ -30,13 +30,7 @@ columns:
   estado: string
   # 'Arrendado' o 'Propio (CFE)'
   propiedad: string
-  
-  proceso: string
-  
-  alias:
-    type: string
-    nullable: true
     
-  rpe_creamod: 
+  rpe_responsable: 
     type: string
     nullable: true

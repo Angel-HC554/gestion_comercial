@@ -4,38 +4,44 @@ namespace App\Controllers;
 
 use App\Models\OrdenVehiculo;
 use App\Models\Vehiculo;
+use App\Models\AreaUsuario;
+use Carbon\Carbon;
 
 class HomeController extends Controller
 {
     public function index()
     {
-        // 1. Lógica de conteos de mantenimiento (sin caché)
-        $vehiculos = Vehiculo::all();
+        $usuario = auth()->user();
+        $areasUsuario = AreaUsuario::with('area', 'subarea')
+            ->where('user_id', $usuario->id)
+            ->get();
+        
+        $vehiculos = Vehiculo::with([
+            'latestSupervision' => function($q) { $q->select('id', 'vehiculo_id', 'kilometraje', 'fecha', 'hora_fin'); },
+            'latestMantenimiento'
+        ])
+        ->select('id', 'marca', 'modelo')
+        ->get();
+
         $conteosMantenimiento = [
-            'amarillo'    => $vehiculos->where('estado_mantenimiento', 'amarillo')->count(),
-            'rojo'        => $vehiculos->where('estado_mantenimiento', 'rojo')->count(),
-            'rojo_pasado' => $vehiculos->where('estado_mantenimiento', 'rojo_pasado')->count(),
+            'verde'    => $vehiculos->filter(fn($v) => $v->estado_mantenimiento === 'verde')->count(),
+            'amarillo'    => $vehiculos->filter(fn($v) => $v->estado_mantenimiento === 'amarillo')->count(),
+            'rojo'        => $vehiculos->filter(fn($v) => $v->estado_mantenimiento === 'rojo')->count(),
+            'rojo_pasado' => $vehiculos->filter(fn($v) => $v->estado_mantenimiento === 'rojo_pasado')->count(),
         ];
 
-        // 2. Consultas generales
-        $totalOrdenes = OrdenVehiculo::count();
+        // 2. Órdenes Globales (Solo Pendientes y En Taller)
         $ordenesPendientes = OrdenVehiculo::where('status', 'PENDIENTE')->count();
-        $ordenesCompletadas = OrdenVehiculo::where('status', 'TERMINADO')->count();
+        $ordenesEnTaller   = OrdenVehiculo::where('status', 'EN TALLER')->count();
         
-        $totalVehiculos = Vehiculo::count();
-        // Nota: Asegúrate que estos scopes existan en tu modelo Vehiculo de Leaf
-        $vehiculosConDiaria = Vehiculo::conSupervisionDiariaHoy()->count();
-        $vehiculosConSemanal = Vehiculo::conSupervisionSemanalEstaSemana()->count();
+        $totalVehiculos = $vehiculos->count();
 
-        // 3. Renderizar vista con datos
         render('pages.dashboard', [
             'conteosMantenimiento' => $conteosMantenimiento,
-            'totalOrdenes' => $totalOrdenes,
-            'ordenesPendientes' => $ordenesPendientes,
-            'ordenesCompletadas' => $ordenesCompletadas,
-            'totalVehiculos' => $totalVehiculos,
-            'vehiculosConDiaria' => $vehiculosConDiaria,
-            'vehiculosConSemanal' => $vehiculosConSemanal
+            'ordenesPendientes'    => $ordenesPendientes,
+            'ordenesEnTaller'      => $ordenesEnTaller,
+            'totalVehiculos'       => $totalVehiculos,
+            'areasUsuario'         => $areasUsuario
         ]);
     }
 }

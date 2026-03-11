@@ -13,33 +13,46 @@ class DashboardVehiculosController extends Controller
     {
         Carbon::setLocale('es');
 
-        $ordenesTaller = OrdenVehiculo::where('status', 'VEHICULO TALLER')
-            ->orderByDesc('fechafirm')
-            ->orderByDesc('id')
+        $ordenesTaller = OrdenVehiculo::with('detallePropio', 'detalleArrendado')
+            ->where('status', 'VEHICULO TALLER')
+            ->orderByDesc('created_at')
             ->get();
 
         $noEconomicosTaller = $ordenesTaller->pluck('noeconomico')->unique()->values();
 
         $vehiculosMap = Vehiculo::whereIn('no_economico', $noEconomicosTaller)
-            ->select('id', 'no_economico', 'marca', 'modelo', 'placas', 'agencia')
+            ->select('id', 'no_economico', 'marca', 'modelo', 'placas', 'departamento', 'ubicacion')
             ->get()
             ->keyBy('no_economico');
 
         $vehiculosEnTaller = $ordenesTaller->map(function ($orden) use ($vehiculosMap) {
             $vehiculo = $vehiculosMap->get($orden->noeconomico);
+
+            $nombreTaller = 'No especificado';
+            $fechaIngreso = $orden->created_at;
+
+            if ($orden->detallePropio) {
+                $nombreTaller = $orden->detallePropio->taller;
+                $fechaIngreso = $orden->detallePropio->fecharecep ?? $orden->created_at;
+            } elseif ($orden->detalleArrendado) {
+                $nombreTaller = 'Arrendado / Externo';
+                $fechaIngreso = $orden->detalleArrendado->fecha_gen ?? $orden->created_at;
+            }
+
             return [
                 'orden_id' => $orden->id,
                 'noeconomico' => $orden->noeconomico,
                 'marca' => $orden->marca,
                 'placas' => $orden->placas,
-                'taller' => $orden->taller,
-                'fecha_ingreso' => $orden->fecharecep ?? $orden->created_at,
+                'taller' => $nombreTaller,
+                'fecha_ingreso' => $fechaIngreso,
                 'link' => $vehiculo ? '/vehiculos/' . $vehiculo->id : null,
-                'agencia' => $vehiculo?->agencia,
+                'departamento' => $vehiculo?->departamento,
+                'ubicacion' => $vehiculo?->ubicacion,
             ];
         });
 
-        $topReingresos = OrdenVehiculo::selectRaw('noeconomico, marca, placas, COUNT(*) as total, MIN(fechafirm) as primera_fecha')
+        $topReingresos = OrdenVehiculo::selectRaw('noeconomico, marca, placas, COUNT(*) as total, MIN(created_at) as primera_fecha')
             ->groupBy('noeconomico', 'marca', 'placas')
             ->orderByDesc('total')
             ->limit(6)
@@ -92,7 +105,7 @@ class DashboardVehiculosController extends Controller
 
         $ordenes500 = OrdenVehiculo::whereNotNull('orden_500')
             ->where('orden_500', '<>', 'NO')
-            ->orderByDesc('fechafirm')
+            ->orderByDesc('created_at')
             ->limit(8)
             ->get();
 

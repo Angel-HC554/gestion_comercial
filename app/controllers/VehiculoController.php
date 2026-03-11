@@ -6,6 +6,9 @@ use App\Models\Vehiculo;
 use App\Models\OrdenVehiculo;
 use App\Models\SupervisionSemanal;
 use App\Models\SupervisionDiaria;
+use App\Models\AreaUsuario;
+use App\Models\VehiculoArchivo;
+use App\Models\OrdenArchivo;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -20,11 +23,8 @@ class VehiculoController extends Controller
     // 1. Vista Principal
     public function index()
     {
-        // Renderizamos la vista vacía. AlpineJS llamará a search() al cargar.
-        // Pasamos los estados únicos para llenar el select de filtros en el frontend si es necesario,
-        // o puedes hacer una llamada API separada para eso. Aquí lo inyecto directo para SSR.
         $estados = Vehiculo::distinct()->pluck('estado')->toArray();
-        
+
         render('vehiculos.index', [
             'estados' => $estados
         ]);
@@ -33,49 +33,99 @@ class VehiculoController extends Controller
     // 2. API de Búsqueda y Filtrado
     public function search()
     {
+        $user = auth()->user();
+
+        $query = Vehiculo::with([
+            'latestSupervision' => function ($q) {
+                $q->select('id', 'vehiculo_id', 'kilometraje', 'fecha', 'hora_fin');
+            },
+            'latestMantenimiento'
+        ]);
+
+        if (!$user->is('admin')) {
+            $asignaciones = AreaUsuario::with('area', 'subarea')
+                ->where('user_id', $user->id)
+                ->get();
+
+            if ($asignaciones->isNotEmpty()) {
+                $query->where(function ($groupQuery) use ($asignaciones) {
+                    foreach ($asignaciones as $asignacion) {
+                        // Por cada fila en 'area_usuarios', agregamos un OR
+                        $groupQuery->orWhere(function ($subQuery) use ($asignacion) {
+
+                            // Condición A: El departamento coincide
+                            if ($asignacion->area) {
+                                $subQuery->where('departamento', $asignacion->area->nombre);
+                            }
+
+                            // Condición B: La ubicación coincide (solo si la asignación tiene subarea)
+                            if ($asignacion->subarea) {
+                                $subQuery->where('ubicacion', $asignacion->subarea->nombre);
+                            }
+                        });
+                    }
+                });
+            } else {
+                $query->where('id', 0);
+            }
+        }
+
         // Obtener parámetros
         $page = (int) request()->get('page', 1);
         $perPage = (int) request()->get('perPage', 16);
+        if ($perPage <= 0) $perPage = 16;
         $search = request()->get('search', '');
         $estado = request()->get('estado', '');
-
-        // --- CORRECCIÓN: Validación de seguridad ---
-        // Si por alguna razón perPage es 0 o negativo, forzamos a 16
-        if ($perPage <= 0) {
-            $perPage = 16;
-        }
-        // -------------------------------------------
-
-        // Query Builder
-        $query = Vehiculo::query()
-            ->select('id', 'marca', 'modelo', 'año', 'no_economico', 'estado', 'tipo_vehiculo', 'placas');
+        $mantenimiento = request()->get('mantenimiento', '');
 
         // Filtros
         if ($search) {
             $query->where('no_economico', 'like', "%{$search}%");
         }
-        
+
         // Validamos que estado no sea 'Todos' ni nulo
         if ($estado && $estado !== 'Todos') {
             $query->where('estado', $estado);
         }
 
-        // Paginación Manual
-        $total = $query->count();
-        $vehiculos = $query->orderBy('no_economico', 'asc')
-                           ->skip(($page - 1) * $perPage)
-                           ->take($perPage)
-                           ->get();
+        $query->orderBy('no_economico', 'asc');
 
-        $vehiculos->each(function($v){
+        // 5. OBTENER COLECCIÓN (AQUÍ CAMBIA TODO)
+        $vehiculosCollection = $query->get();
+
+        // 6. FILTRADO POR MANTENIMIENTO (Lógica PHP)
+        if ($mantenimiento && $mantenimiento !== 'Todos') {
+            // Usamos filter de Colecciones de Laravel
+            $vehiculosCollection = $vehiculosCollection->filter(function ($v) use ($mantenimiento) {
+                // Aquí se ejecuta el Accessor getEstadoMantenimientoAttribute()
+                $semaforo = $v->estado_mantenimiento;
+
+                // Lógica especial para "urgente" (incluye rojo y rojo pasado)
+                if ($mantenimiento === 'urgente') {
+                    return in_array($semaforo, ['rojo', 'rojo_pasado']);
+                }
+
+                // Comparación normal (verde, amarillo)
+                return $semaforo === $mantenimiento;
+            });
+        }
+
+        // Paginación Manual
+        $total = $vehiculosCollection->count();
+        $lastPage = ceil($total / $perPage);
+
+        $pagedData = $vehiculosCollection->slice(($page - 1) * $perPage, $perPage)->values();
+
+        // 8. FORMATEO FINAL (Fotos)
+        $pagedData->each(function ($v) {
             $v->foto = $v->foto_url;
         });
 
         return response()->json([
-            'data' => $vehiculos,
+            'data' => $pagedData,
             'total' => $total,
             // Aquí estaba el error, ahora $perPage seguro es mayor a 0
-            'last_page' => ceil($total / $perPage), 
+            'last_page' => $lastPage > 0 ? $lastPage : 1,
             'current_page' => $page
         ]);
     }
@@ -85,10 +135,9 @@ class VehiculoController extends Controller
     {
         // Validación manual simple (Leaf tiene validadores más complejos si instalas leaf/form)
         $data = request()->body();
-        
-        // Lista de campos requeridos basados en tu validación de Livewire
-        $required = ['agencia', 'no_economico', 'placas', 'tipo_vehiculo', 'marca', 'modelo', 'año', 'estado', 'propiedad', 'proceso', 'rpe_creamod'];
-        
+
+        $required = ['no_economico', 'departamento', 'ubicacion', 'placas', 'tipo_vehiculo', 'marca', 'modelo', 'año', 'estado', 'propiedad', 'rpe_responsable'];
+
         foreach ($required as $field) {
             if (empty($data[$field])) {
                 return response()->json([
@@ -107,11 +156,6 @@ class VehiculoController extends Controller
         }
 
         try {
-            // Manejo de alias (nullable)
-            if (!isset($data['alias'])) {
-                $data['alias'] = null;
-            }
-
             $vehiculo = Vehiculo::create($data);
 
             return response()->json([
@@ -119,7 +163,6 @@ class VehiculoController extends Controller
                 'message' => '¡Vehículo creado correctamente!',
                 'data' => $vehiculo
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -134,24 +177,24 @@ class VehiculoController extends Controller
         $vehiculo = Vehiculo::find($id);
 
         if (!$vehiculo) {
-            response()->redirect('/vehiculos'); 
+            response()->redirect('/vehiculos');
             return;
         }
 
         // Cargar relaciones necesarias para los cálculos del modelo
-        $vehiculo->load(['supervisioDiaria', 'supervisioSemanal']); 
+        $vehiculo->load(['supervisioDiaria', 'supervisioSemanal']);
         $vehiculo->load(['latestSupervision', 'latestMantenimiento']);
 
         $numero_eco = $vehiculo->no_economico;
         //---------------------------------------------------->
         // 1. Obtener ordenes para la TABLA INFERIOR
-        $ordenes = OrdenVehiculo::with('archivo')
-                    ->where('noeconomico', $numero_eco)
-                    ->orderBy('id', 'desc')
-                    ->get();
+        $ordenes = OrdenVehiculo::with('archivo', 'detallePropio', 'detalleArrendado')
+            ->where('noeconomico', $numero_eco)
+            ->orderBy('id', 'desc')
+            ->get();
 
         // 2. LOGICA PARA LA GRÁFICA
-        $ordenesParaGrafica = $ordenes->sortBy('fechafirm'); 
+        $ordenesParaGrafica = $ordenes->sortBy('created_at');
 
         // Catálogo de reparaciones
         $catalogoReparaciones = [
@@ -178,29 +221,56 @@ class VehiculoController extends Controller
         ];
 
         // Mapeo de datos para ChartJS
-        $chartData = $ordenesParaGrafica->map(function($orden) use ($catalogoReparaciones) {
+        $chartData = $ordenesParaGrafica->map(function ($orden) use ($catalogoReparaciones) {
             $reparaciones = [];
             $esGolpe = false;
+            $fecha = $orden->created_at ? $orden->created_at->format('Y-m-d') : null;
+            $taller = 'N/A';
+            $observacion = '';
 
-            foreach ($catalogoReparaciones as $key => $label) {
-                if (!empty($orden->$key) && $orden->$key != '0') {
-                    $reparaciones[] = $label;
-                    if ($key === 'vehicle10') { $esGolpe = true; }
+            if ($orden->detallePropio) {
+                $det = $orden->detallePropio;
+
+                // Extraer fecha, taller y observación de la tabla hija
+                $fecha = $det->fechafirm ?? $fecha;
+                $taller = $det->taller;
+                $observacion = $det->observacion;
+
+                // Extraer reparaciones (vehicle1...vehicle20 solo existen en propios)
+                foreach ($catalogoReparaciones as $key => $label) {
+                    if (!empty($det->$key) && $det->$key != '0') {
+                        $reparaciones[] = $label;
+                        if ($key === 'vehicle10') {
+                            $esGolpe = true;
+                        }
+                    }
+                }
+            } elseif ($orden->detalleArrendado) {
+                $det = $orden->detalleArrendado;
+
+                // Arrendados tienen campos distintos
+                $fecha = $det->fecha_gen ?? $fecha;
+                $taller = $det->taller ?? 'N/A';
+                $observacion = "Sin observaciones";
+
+                // Si quieres mostrar el tipo de servicio como una "reparación" en la gráfica: OPCIONAAAAAAAAAL
+                if ($det->tipo_servicio) {
+                    $reparaciones[] = $det->tipo_servicio;
                 }
             }
 
             return [
                 'id' => $orden->id,
-                'fecha' => $orden->fechafirm,
+                'fecha' => $fecha,
                 'km' => (int) str_replace(',', '', $orden->kilometraje),
-                'taller' => $orden->taller,
+                'taller' => $taller,
                 'es_golpe' => $esGolpe,
                 'reparaciones' => $reparaciones,
-                'observacion' => $orden->observacion,
+                'observacion' => $observacion,
                 'archivo' => $orden->archivo ? ['ruta_archivo' => $orden->archivo->ruta_archivo] : null,
                 'servicio' => $orden->requiere_servicio
             ];
-        })->values(); // values() resetea los índices del array después del sortBy
+        })->values();
 
         // Fotos de la última supervisión semanal
         $fotos = SupervisionSemanal::select('foto_del', 'foto_tra', 'foto_lado_der', 'foto_lado_izq')
@@ -229,12 +299,12 @@ class VehiculoController extends Controller
             'chartData' => $chartData
         ]);
     }
-    
+
     public function import()
     {
         // 1. Validar que se haya subido un archivo
         $files = request()->files();
-        
+
         if (!isset($files['archivoExcel']) || $files['archivoExcel']['error'] !== UPLOAD_ERR_OK) {
             return response()->json(['status' => 'error', 'message' => 'Error al subir el archivo.'], 400);
         }
@@ -250,18 +320,20 @@ class VehiculoController extends Controller
             // 2. Cargar el Excel
             $spreadsheet = IOFactory::load($file['tmp_name']);
             $sheet = $spreadsheet->getActiveSheet();
-            
+
             // Obtener todas las filas como un array de arrays
             // null, true, true, true asegura que las celdas vacías sean null y mantenga el formato
-            $rows = $sheet->toArray(null, true, true, true); 
-            
-            // $rows tiene formato: [1 => ['A'=>'#', 'B'=>'Agencia'...], 2 => ['A'=>'1', 'B'=>'DW01'...]]
+            $rows = $sheet->toArray(null, true, true, true);
 
             // 3. Mapear Encabezados (Fila 1)
             // Buscar en qué letra de columna está cada nombre
             $headers = array_shift($rows); // Saca la primera fila y la guarda en $headers
-            
-            // Mapa inverso: 'Número Económico' => 'C', 'Agencia' => 'B'
+
+            // Filtrar encabezados nulos o vacíos antes de usar array_flip
+            $headers = array_filter($headers, function ($value) {
+                return $value !== null && $value !== '';
+            });
+
             $colMap = array_flip($headers);
 
             // Validar que existan columnas críticas
@@ -293,7 +365,7 @@ class VehiculoController extends Controller
             // 4. Recorrer los datos (Filas 2 en adelante)
             foreach ($rows as $row) {
                 // Función auxiliar para obtener dato seguro usando el mapa
-                $getVal = function($colName) use ($row, $colMap) {
+                $getVal = function ($colName) use ($row, $colMap) {
                     $colLetter = $colMap[$colName] ?? null;
                     return $colLetter ? ($row[$colLetter] ?? null) : null;
                 };
@@ -306,18 +378,18 @@ class VehiculoController extends Controller
 
                 // Preparar array de datos (Mapeo exacto de tu archivo anterior)
                 $vehiculoData = [
-                    'agencia'       => $getVal('Agencia'),
                     'no_economico'  => $noEconomico,
+                    'serie'         => $getVal('Serie'),
+                    'departamento'  => $getVal('Departamento'),
+                    'ubicacion'     => $getVal('Ubicación'),
                     'placas'        => $getVal('Placas'),
                     'tipo_vehiculo' => $getVal('Tipo Vehículo'),
                     'marca'         => $getVal('Marca'),
                     'modelo'        => $getVal('Modelo'),
                     'año'           => (int) $getVal('Año'),
-                    'estado'        => $getVal('Estado'),
+                    'estado'        => $getVal('Estado') ?? 'En circulacion',
                     'propiedad'     => $getVal('Propiedad'),
-                    'proceso'       => $getVal('Proceso'),
-                    'alias'         => $getVal('Alias'),
-                    'rpe_creamod'   => $getVal('RPE Crea/Modifica'),
+                    'rpe_responsable'   => $getVal('RPE Responsable') ?? 'NA',
                 ];
 
                 if (isset($colMap['En Taller'])) {
@@ -361,7 +433,6 @@ class VehiculoController extends Controller
                 'status' => 'success',
                 'message' => "Importación exitosa: $countCreated nuevos, $countUpdated actualizados."
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -369,7 +440,7 @@ class VehiculoController extends Controller
             ], 500);
         }
     }
-    
+
     public function export()
     {
         try {
@@ -379,12 +450,25 @@ class VehiculoController extends Controller
             // 2. Crear Spreadsheet
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
-            
+
             // 3. Definir Encabezados
             $headers = [
-                '#', 'Agencia', 'Número Económico', 'Placas', 'Tipo Vehículo', 
-                'Marca', 'Modelo', 'Año', 'Ordenes Pendientes', 'En Taller', 'Finalizado', 'Estado', 'Propiedad', 
-                'Proceso', 'Alias', 'RPE Crea/Modifica'
+                '#',
+                'Número Económico',
+                'Serie',
+                'Departamento',
+                'Ubicación',
+                'Placas',
+                'Tipo Vehículo',
+                'Marca',
+                'Modelo',
+                'Año',
+                'Ordenes Pendientes',
+                'En Taller',
+                'Finalizado',
+                'Estado',
+                'Propiedad',
+                'RPE Responsable'
             ];
 
             // Escribir encabezados en fila 1 (A1, B1, C1...)
@@ -396,8 +480,10 @@ class VehiculoController extends Controller
             foreach ($vehiculos as $v) {
                 $rowData = [
                     $v->id,
-                    $v->agencia,
                     $v->no_economico,
+                    $v->serie,
+                    $v->departamento,
+                    $v->ubicacion,
                     $v->placas,
                     $v->tipo_vehiculo,
                     $v->marca,
@@ -408,9 +494,7 @@ class VehiculoController extends Controller
                     $v->finalizado ? 'SI' : 'NO',
                     $v->estado,
                     $v->propiedad,
-                    $v->proceso,
-                    $v->alias,
-                    $v->rpe_creamod,
+                    $v->rpe_responsable,
                 ];
                 $sheet->fromArray($rowData, NULL, 'A' . $rowNum);
                 $rowNum++;
@@ -437,7 +521,7 @@ class VehiculoController extends Controller
                 ],
                 'fill' => [
                     'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => 'F2F2F2'], // Gris claro
+                    'startColor' => ['rgb' => 'A7F5D0'], // Verde claro
                 ],
                 'borders' => [
                     'bottom' => [
@@ -453,12 +537,12 @@ class VehiculoController extends Controller
 
             // 6. Generar Descarga
             $writer = new Xlsx($spreadsheet);
-            
+
             $filename = 'vehiculos_' . date('Y-m-d_H-i') . '.xlsx';
 
             // Headers HTTP para forzar la descarga
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment; filename="'. urlencode($filename) .'"');
+            header('Content-Disposition: attachment; filename="' . urlencode($filename) . '"');
             header('Cache-Control: max-age=0');
 
             $writer->save('php://output');
@@ -469,7 +553,7 @@ class VehiculoController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-    
+
     public function historial($id)
     {
         // 1. Buscamos el vehículo
@@ -492,5 +576,78 @@ class VehiculoController extends Controller
             'supervisiones' => $supervisiones
         ]);
     }
+    /**
+     * Obtener la lista de archivos para el frontend
+     */
+    public function getDocumentos($id)
+    {
+        $documentos = VehiculoArchivo::where('vehiculo_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+        $documentos->transform(function ($doc) {
+            $doc->url = $doc->ruta_archivo;
+            return $doc;
+        });
 
+        return response()->json($documentos);
+    }
+
+    /**
+     * Recibir y guardar el nuevo documento PDF
+     */
+    public function storeDocumento($id)
+    {
+        // 1. Validar que se envió un archivo
+        if (!isset($_FILES['archivo']) || $_FILES['archivo']['error'] !== UPLOAD_ERR_OK) {
+            return response()->json(['status' => 'error', 'message' => 'No se ha seleccionado ningún archivo válido.'], 400);
+        }
+
+        $file = $_FILES['archivo'];
+        $nombreDoc = request()->get('nombre', 'Documento sin nombre');
+
+        // 2. Validar que sea PDF por seguridad
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if ($extension !== 'pdf') {
+            return response()->json(['status' => 'error', 'message' => 'Solo se permiten archivos en formato PDF.'], 400);
+        }
+
+        try {
+            // 3. Preparar el directorio de subida (ej. public/expedientes/5/)
+            $basePath = dirname(__DIR__, 2); // Ajusta según la estructura de tu proyecto Leaf
+            $uploadDir = $basePath . '/public/expedientes/' . $id . '/';
+
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
+            // 4. Generar nombre único para no sobreescribir
+            $fileName = 'doc_' . time() . '_' . uniqid() . '.pdf';
+            $targetPath = $uploadDir . $fileName;
+
+            // 5. Mover el archivo e insertar en la BD
+            if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+                
+                $rutaRelativa = '/expedientes/' . $id . '/' . $fileName;
+
+                VehiculoArchivo::create([
+                    'vehiculo_id' => $id,
+                    'nombre'      => strtoupper($nombreDoc),
+                    'ruta_archivo'=> $rutaRelativa
+                ]);
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Documento guardado correctamente.'
+                ]);
+            } else {
+                throw new \Exception("No se pudo mover el archivo al directorio de destino.");
+            }
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error en el servidor: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

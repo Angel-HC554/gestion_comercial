@@ -1,7 +1,4 @@
 <div class="space-y-6 animate-fade-in-down">
-    
-    {{-- Mantenemos tu encabezado si quieres que aparezca al cargar la pestaña, 
-         o puedes quitarlo si sientes que repite información --}}
     <div class="mb-8 text-center">
         <p class="text-slate-500 mt-2 text-sm">
             Mostrando los últimos registros

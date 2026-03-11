@@ -1,11 +1,13 @@
 @php
     $noEconomico = $noEconomico ?? null;
+    $tienePermiso = auth()->user()->can('generar 500') ? 'true' : 'false';
 @endphp
 
 <div class="mx-auto py-6" x-data="ordenesTable('{{ $noEconomico }}')" @open-finish-modal.window="openModal('status', $event.detail)" x-cloak>
     @csrf
 
-    <div class="bg-white p-4 rounded-lg shadow-sm border border-zinc-300 border-t-emerald-600/40 border-t-4 mb-6 flex flex-wrap gap-4 items-end">
+    <div
+        class="bg-white p-4 rounded-lg shadow-sm border border-zinc-300 border-t-emerald-600/40 border-t-4 mb-6 flex flex-wrap gap-4 items-end">
         <div class="flex flex-col">
             <label class="text-sm font-medium text-zinc-700 mb-1">Desde</label>
             <input type="date" x-model="filters.fecha_inicio" @blur="fetchData()" @change="fetchData()"
@@ -22,6 +24,9 @@
                 class="border-2 border-zinc-300 rounded-md focus:ring-emerald-600 focus:border-emerald-600 text-sm w-40 h-9 pr-2 cursor-pointer">
                 <option value="">Todos</option>
                 <option value="PENDIENTE">PENDIENTE</option>
+                <option value="ENVIADO A PV">ENVIADO A PV</option>
+                <option value="ESPERANDO CITA">ESPERANDO CITA</option>
+                <option value="CITA ASIGNADA">CITA ASIGNADA</option>
                 <option value="VEHICULO TALLER">VEHICULO TALLER</option>
                 <option value="TERMINADO">TERMINADO</option>
             </select>
@@ -69,7 +74,10 @@
                             Eco
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
-                            Agencia
+                            Tipo
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                            Area
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Fecha
                         </th>
@@ -87,55 +95,104 @@
                     <template x-for="orden in ordenes" :key="orden.id">
                         <tr class="hover:bg-zinc-50/80 transition-colors">
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <a class="text-zinc-600 font-medium"
-                                    x-text="orden.id"></a>
+                                <a class="text-zinc-600 font-medium" x-text="orden.id"></a>
                             </td>
 
                             <td class="px-6 py-4 whitespace-nowrap text-zinc-700 font-medium"
                                 x-text="orden.noeconomico"></td>
 
-                            <td class="px-6 py-4 whitespace-nowrap text-zinc-600" x-text="orden.area"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-zinc-700 font-medium"
+                                x-text="orden.tipo_vehiculo === 'propio' ? 'PROPIO (CFE)' : 'ARRENDADO' || 'N/A'"></td>
 
-                            <td class="px-6 py-4 whitespace-nowrap text-zinc-600" x-text="orden.fechafirm"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-zinc-600">
+                                <span
+                                    x-text="orden.tipo_vehiculo === 'propio' 
+                                    ? (orden.detalle_propio?.area || 'N/A') 
+                                    : (orden.vehiculo ? orden.vehiculo.departamento + ' - ' + orden.vehiculo.ubicacion : 'N/A')">
+                                </span>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap text-zinc-600"
+                                x-text="formatearFecha(orden.tipo_vehiculo === 'propio' ? orden.detalle_propio?.fechafirm : orden.detalle_arrendado?.fecha_gen)">
+                            </td>
 
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span x-show="!orden.orden_500 || orden.orden_500 === 'NO'"
                                     class="text-zinc-400 text-xs">NO</span>
-                                @if(auth()->user()->can('generar 500'))
-                                <button x-show="orden.orden_500 && orden.orden_500 !== 'NO'"
+
+                                <button
+                                    x-show="orden.orden_500 && orden.orden_500 !== 'NO'
+                                                && orden.status === 'PENDIENTE'
+                                                && {{ $tienePermiso }}"
                                     @click="openModal('code500', orden)"
                                     class="text-emerald-700 font-bold hover:underline cursor-pointer"
                                     x-text="orden.orden_500"></button>
-                                @else
-                                <span x-show="orden.orden_500 && orden.orden_500 !== 'NO'"
-                                    class="text-zinc-700 font-bold"
-                                    x-text="orden.orden_500"></span>
-                                @endif
+
+                                <span
+                                    x-show="orden.orden_500 && orden.orden_500 !== 'NO'
+                                              && (orden.status !== 'PENDIENTE' || !{{ $tienePermiso }})"
+                                    class="text-zinc-700 font-bold" x-text="orden.orden_500"></span>
                             </td>
 
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <template x-if="orden.status === 'PENDIENTE'">
                                     <button
-                                        class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer border bg-red-100 text-red-800 border-red-200"
-                                        x-text="orden.status">
+                                        class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide transition-colors border bg-red-100 text-red-800 border-red-200">
+                                        <span x-text="orden.status"></span>
                                     </button>
                                 </template>
+
+                                <template x-if="orden.status === 'ENVIADO A PV'">
+                                    <div>
+                                        <button x-show="isAdmin"
+                                            @click="selectedOrden = orden; saveAction('marcarAtendido')"
+                                            class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer border bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200 shadow-sm">
+                                            Atender Solicitud
+                                        </button>
+                                        <span x-show="!isAdmin"
+                                            class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide border bg-zinc-100 text-zinc-600 border-zinc-200">
+                                            Enviado a PV
+                                        </span>
+                                    </div>
+                                </template>
+
+                                <template x-if="orden.status === 'ESPERANDO CITA'">
+                                    <div>
+                                        <button x-show="isAdmin" @click="openModal('asignarCita', orden)"
+                                            class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer border bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200 shadow-sm">
+                                            Asignar Cita
+                                        </button>
+                                        <span x-show="!isAdmin"
+                                            class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide border bg-zinc-100 text-zinc-600 border-zinc-200">
+                                            Esperando Cita
+                                        </span>
+                                    </div>
+                                </template>
+
+                                <template x-if="orden.status === 'CITA ASIGNADA'">
+                                    <button @click="openModal('verCita', orden)"
+                                        class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer border bg-indigo-100 text-indigo-800 border-indigo-300 hover:bg-indigo-200 shadow-sm animate-pulse">
+                                        Ver Cita
+                                    </button>
+                                </template>
+
                                 <template x-if="orden.status === 'VEHICULO TALLER'">
                                     <button @click="openModal('status', orden)"
-                                        class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer border bg-orange-100 text-orange-800 border-orange-200"
-                                        x-text="orden.status">
+                                        class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer border bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200">
+                                        <span x-text="orden.status"></span>
                                     </button>
                                 </template>
+
                                 <template x-if="orden.status === 'TERMINADO'">
                                     <button
-                                        class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer border bg-emerald-100 text-emerald-800 border-emerald-200"
-                                        x-text="orden.status">
+                                        class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide transition-colors border bg-emerald-100 text-emerald-800 border-emerald-200">
+                                        <span x-text="orden.status"></span>
                                     </button>
                                 </template>
                             </td>
 
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
-                                <button @click="openModal('more', orden)"
+                                <button @click="openModal('more', orden)" title="Ver mas"
                                     class="shadow-xs cursor-pointer border border-gray-400 bg-gray-50 text-gray-700 p-1.5 rounded-md hover:bg-emerald-100 hover:text-emerald-700 transition duration-200">
                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -145,24 +202,30 @@
                                     </svg>
                                 </button>
 
-                                @if(auth()->user()->is('admin'))
-                                <a :href="'/ordenvehiculos/' + orden.id + '/edit?return_url=/{{ urlencode(request()->getPath()) }}'"
-                                    class="shadow-xs border border-gray-400 text-gray-700 bg-gray-50 p-1.5 rounded-md hover:bg-indigo-100 hover:text-indigo-600 transition duration-200">
-                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.768 3.732z" />
-                                    </svg>
-                                </a>
+                                @if (auth()->user()->is('admin'))
+                                    <a :href="(orden.tipo_vehiculo === 'arrendado' ?
+                                        '/ordenvehiculos/arrendado/' + orden.id + '/edit' :
+                                        '/ordenvehiculos/' + orden.id + '/edit') +
+                                    '?return_url=/{{ urlencode(request()->getPath()) }}'"
+                                        title="Editar orden"
+                                        class="shadow-xs cursor-pointer border border-gray-400 text-gray-700 bg-gray-50 p-1.5 rounded-md hover:bg-indigo-100 hover:text-indigo-600 transition duration-200">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                            stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.768 3.732z" />
+                                        </svg>
+                                    </a>
                                 @endif
 
-                                @if(auth()->user()->is('admin'))
-                                <button @click="openModal('delete', orden)"
-                                    class="shadow-xs cursor-pointer border border-gray-400 text-gray-700 bg-gray-50 p-1.5 rounded-md hover:bg-red-100 hover:text-red-600 transition duration-200">
-                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
+                                @if (auth()->user()->is('admin'))
+                                    <button @click="openModal('delete', orden)" title="Eliminar orden"
+                                        class="shadow-xs cursor-pointer border border-gray-400 text-gray-700 bg-gray-50 p-1.5 rounded-md hover:bg-red-100 hover:text-red-600 transition duration-200">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                            stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
                                 @endif
                             </td>
                         </tr>
@@ -212,55 +275,65 @@
     </div>
 
     <div x-show="modals.code500" x-cloak
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity>
-    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg transform transition-all"
-        @click.away="modals.code500 = false">
-        
-        <h3 class="text-xl font-bold text-zinc-900 mb-4 border-b pb-2">Asignar Código 500</h3>
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity>
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg transform transition-all"
+            @click.away="modals.code500 = false">
 
-        <div class="mb-4">
-            <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Servicios Solicitados</h4>
-            <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
-                <template x-for="(label, key) in reparacionesMap" :key="key">
-                    <span x-show="selectedOrden && selectedOrden[key] === 'X'" 
-                          x-text="label"
-                          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
-                    </span>
+            <h3 class="text-xl font-bold text-zinc-900 mb-4 border-b pb-2">Asignar Código 500</h3>
+
+            <div class="mb-4">
+                <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Servicios Solicitados</h4>
+                <template x-if="selectedOrden?.tipo_vehiculo === 'propio'">
+                    <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
+                        <template x-for="(label, key) in reparacionesMap" :key="key">
+                            <span x-show="selectedOrden.detalle_propio && selectedOrden.detalle_propio[key] === 'X'"
+                                x-text="label"
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            </span>
+                        </template>
+
+                        <div x-show="selectedOrden && !Object.keys(reparacionesMap).some(k => selectedOrden[k] === 'X')"
+                            class="text-sm text-zinc-400 italic w-full">
+                            No se seleccionaron servicios específicos.
+                        </div>
+                    </div>
                 </template>
-                
-                <div x-show="selectedOrden && !Object.keys(reparacionesMap).some(k => selectedOrden[k] === 'X')" 
-                     class="text-sm text-zinc-400 italic w-full">
-                    No se seleccionaron servicios específicos.
+                <template x-if="selectedOrden?.tipo_vehiculo === 'arrendado'">
+                    <div class="bg-blue-50 p-2 rounded border border-blue-100 text-sm text-blue-700">
+                        Vehículo Arrendado: <span x-text="selectedOrden.detalle_arrendado?.tipo_servicio"></span>
+                    </div>
+                </template>
+            </div>
+
+            <div class="mb-6">
+                <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Observaciones / Fallas</h4>
+                <div
+                    class="bg-zinc-50 rounded-md p-3 border border-zinc-200 text-sm text-zinc-700 min-h-[60px] max-h-[100px] overflow-y-auto">
+                    <p
+                        x-text="selectedOrden?.tipo_vehiculo === 'propio' ? selectedOrden.detalle_propio?.observacion : 'Sin observaciones.'">
+                    </p>
                 </div>
             </div>
-        </div>
 
-        <div class="mb-6">
-            <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Observaciones / Fallas</h4>
-            <div class="bg-zinc-50 rounded-md p-3 border border-zinc-200 text-sm text-zinc-700 min-h-[60px] max-h-[100px] overflow-y-auto">
-                <p x-text="selectedOrden?.observacion || 'Sin observaciones registradas.'"></p>
+            <hr class="border-zinc-200 mb-6">
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-zinc-700 mb-1">Ingresar Código</label>
+                <div class="relative">
+                    <span class="absolute left-3 top-2 text-zinc-400">#</span>
+                    <input type="text" x-model="tempData.orden_500" placeholder="Ej. 500-1234"
+                        class="pl-8 w-full border-gray-300 rounded-md focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 p-2 border-2 font-bold text-zinc-800">
+                </div>
             </div>
-        </div>
 
-        <hr class="border-zinc-200 mb-6">
-
-        <div class="mb-6">
-            <label class="block text-sm font-medium text-zinc-700 mb-1">Ingresar Código</label>
-            <div class="relative">
-                <span class="absolute left-3 top-2 text-zinc-400">#</span>
-                <input type="text" x-model="tempData.orden_500" placeholder="Ej. 500-1234"
-                    class="pl-8 w-full border-gray-300 rounded-md focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 p-2 border-2 font-bold text-zinc-800">
+            <div class="flex justify-end gap-2">
+                <button @click="modals.code500 = false"
+                    class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium cursor-pointer">Cancelar</button>
+                <button @click="saveAction('code500')"
+                    class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium shadow-sm cursor-pointer">Guardar</button>
             </div>
-        </div>
-
-        <div class="flex justify-end gap-2">
-            <button @click="modals.code500 = false"
-                class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium cursor-pointer">Cancelar</button>
-            <button @click="saveAction('code500')"
-                class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium shadow-sm cursor-pointer">Guardar</button>
         </div>
     </div>
-</div>
 
     <div x-show="modals.status" x-cloak
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity>
@@ -268,13 +341,14 @@
             @click.away="modals.status = false">
 
             <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold text-zinc-900">Actualizar estado</h3>
-            <button @click="modals.status = false" class="text-gray-400 hover:text-gray-600 cursor-pointer">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                    </path>
-                </svg>
-            </button>
+                <h3 class="text-xl font-bold text-zinc-900">Actualizar estado</h3>
+                <button @click="modals.status = false" class="text-gray-400 hover:text-gray-600 cursor-pointer">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
             </div>
 
             <p class="text-sm text-zinc-500 mt-1 mb-4">Estado actual: <span class="font-bold"
@@ -282,7 +356,7 @@
 
             <div class="space-y-4 mb-6">
 
-                <div class=p-3 rounded-md border border-emerald-100 space-y-3">
+                <div class="p-3 rounded-md border border-emerald-100 space-y-3">
                     <div>
                         <label class="block text-sm font-medium text-zinc-700 mb-1">Kilometraje Salida <span
                                 class="text-red-500">*</span></label>
@@ -307,9 +381,82 @@
             </div>
             <div class="flex justify-end gap-2 border-t pt-4 border-gray-300">
                 <button @click="modals.status = false"
-                    class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium">Cancelar</button>
+                    class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium cursor-pointer">Cancelar</button>
                 <button @click="saveAction('status')"
-                    class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium">Guardar</button>
+                    class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium cursor-pointer">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="modals.asignarCita" x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity>
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm transform transition-all"
+            @click.away="modals.asignarCita = false">
+            <h3 class="text-xl font-bold text-zinc-900 mb-2">Asignar Cita al Taller</h3>
+            <p class="text-sm text-zinc-500 mb-4">Ingresa la fecha que se confirmó para el vehículo <strong
+                    x-text="selectedOrden?.noeconomico"></strong>.</p>
+
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha de la Cita <span
+                        class="text-red-500">*</span></label>
+                <input type="date" x-model="tempData.fechaCita" required
+                    class="w-full border-2 border-gray-300 rounded-md focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 p-2 text-zinc-800 font-medium">
+            </div>
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-zinc-700 mb-1">Nombre del taller <span
+                        class="text-red-500">*</span></label>
+                <input type="text" x-model="tempData.taller" required
+                    class="w-full border-2 border-gray-300 rounded-md focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 p-2 text-zinc-800 font-medium"
+                    placeholder="Ingresa el nombre">
+            </div>
+
+            <div class="flex justify-end gap-2 border-t pt-4 border-gray-200">
+                <button @click="modals.asignarCita = false"
+                    class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium cursor-pointer">Cancelar</button>
+                <button @click="saveAction('asignarCita')"
+                    class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium shadow-sm cursor-pointer">Confirmar
+                    Cita</button>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="modals.verCita" x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity>
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm transform transition-all"
+            @click.away="modals.verCita = false">
+
+            <div class="text-center mb-5 mt-2">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 mb-3">
+                    <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-zinc-900">Cita Confirmada</h3>
+                <p class="text-sm text-zinc-500 mt-1">El vehículo debe presentarse al taller el día:</p>
+                <p class="text-2xl font-black text-indigo-600 mt-2"
+                    x-text="formatearFecha(selectedOrden?.detalle_arrendado?.fecha_cita)">
+                </p>
+                <p class="text-sm text-zinc-700 mt-3 font-medium" x-show="selectedOrden?.detalle_arrendado?.taller">
+                    Taller: <span class="font-bold text-indigo-600"
+                        x-text="selectedOrden?.detalle_arrendado?.taller"></span>
+                </p>
+            </div>
+
+            <div class="bg-zinc-50 p-3 rounded-md border border-zinc-200 text-sm text-zinc-600 text-center mb-6">
+                Una vez que hayas dejado el vehículo en el taller, presiona el botón de abajo para continuar con el
+                proceso.
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <button @click="saveAction('ingresarTaller')"
+                    class="w-full px-4 py-2 bg-orange-500 text-white hover:bg-orange-600 rounded-md text-sm font-bold shadow-sm cursor-pointer">
+                    Ya lo dejé en el Taller
+                </button>
+                <button @click="modals.verCita = false"
+                    class="w-full px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium cursor-pointer">
+                    Cerrar y volver
+                </button>
             </div>
         </div>
     </div>
@@ -336,6 +483,7 @@
 <script>
     function ordenesTable(filterNoEconomico = null) {
         return {
+            isAdmin: {{ auth()->user()->is('admin') ? 'true' : 'false' }},
             ordenes: [],
             loading: true,
             // Paginación
@@ -355,7 +503,9 @@
                 code500: false,
                 status: false,
                 more: false,
-                delete: false
+                delete: false,
+                asignarCita: false, // <- NUEVO
+                verCita: false
             },
             maxDate: new Date().toLocaleDateString('en-CA'),
 
@@ -411,7 +561,10 @@
                 orden_500: '',
                 newStatus: 'TERMINADO',
                 kilometraje: '',
-                fechaTerminacion: ''
+                fechaTerminacion: '',
+                fechaCita: '',
+                comentarios: '',
+                taller: ''
             },
             validateFecha() {
                 // Si no hay fecha, no hacemos nada
@@ -442,19 +595,31 @@
                 }
             },
             init() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const filtro = urlParams.get('filtro');
+
+                if (filtro === 'por_atender') {
+                    this.filters.estado = 'ENVIADO A PV';
+                } else if (filtro === 'orden500') {
+                    this.filters.estado = 'PENDIENTE';
+                } else if (filtro === 'citas') {
+                    this.filters.estado = 'CITA ASIGNADA';
+                }
                 // Carga inicial de datos
                 this.fetchData();
 
                 // Watchers para reaccionar a cambios en los filtros y búsqueda
                 this.$watch('search', () => {
-                    this.currentPage = 1;  // Reinicia a la primera página al buscar
+                    this.currentPage = 1; // Reinicia a la primera página al buscar
                     this.fetchData();
                 });
 
                 this.$watch('filters', () => {
                     this.currentPage = 1;
                     this.fetchData();
-                }, { deep: true }); // Importante: deep para detectar cambios dentro del objeto filters
+                }, {
+                    deep: true
+                });
 
                 this.$watch('perPage', () => {
                     this.currentPage = 1;
@@ -502,6 +667,11 @@
                     fecha_fin: '',
                     estado: ''
                 };
+                if (window.history.replaceState) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('filtro');
+                    window.history.replaceState({ path: url.href }, '', url.href);
+                }
                 this.fetchData();
             },
 
@@ -518,7 +688,10 @@
                     orden_500: orden.orden_500 || '',
                     newStatus: 'TERMINADO',
                     kilometraje: '',
-                    fechaTerminacion: ''
+                    fechaTerminacion: '',
+                    fechaCita: '',
+                    comentarios: '',
+                    taller: ''
                 };
 
 
@@ -547,15 +720,32 @@
             },
             // UTILIDADES PARA LA VISTA
             formatDate(dateString) {
-                if (!dateString) return '';
-                const date = new Date(dateString);
+                if (!dateString) return 'Sin fecha';
+                
+                // Cambiamos el espacio por una 'T' para crear un formato ISO válido: "YYYY-MM-DDTHH:mm:ss"
+                const fechaEstandar = dateString.replace(' ', 'T');
+                const date = new Date(fechaEstandar);
+
+                // Validación de seguridad: si por algún motivo falla, no muestra "Invalid Date"
+                if (isNaN(date)) return 'Sin fecha';
+    
                 return date.toLocaleString('es-MX', {
                     day: '2-digit',
-                    month: '2-digit',
+                    month: 'short',
                     year: 'numeric',
                     hour: '2-digit',
-                    minute: '2-digit'
-                });
+                    minute: '2-digit',
+                    hour12: false // Formato 24 hrs
+                }).toUpperCase().replace(/\./g, '');
+            },
+            formatearFecha(fechaStr) {
+                if (!fechaStr) return 'Sin fecha';
+                const fechaLocal = new Date(fechaStr.replace(/-/g, '/'));
+                return fechaLocal.toLocaleDateString('es-MX', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                }).toUpperCase().replace(/\./g, '');
             },
             getTitulo(tipo) {
                 return this.titleMap[tipo] || tipo.replace('_', ' ').toUpperCase();
@@ -636,10 +826,56 @@
                         return;
                     }
 
+
                     formData.append('comentarios', this.tempData.comentarios || '');
                     formData.append('_token', csrfToken); // Agregar token al form data también por seguridad
 
                     body = formData;
+
+                } else if (type === 'marcarAtendido') {
+                    url = `/ordenvehiculos/arrendado/${this.selectedOrden.id}/atendido`;
+                    body = JSON.stringify({
+                        _token: csrfToken
+                    });
+                    headers['Content-Type'] = 'application/json';
+
+                } else if (type === 'asignarCita') {
+                    if (!this.tempData.fechaCita) {
+                        Swal.fire({
+                            toast: true,
+                            position: "top-end",
+                            icon: 'warning',
+                            title: 'Selecciona una fecha',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                        return;
+                    }
+                    if (!this.tempData.taller) {
+                        Swal.fire({
+                            toast: true,
+                            position: "top-end",
+                            icon: 'warning',
+                            title: 'Ingresa el nombre del taller',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                        return;
+                    }
+                    url = `/ordenvehiculos/arrendado/${this.selectedOrden.id}/asignar-cita`;
+                    body = JSON.stringify({
+                        _token: csrfToken,
+                        fecha_cita: this.tempData.fechaCita,
+                        taller: this.tempData.taller
+                    });
+                    headers['Content-Type'] = 'application/json';
+
+                } else if (type === 'ingresarTaller') {
+                    url = `/ordenvehiculos/arrendado/${this.selectedOrden.id}/ingresar-taller`;
+                    body = JSON.stringify({
+                        _token: csrfToken
+                    });
+                    headers['Content-Type'] = 'application/json';
 
                 } else {
                     // --- LÓGICA EXISTENTE PARA JSON (code500, status, etc) ---
@@ -667,7 +903,7 @@
                                 }
                             });
                             return; // Detiene la ejecución para que no se envíe nada
-                        }   
+                        }
                         url = `/ordenvehiculos/modal/${this.selectedOrden.id}`;
                         data.status = this.tempData.newStatus;
                         data.kilometraje = this.tempData.kilometraje;
@@ -694,6 +930,9 @@
                         // Cerrar modales
                         this.modals[type] = false;
                         if (type === 'upload') this.modals.more = false; // Cerrar también el modal "ver mas"
+
+                        // Cierra el modal de "Ver Cita" cuando el tipo es ingresarTaller
+                        if (type === 'ingresarTaller') this.modals.verCita = false;
 
                         // Limpiar inputs si fue upload
                         if (type === 'upload' && this.$refs.fileInput) {
