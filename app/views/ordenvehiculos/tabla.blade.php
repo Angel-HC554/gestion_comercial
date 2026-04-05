@@ -397,9 +397,12 @@
                     x-text="selectedOrden?.noeconomico"></strong>.</p>
 
             <div class="mb-5">
-                <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha de la Cita <span
+                <label class="block text-sm font-medium text-zinc-700 mb-1">Fecha y hora de la Cita <span
                         class="text-red-500">*</span></label>
-                <input type="date" x-model="tempData.fechaCita" required
+                <input type="datetime-local" x-model="tempData.fechaCita" required
+                    x-bind:min="minDateCita"
+                    @blur="validateFechaCita()" 
+                    @change="validateFechaCita()"
                     class="w-full border-2 border-gray-300 rounded-md focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 p-2 text-zinc-800 font-medium">
             </div>
             <div class="mb-5">
@@ -435,7 +438,7 @@
                 <h3 class="text-lg font-bold text-zinc-900">Cita Confirmada</h3>
                 <p class="text-sm text-zinc-500 mt-1">El vehículo debe presentarse al taller el día:</p>
                 <p class="text-2xl font-black text-indigo-600 mt-2"
-                    x-text="formatearFecha(selectedOrden?.detalle_arrendado?.fecha_cita)">
+                    x-text="formatDate(selectedOrden?.detalle_arrendado?.fecha_cita)">
                 </p>
                 <p class="text-sm text-zinc-700 mt-3 font-medium" x-show="selectedOrden?.detalle_arrendado?.taller">
                     Taller: <span class="font-bold text-indigo-600"
@@ -508,6 +511,7 @@
                 verCita: false
             },
             maxDate: new Date().toLocaleDateString('en-CA'),
+            minDateCita: new Date().toLocaleDateString('en-CA'),
 
             // Datos Temporales para Edición
             selectedOrden: null,
@@ -573,7 +577,7 @@
                 // Comparamos cadenas (YYYY-MM-DD)
                 if (this.tempData.fechaTerminacion > this.maxDate) {
                     // Opción A: Resetear a HOY
-                    this.tempData.fechaTerminacion = this.maxDate;
+                    this.tempData.fechaTerminacion = '';
 
                     // Opción B: Si prefieres borrarlo
                     // this.tempData.fechaTerminacion = '';
@@ -591,6 +595,31 @@
                         });
                     } else {
                         alert('No puedes seleccionar fechas futuras');
+                    }
+                }
+            },
+            validateFechaCita(){
+                // Si no hay fecha, no hacemos nada
+                if (!this.tempData.fechaCita) return;
+
+                const fechaSeleccionada = this.tempData.fechaCita.split('T')[0];
+                // Comparamos cadenas (YYYY-MM-DD)
+                if (fechaSeleccionada < this.minDateCita) {
+                    // Opción A: Resetear a HOY
+                    this.tempData.fechaCita = '';
+
+                    const Swal = window.Swal; // Aseguramos acceso a Swal
+                    if (Swal) {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'warning',
+                            title: 'No puedes asignar citas en fechas pasadas',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    } else {
+                        alert('No puedes seleccionar fechas pasadas');
                     }
                 }
             },

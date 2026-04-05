@@ -44,6 +44,11 @@ class SupervisionDiariaController extends Controller
             $queryVehiculos->where('departamento', $departamentoFilter);
         }
 
+        $ubicacionFilter = request()->get('ubicacion');
+        if ($ubicacionFilter) {
+            $queryVehiculos->where('ubicacion', $ubicacionFilter);
+        }
+
         // 4. Eager Loading Eficiente
         $queryVehiculos->with(['supervisioDiaria' => function ($q) use ($fechaInicio, $fechaFin) {
             $q->whereBetween('fecha', [
@@ -105,14 +110,22 @@ class SupervisionDiariaController extends Controller
             ->orderBy('departamento')
             ->pluck('departamento');
 
+        $queryUbicaciones = Vehiculo::whereNotNull('ubicacion')->where('ubicacion', '!=', '');
+        if ($departamentoFilter) {
+            $queryUbicaciones->where('departamento', $departamentoFilter);
+        }
+        $ubicaciones = $queryUbicaciones->distinct()->orderBy('ubicacion')->pluck('ubicacion');
+
         // 8. Renderizar Vista
         render('supervision_diaria.index', [
             'vehiculos' => $vehiculosProcesados,
             'diasDelMes' => $diasDelMes,
             'nombreMes' => ucfirst($nombreMes),
             'departamentos' => $departamentos,
+            'ubicaciones' => $ubicaciones,
             'filtrosActuales' => [
                 'departamento' => $departamentoFilter,
+                'ubicacion' => $ubicacionFilter,
                 'cumplimiento' => $cumplimientoFilter,
                 'mes' => $mes,
                 'año' => $año
@@ -215,6 +228,7 @@ class SupervisionDiariaController extends Controller
         // 1. Configuración de Fechas
         $mesInput = request()->get('mes');
         $añoInput = request()->get('año');
+        $departamentoFilter = request()->get('departamento');
         $mes = $mesInput ? (int)$mesInput : \Carbon\Carbon::now()->month;
         $año = $añoInput ? (int)$añoInput : \Carbon\Carbon::now()->year;
 
@@ -224,20 +238,28 @@ class SupervisionDiariaController extends Controller
         $nombreMes = $fechaInicioMes->translatedFormat('F Y');
 
         // 2. Consulta de Vehículos y Supervisiones Diarias
-        $todosLosVehiculos = Vehiculo::with(['supervisioDiaria' => function ($q) use ($fechaInicioMes, $fechaFinMes){
+        $queryVehiculos = Vehiculo::with(['supervisioDiaria' => function ($q) use ($fechaInicioMes, $fechaFinMes){
                 $q->whereBetween('fecha', [$fechaInicioMes->format('Y-m-d'), $fechaFinMes->format('Y-m-d')]);
             }])
-            ->select('id', 'no_economico', 'departamento', 'en_taller')
-            ->get();
+            ->select('id', 'no_economico', 'departamento', 'ubicacion', 'en_taller');
+        
+        if ($departamentoFilter) {
+            $queryVehiculos->where('departamento', $departamentoFilter);
+        }
+
+        $todosLosVehiculos = $queryVehiculos->get();
 
         // 3. Procesamiento (ACTUALIZADO: Agrupación por departamento)
         $tablaResumen = [];
         $hoy = \Carbon\Carbon::now()->endOfDay(); 
 
-        $gruposPorDepartamento = $todosLosVehiculos->groupBy('departamento');
+        $columnaAgrupacion = $departamentoFilter ? 'ubicacion' : 'departamento';
+        $tipoAgrupacion = $departamentoFilter ? 'Ubicación' : 'Proceso';
 
-        foreach ($gruposPorDepartamento as $nombreDepto => $vehiculosGrupo) {
-            $nombre = $nombreDepto ?: 'SIN DEPARTAMENTO';
+       $grupos = $todosLosVehiculos->groupBy($columnaAgrupacion);
+
+        foreach ($grupos as $nombreDato => $vehiculosGrupo) {
+            $nombre = $nombreDato ?: 'SIN ' . $tipoAgrupacion;
 
             $totalVehiculos = $vehiculosGrupo->count();
             $totalEnTaller = $vehiculosGrupo->where('en_taller', 1)->count();
@@ -301,7 +323,9 @@ class SupervisionDiariaController extends Controller
             'nombreMes' => ucfirst($nombreMes),
             'resumen' => $tablaResumen,
             'mes' => $mes,
-            'año' => $año
+            'año' => $año,
+            'departamentoActual' => $departamentoFilter,
+            'tipoAgrupacion' => $tipoAgrupacion
         ]);
     }
 

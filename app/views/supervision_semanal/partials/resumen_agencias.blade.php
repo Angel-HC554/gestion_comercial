@@ -2,11 +2,17 @@
     {{-- 1. HEADER SUPERIOR (Diseño Unificado) --}}
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
-            <h2 class="text-2xl font-bold text-zinc-900">Resumen Semanal por Agencias</h2>
-            <p class="text-sm text-zinc-500">
-                Periodo: <span class="font-semibold text-emerald-600 capitalize">{{ $nombreMes }}</span>
-            </p>
-        </div>
+    <h2 class="text-2xl font-bold text-zinc-900">
+        @if($departamentoActual)
+            Resumen de Ubicaciones: {{ $departamentoActual }}
+        @else
+            Resumen General por Procesos
+        @endif
+    </h2>
+    <p class="text-sm text-zinc-500">
+        Periodo: <span class="font-semibold text-emerald-600 capitalize">{{ $nombreMes }}</span>
+    </p>
+</div>
 
         <a href="/supervision-semanal">
         <button class="w-full md:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer">
@@ -26,7 +32,7 @@
     {{-- Botón Anterior --}}
     <button 
         @if($semanaIndex > 0)
-            hx-get="/supervision-semanal/resumen-agencias?semana_index={{ $semanaIndex - 1 }}&mes={{ $mes }}&año={{ $año }}"
+            hx-get="/supervision-semanal/resumen-agencias?semana_index={{ $semanaIndex - 1 }}&mes={{ $mes }}&año={{ $año }}&departamento={{ $departamentoActual }}"
             hx-target="#contenedor-principal"
             hx-swap="innerHTML"
             class="flex items-center gap-2 px-4 py-2 bg-zinc-100 border border-zinc-300 text-zinc-700 rounded-md hover:bg-zinc-200 font-medium transition-colors cursor-pointer"
@@ -50,7 +56,7 @@
     {{-- Botón Siguiente --}}
     <button 
         @if($semanaIndex < $totalSemanas - 1)
-            hx-get="/supervision-semanal/resumen-agencias?semana_index={{ $semanaIndex + 1 }}&mes={{ $mes }}&año={{ $año }}"
+            hx-get="/supervision-semanal/resumen-agencias?semana_index={{ $semanaIndex + 1 }}&mes={{ $mes }}&año={{ $año }}&departamento={{ $departamentoActual }}"
             hx-target="#contenedor-principal"
             hx-swap="innerHTML"
             class="flex items-center gap-2 px-4 py-2 bg-zinc-100 border border-zinc-300 text-zinc-700 rounded-md hover:bg-zinc-200 font-medium transition-colors cursor-pointer"
@@ -71,7 +77,7 @@
         <table class="w-full border-collapse">
             <thead>
                 <tr class="bg-zinc-50 border-b border-zinc-200">
-                    <th class="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider border-r border-zinc-200">Departamento</th>
+                    <th class="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider border-r border-zinc-200">{{ $tipoAgrupacion }}</th>
                     <th class="py-3 px-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">Vehículos</th>
                     <th class="py-3 px-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">En Taller</th>
                     <th class="py-3 px-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">Pendientes</th>

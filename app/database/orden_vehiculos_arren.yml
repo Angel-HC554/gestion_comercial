@@ -33,7 +33,7 @@ columns:
     type: string
     nullable: true
   fecha_cita:
-    type: date
+    type: datetime
     nullable: true
   taller:
     type: string

@@ -16,23 +16,38 @@
         <form method="GET" action="/supervision-diaria" class="w-full">
             <div class="flex flex-col md:flex-row gap-4 items-end md:items-center bg-white rounded-lg border-t-4 border-t-emerald-600 shadow-sm p-4 border border-zinc-200">
                 
-                <div class="flex flex-row w-full md:w-auto justify-between">
-                    <div class="w-full">
-                        <label class="text-sm font-bold text-zinc-700 mb-1">Departamento:</label>
-                        <select name="departamento" class="w-full h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none transition-shadow">
-                            <option value="">Todos los Departamentos</option>
-                            @foreach($departamentos as $depto)
-                                <option value="{{ $depto }}" {{ ($filtrosActuales['departamento'] ?? '') == $depto ? 'selected' : '' }}>
-                                    {{ $depto }}
-                                </option>
-                            @endforeach
+                <div class="flex flex-col w-full md:w-auto justify-between">
+                    
+                        <label class="text-sm font-bold text-zinc-700 mb-1">Proceso:</label>
+                        <select name="departamento"
+                        x-data="{}"
+                        @change="htmx.ajax('GET', '/api/ubicaciones-options?departamento=' + $el.value, {target: $el.closest('form').querySelector('.ubicacion-select'), swap: 'innerHTML'})" 
+                        class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none cursor-pointer">
+                        <option value="">Todos los procesos</option>
+                        @foreach($departamentos as $depto)
+                            <option value="{{ $depto }}" {{ ($filtrosActuales['departamento'] ?? '') == $depto ? 'selected' : '' }}>
+                                {{ $depto }}
+                            </option>
+                        @endforeach
                         </select>
-                    </div>
+                    
+                </div>
+
+                <div class="flex flex-col w-full md:w-auto">
+                    <label class="text-sm font-bold text-zinc-700 mb-1">Ubicación:</label>
+                    <select name="ubicacion" class="ubicacion-select w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none cursor-pointer">
+                        <option value="">Todas las ubicaciones</option>
+                        @foreach($ubicaciones as $ubicacion)
+                            <option value="{{ $ubicacion }}" {{ ($filtrosActuales['ubicacion'] ?? '') == $ubicacion ? 'selected' : '' }}>
+                                {{ $ubicacion }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <div class="flex flex-col w-full md:w-auto">
                     <label class="text-sm font-bold text-zinc-700 mb-1">Cumplimiento:</label>
-                    <select name="cumplimiento" class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none transition-shadow">
+                    <select name="cumplimiento" class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none transition-shadow cursor-pointer">
                         <option value="todos">Mostrar Todos</option>
                         <option value="no_cumple" {{ ($filtrosActuales['cumplimiento'] ?? '') == 'no_cumple' ? 'selected' : '' }}>
                             Mostrar Solo Incumplidos
@@ -40,17 +55,21 @@
                     </select>
                 </div>
 
-                <button type="submit" class="w-full md:w-auto h-10 px-6 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2">
+                <button type="submit" class="w-full md:w-auto h-10 px-6 mt-6 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                     </svg>
                     Filtrar
                 </button>
 
-                <a href="/supervision-diaria/resumen-agencias?mes={{ $filtrosActuales['mes'] }}&año={{ $filtrosActuales['año'] }}" 
-                    class="w-full md:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer no-underline">
-                    Ver Resumen por departamentos
-                </a>
+                <button 
+                    type="button"
+                    hx-get="/supervision-diaria/resumen-agencias?mes={{ $filtrosActuales['mes'] }}&año={{ $filtrosActuales['año'] }}"
+                    hx-include="closest form"
+                    hx-target="body" 
+                    class="w-full md:w-auto h-10 px-6 mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"             >
+                    Ver resumen por proceso
+                </button>
             </div>
         </form>
 
@@ -95,6 +114,12 @@
                                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                             </svg>
                                         </a>
+                                    @elseif($status == 'taller')
+                                        <div class="flex justify-center" title="En Taller">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-amber-400">
+                                                <path fill-rule="evenodd" d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889c-.02.12-.115.26-.297.348a7.493 7.493 0 00-.986.57c-.166.115-.334.126-.45.083L6.3 5.508a1.875 1.875 0 00-2.282.819l-.922 1.597a1.875 1.875 0 00.432 2.385l.84.692c.095.078.17.229.154.43a7.598 7.598 0 000 1.139c.015.2-.059.352-.153.43l-.841.692a1.875 1.875 0 00-.432 2.385l.922 1.597a1.875 1.875 0 002.282.818l1.019-.382c.115-.043.283-.031.45.082.312.214.641.405.985.57.182.088.277.228.297.35l.178 1.071c.151.904.933 1.567 1.85 1.567h1.844c.916 0 1.699-.663 1.85-1.567l.178-1.072c.02-.12.114-.26.297-.349.344-.165.673-.356.985-.57.167-.114.335-.125.45-.082l1.02.382a1.875 1.875 0 002.28-.819l.923-1.597a1.875 1.875 0 00-.432-2.385l-.84-.692c-.095-.078-.17-.229-.154-.43a7.614 7.614 0 000-1.139c-.016-.2.059-.352.153-.43l.84-.692c.708-.582.891-1.59.433-2.385l-.922-1.597a1.875 1.875 0 00-2.282-.818l-1.02.382c-.114.043-.282.031-.449-.083a7.49 7.49 0 00-.985-.57c-.183-.087-.277-.227-.297-.348l-.179-1.072a1.875 1.875 0 00-1.85-1.567h-1.843zM12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" clip-rule="evenodd" />
+                                            </svg>
+                                        </div>
                                     @elseif($status == 'no_cumplido')
                                         <div class="flex justify-center" title="No Cumplido">
                                             <svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">

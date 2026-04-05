@@ -5,7 +5,6 @@ columns:
     type: integer
     unsigned: true
     primary: true
-    # En SQL esto sería: FOREIGN KEY (id_orden) REFERENCES ordenes_global(id)
 
   # --- DATOS ESPECÍFICOS ---
   area: string

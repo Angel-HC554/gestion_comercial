@@ -11,6 +11,8 @@ use App\Models\VehiculoArchivo;
 use App\Models\OrdenArchivo;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -36,6 +38,7 @@ class VehiculoController extends Controller
         $user = auth()->user();
 
         $query = Vehiculo::with([
+            'fotoPerfil',
             'latestSupervision' => function ($q) {
                 $q->select('id', 'vehiculo_id', 'kilometraje', 'fecha', 'hora_fin');
             },
@@ -376,6 +379,14 @@ class VehiculoController extends Controller
 
                 if (!$noEconomico) continue; // Saltar filas vacías
 
+                $vehiculo = null;
+                if ($idExcel) {
+                    $vehiculo = Vehiculo::find($idExcel);
+                }
+                if (!$vehiculo) {
+                    $vehiculo = Vehiculo::where('no_economico', $noEconomico)->first();
+                }
+
                 // Preparar array de datos (Mapeo exacto de tu archivo anterior)
                 $vehiculoData = [
                     'no_economico'  => $noEconomico,
@@ -387,11 +398,19 @@ class VehiculoController extends Controller
                     'marca'         => $getVal('Marca'),
                     'modelo'        => $getVal('Modelo'),
                     'año'           => (int) $getVal('Año'),
-                    'estado'        => $getVal('Estado') ?? 'En circulacion',
                     'propiedad'     => $getVal('Propiedad'),
                     'rpe_responsable'   => $getVal('RPE Responsable') ?? 'NA',
                 ];
 
+                $estadoExcel = $getVal('Estado');
+                if (!empty(trim($estadoExcel ?? ''))) {
+                    // Si el Excel trae un estado escrito (ej. "Fuera de circulacion"), le hacemos caso
+                    $vehiculoData['estado'] = trim($estadoExcel);
+                } else {
+                    // Si la celda está vacía:
+                    // Si el vehículo existe, conservamos su estado actual. Si es nuevo, va "En circulacion".
+                    $vehiculoData['estado'] = $vehiculo ? $vehiculo->estado : 'En circulacion';
+                }
                 if (isset($colMap['En Taller'])) {
                     $vehiculoData['en_taller'] = $normalizeSiNoToInt($getVal('En Taller'));
                 }
@@ -400,33 +419,19 @@ class VehiculoController extends Controller
                     $vehiculoData['finalizado'] = $normalizeSiNoToInt($getVal('Finalizado'));
                 }
 
-                // 5. LÓGICA DE UPSERT (Actualizar o Crear)
-                $vehiculo = null;
-
-                // A) Si el Excel trae ID, buscamos por ID
-                if ($idExcel) {
-                    $vehiculo = Vehiculo::find($idExcel);
-                }
-
-                // B) Si no se encontró por ID (o no traía), buscamos por No. Económico (Clave única de negocio)
-                if (!$vehiculo) {
-                    $vehiculo = Vehiculo::where('no_economico', $noEconomico)->first();
-                }
-
                 if ($vehiculo) {
                     // --- ACTUALIZAR ---
-                    // Actualizamos solo si existen cambios (Eloquent lo maneja, pero hacemos update directo)
                     $vehiculo->update($vehiculoData);
                     $countUpdated++;
                 } else {
                     // --- CREAR ---
-                    // Si el Excel traía un ID pero no existía en BD, podemos forzar ese ID o dejar que sea autoincrement
                     if ($idExcel) {
-                        $vehiculoData['id'] = $idExcel;
+                    $vehiculoData['id'] = $idExcel;
                     }
                     Vehiculo::create($vehiculoData);
                     $countCreated++;
                 }
+                
             }
 
             return response()->json([
@@ -626,13 +631,13 @@ class VehiculoController extends Controller
 
             // 5. Mover el archivo e insertar en la BD
             if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-                
+
                 $rutaRelativa = '/expedientes/' . $id . '/' . $fileName;
 
                 VehiculoArchivo::create([
                     'vehiculo_id' => $id,
                     'nombre'      => strtoupper($nombreDoc),
-                    'ruta_archivo'=> $rutaRelativa
+                    'ruta_archivo' => $rutaRelativa
                 ]);
 
                 return response()->json([
@@ -642,12 +647,80 @@ class VehiculoController extends Controller
             } else {
                 throw new \Exception("No se pudo mover el archivo al directorio de destino.");
             }
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Error en el servidor: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function actualizarFoto($id)
+    {
+        $vehiculo = Vehiculo::find($id);
+
+        if (!$vehiculo) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Vehículo no encontrado'
+            ], 404);
+        }
+        
+        $archivo = $_FILES['foto_vehiculo'] ?? null;
+
+        if (isset($archivo) && $archivo['error'] === UPLOAD_ERR_OK) {
+            $basePath = dirname(__DIR__, 2) . '/public';
+            $carpetaDestino = $basePath . '/vehiculos_fotos/' . $vehiculo->no_economico;
+
+            if (!is_dir($carpetaDestino)) {
+                mkdir($carpetaDestino, 0755, true);
+            }
+
+            $nombreArchivo = 'perfil_' . time() . '.jpg';
+            $rutaCompleta = $carpetaDestino . '/' . $nombreArchivo;
+            $rutaRelativa = '/vehiculos_fotos/' . $vehiculo->no_economico . '/' . $nombreArchivo;
+
+            try {
+                $manager = new ImageManager(new Driver());
+                $image = $manager->read($archivo['tmp_name']);
+                $image->scaleDown(width: 800, height: 800);
+                $image->toJpeg(75)->save($rutaCompleta);
+
+                $archivoExistente = VehiculoArchivo::where('vehiculo_id', $vehiculo->id)
+                                                ->where('nombre', 'foto perfil')
+                                                ->first();
+                if ($archivoExistente) {
+                    if ($archivoExistente->ruta_archivo && file_exists($basePath . $archivoExistente->ruta_archivo)) {
+                    @unlink($basePath . $archivoExistente->ruta_archivo);
+                    }
+                    $archivoExistente->update([
+                        'ruta_archivo' => $rutaRelativa
+                    ]);
+                } else {
+
+                    $vehiculo_archivo = VehiculoArchivo::create([
+                        'vehiculo_id' => $vehiculo->id,
+                        'nombre'      => 'foto perfil',
+                        'ruta_archivo' => $rutaRelativa
+                    ]);
+                }
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Foto actualizada correctamente',
+                    'ruta' => $rutaRelativa
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Error al procesar la imagen: ' . $e->getMessage()
+                ], 500);
+            }
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se recibió ninguna imagen válida o hubo un error al subirla.'
+            ], 400);
         }
     }
 }

@@ -7,7 +7,13 @@
         {{-- HEADER SUPERIOR --}}
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
             <div>
-                <h2 class="text-2xl font-bold text-zinc-900">Resumen Diario por Departamentos</h2>
+                <h2 class="text-2xl font-bold text-zinc-900">
+                    @if($departamentoActual)
+                        Resumen Diario de Ubicaciones: {{ $departamentoActual }}
+                    @else
+                        Resumen Diario General por Procesos
+                    @endif
+                </h2>
                 <p class="text-sm text-zinc-500">
                     Acumulado del mes: <span class="font-semibold text-emerald-600 capitalize">{{ $nombreMes }}</span>
                 </p>
@@ -28,7 +34,9 @@
             <table class="w-full border-collapse">
                 <thead>
                     <tr class="bg-zinc-50 border-b border-zinc-200">
-                        <th class="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Departamento</th>
+                        <th class="py-3 px-4 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider border-r border-zinc-200">
+                            {{ $tipoAgrupacion }}
+                        </th>
                         <th class="py-3 px-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">Flotilla</th>
                         <th class="py-3 px-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">En Taller</th>
                         <th class="py-3 px-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">Faltas Acumuladas</th>
@@ -78,7 +86,7 @@
                             <td class="py-3 px-4">
                                 <div class="flex flex-col items-center justify-center w-32 mx-auto">
                                     <div class="flex justify-between w-full text-xs mb-1">
-                                        <span class="font-bold text-zinc-700">{{ $fila['cumplidos'] }} <span class="text-zinc-400 font-normal">regs.</span></span>
+                                        <span class="font-bold text-zinc-700">{{ $fila['cumplidos'] }} <span class="text-zinc-400 font-normal">registros</span></span>
                                         <span class="font-bold {{ $fila['porcentaje'] == 100 ? 'text-emerald-600' : 'text-zinc-600' }}">{{ $fila['porcentaje'] }}%</span>
                                     </div>
                                     <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden border border-gray-100">

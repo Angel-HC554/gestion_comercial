@@ -8,6 +8,7 @@ use App\Models\Vehiculo;
 use App\Models\VehiculoSalidaTaller;
 use App\Models\OrdenArchivo;
 use App\Models\HistorialOrden;
+use App\Models\AreaUsuario;
 use App\Models\OrdenVehiculoArren;
 use App\Models\OrdenVehiculoPropio;
 use Intervention\Image\ImageManager;
@@ -23,46 +24,13 @@ class OrdenVehiculoController extends Controller
     // 1. Carga la vista inicial
     public function index()
     {
-        $citas = OrdenVehiculo:: with('detalleArrendado')->where('status', 'CITA ASIGNADA')->get();
-        // Recorremos las citas para agregarles el texto dinámico
-        $citas->map(function ($cita) {
-        if ($cita->detalleArrendado && $cita->detalleArrendado->fecha_cita) {
-            
-            // Convertimos las fechas a inicio de día para que el cálculo sea exacto (sin importar la hora)
-            $fechaCita = Carbon::parse($cita->detalleArrendado->fecha_cita)->startOfDay();
-            $hoy = Carbon::now()->startOfDay();
-
-            // Calculamos la diferencia en días (el 'false' es para que nos dé números negativos si la cita ya pasó)
-            $diferenciaDias = $hoy->diffInDays($fechaCita, false);
-
-            if ($diferenciaDias == 0) {
-                $cita->texto_fecha = 'Hoy,';
-            } elseif ($diferenciaDias == 1) {
-                $cita->texto_fecha = 'Mañana,';
-            } elseif ($diferenciaDias > 1) {
-                $cita->texto_fecha = 'En ' . $diferenciaDias . ' días,';
-            } elseif ($diferenciaDias == -1) {
-                $cita->texto_fecha = 'Ayer,';
-            } elseif ($diferenciaDias < -1) {
-                // Por si se les olvidó cambiar el estatus y la cita fue hace una semana
-                $cita->texto_fecha = 'Hace ' . abs($diferenciaDias) . ' días,'; 
-            }
-        } else {
-            $cita->texto_fecha = '';
-        }
-        
-        return $cita;
-    });
-
-        // Renderizamos la vista vacía, AlpineJS cargará los datos al iniciar
-        render('ordenvehiculos.index',[
-            'citas' => $citas,
-        ]);
+        render('ordenvehiculos.index');
     }
 
     // 2. API para la tabla (Filtrado y Paginación)
     public function search()
     {
+        $user = auth()->user();
         $page = request()->get('page', 1);
         $perPage = request()->get('perPage', 10);
         $search = request()->get('search', '');
@@ -70,10 +38,6 @@ class OrdenVehiculoController extends Controller
         $fecha_inicio = request()->get('fecha_inicio', '');
         $fecha_fin = request()->get('fecha_fin', '');
 
-        // NUEVO PARÁMETRO: Para filtrar exactamente por un vehículo (vista show)
-        $noEconomicoExacto = request()->get('no_economico_exacto', '');
-
-        // Query Builder de Eloquent
         $query = OrdenVehiculo::query()
             ->with(['archivo', 'detallePropio', 'detalleArrendado', 'vehiculo' => function ($q) {
                 $q->select('no_economico', 'departamento', 'ubicacion');
@@ -83,8 +47,41 @@ class OrdenVehiculoController extends Controller
                 'tipo_vehiculo',
                 'noeconomico',
                 'status',
-                'orden_500',
+                'orden_500'
             );
+
+        if (!$user->is('admin')) {
+            $asignaciones = AreaUsuario::with('area', 'subarea')
+                ->where('user_id', $user->id)
+                ->get();
+            if ($asignaciones->isNotEmpty()) {
+                $query->whereHas('vehiculo', function ($queryVehiculo) use ($asignaciones) {
+                    // ¡LA SOLUCIÓN! Envolvemos todo en un where() contenedor
+                    $queryVehiculo->where(function ($q) use ($asignaciones) {
+
+                        foreach ($asignaciones as $asignacion) {
+                            // Ahora aplicamos los orWhere sobre el $q contenedor
+                            $q->orWhere(function ($subQuery) use ($asignacion) {
+
+                                if ($asignacion->area) {
+                                    $subQuery->where('departamento', $asignacion->area->nombre);
+                                }
+
+                                if ($asignacion->subarea) {
+                                    $subQuery->where('ubicacion', $asignacion->subarea->nombre);
+                                }
+                            });
+                        }
+                    });
+                });
+            } else {
+                $query->where('id', 0);
+            }
+        }
+
+        // NUEVO PARÁMETRO: Para filtrar exactamente por un vehículo (vista show)
+        $noEconomicoExacto = request()->get('no_economico_exacto', '');
+
         if ($noEconomicoExacto) {
             // Filtro exacto para la vista "Show" del vehículo
             $query->where('noeconomico', $noEconomicoExacto);
@@ -959,7 +956,7 @@ class OrdenVehiculoController extends Controller
 
         try {
             db()->transaction(function () use ($orden, $data, $files, $orden_500, $requiere_servicio) {
-                
+
                 // A. Actualizar TABLA PADRE
                 $orden->update([
                     'noeconomico'       => $data['noeconomico'],
@@ -994,10 +991,10 @@ class OrdenVehiculoController extends Controller
                 foreach ($imageMap as $inputName => $suffix) {
                     // Verificamos si hay un archivo nuevo subido sin errores
                     if (isset($files[$inputName]) && $files[$inputName]['error'] === UPLOAD_ERR_OK) {
-                        
+
                         // 1. Guardar nueva imagen
                         $newPath = $this->storeImage($files[$inputName], $data['noeconomico'], $suffix);
-                        
+
                         if ($newPath) {
                             $specificData[$inputName] = $newPath;
 
@@ -1034,7 +1031,6 @@ class OrdenVehiculoController extends Controller
                 'message' => 'Orden actualizada correctamente',
                 'id' => $orden->id
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -1190,10 +1186,10 @@ class OrdenVehiculoController extends Controller
 
                 // 4. Actualizar Estado según el tipo de vehículo
                 if ($oldStatus === 'PENDIENTE') {
-                    
+
                     // Definimos el nuevo estado dinámicamente
-                    $nuevoEstado = ($orden->tipo_vehiculo === 'arrendado') 
-                        ? 'ENVIADO A PV' 
+                    $nuevoEstado = ($orden->tipo_vehiculo === 'arrendado')
+                        ? 'ENVIADO A PV'
                         : 'VEHICULO TALLER';
 
                     // Actualizamos la orden
@@ -1450,7 +1446,7 @@ class OrdenVehiculoController extends Controller
         return response()->json($historial);
     }
 
-public function generarPdfArrendado($id)
+    public function generarPdfArrendado($id)
     {
         // 1. Buscar orden
         $orden = OrdenVehiculo::with('detalleArrendado')->find($id);
@@ -1484,9 +1480,9 @@ public function generarPdfArrendado($id)
         $options = new Options();
         $options->set('isRemoteEnabled', true);
         $options->set('defaultFont', 'Arial');
-        
+
         // IMPORTANTE: Aumentar memoria si las fotos son pesadas
-        ini_set('memory_limit', '256M'); 
+        ini_set('memory_limit', '256M');
 
         $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html);
@@ -1513,7 +1509,7 @@ public function generarPdfArrendado($id)
             // Esto es útil si subiste archivos antes de forzar la extensión
             $extensions = ['.jpg', '.jpeg', '.png', '.gif'];
             $found = false;
-            
+
             // Quitamos extensión actual si la tuviera para probar otras
             $baseName = preg_replace('/\.[^.]+$/', '', $fullPath);
 
@@ -1524,19 +1520,19 @@ public function generarPdfArrendado($id)
                     break;
                 }
             }
-            
+
             if (!$found) return null;
         }
 
         try {
             // Leer contenido del archivo
             $imageData = file_get_contents($fullPath);
-            
+
             // Obtener tipo de imagen para el header (jpg, png, etc)
             $type = pathinfo($fullPath, PATHINFO_EXTENSION);
 
             if ($type === 'jpg') $type = 'jpeg';
-            
+
             // Retornar formato data URI: "data:image/jpg;base64,..."
             return 'data:image/' . $type . ';base64,' . base64_encode($imageData);
         } catch (\Exception $e) {

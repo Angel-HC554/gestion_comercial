@@ -17,7 +17,7 @@ class LoginController extends Controller
     {
         $data = request()->validate([
             'user' => 'required|string',
-            'password' => 'required|min:8',
+            'password' => 'required|min:2',
         ]);
 
         if (!$data) {

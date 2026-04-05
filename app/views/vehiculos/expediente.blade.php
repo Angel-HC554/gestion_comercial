@@ -26,7 +26,7 @@
             <div class="w-full sm:w-1/2">
                 <label class="block text-sm font-medium text-zinc-700 mb-1">Archivo (Solo PDF) <span class="text-red-500">*</span></label>
                 <input type="file" x-ref="archivoPdf" accept="application/pdf" required
-                    class="w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 border-2 border-zinc-300 rounded-md h-10 bg-white cursor-pointer">
+                    class="w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 border-2 border-dashed border-zinc-300 rounded-lg p-2 h-10 bg-zinc-50 cursor-pointer focus:outline-none focus:border-emerald-500 transition-colors">
             </div>
 
             <div class="w-full sm:w-auto">

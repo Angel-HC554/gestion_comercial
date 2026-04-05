@@ -4,8 +4,56 @@
 
 @section('content')
     <div x-data="{
-        tab: 'estado', // Pestaña activa del primer grupo (Estado/Fotos)
-        tabHistorial: 'analisis' // Pestaña activa del segundo grupo (Historial/Supervisión)
+        tab: 'estado',
+        tabHistorial: 'analisis',
+        editarFoto: false,
+        async subirFoto() {
+            const input = document.getElementById('inputFoto');
+            if (input.files.length === 0){
+                Swal.fire({
+                    toast: true, position: 'top-end', icon: 'warning',
+                    title: 'Por favor selecciona una foto', showConfirmButton: false, timer: 3000
+                });
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('foto_vehiculo', input.files[0]);
+            const tokenInput = document.querySelector('input[name=\'_token\']');
+            const csrfToken = tokenInput ? tokenInput.value : '';
+
+            try{
+                const response = await fetch(`/vehiculos/{{ $vehiculo->id }}/actualizar-foto`, {
+                    method: 'POST', // Usamos POST para subir archivos
+                    headers: {
+                    'X-CSRF-TOKEN': csrfToken
+                    },
+                body: formData
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    this.editarFoto = false;
+
+                    await Swal.fire({
+                        icon: 'success', 
+                        title: '¡Listo!', 
+                        text: 'Foto actualizada correctamente',
+                        timer: 2000, 
+                        showConfirmButton: false
+                    });
+                    window.location.reload(); 
+                } else {
+                 throw new Error(data.message || 'Error desconocido del servidor');
+                }
+            } catch (error) {
+                Swal.fire({
+                toast: true, position: 'top-end', icon: 'error',
+                title: error.message || 'Hubo un problema al subir la foto',
+                showConfirmButton: false, timer: 3000
+                });
+            }
+        }
     }" class="min-h-screen pb-10">
 
         <div class="flex items-center justify-between mb-6 mx-6 md:mx-10 pt-6">
@@ -29,9 +77,16 @@
                 <div class="rounded-xl border border-zinc-300 bg-white p-5 shadow-md">
                     <div
                         class="flex items-start gap-4 bg-gradient-to-t from-emerald-600 to-emerald-900 text-white rounded-t-lg -m-5 mb-2 p-4 md:p-5">
-                        <div class="h-20 w-36 shrink-0 overflow-hidden rounded-md bg-gray-100 ring-1 ring-white/20">
+                        <div class="relative group h-20 w-36 shrink-0 overflow-hidden rounded-md bg-gray-100 ring-1 ring-white/20">
                             <img src="{{ $vehiculo->foto_url }}"
-                                alt="foto del vehículo" class="h-full w-full object-cover">
+                                alt="foto del vehículo" 
+                                class="h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-60"                       >
+    
+                            <button class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 text-white" @click="editarFoto = true">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-6 drop-shadow-md cursor-pointer">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                </svg>
+                            </button>
                         </div>
                         <div>
                             <div class="text-xl font-semibold text-white">
@@ -641,10 +696,47 @@
                 </div>
             </div>
         </div>
+        <div x-show="editarFoto" x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity>
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all overflow-hidden"
+    @click.away="editarFoto = false">
+    
+    <div class="p-6">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 bg-emerald-100 rounded-full text-emerald-600 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-zinc-900">Actualizar fotografía</h3>
+        </div>
+
+        <p class="text-sm text-zinc-500 mb-5">Selecciona una imagen desde tu dispositivo para asignarla como la foto principal de este vehículo.</p>
+
+        <div class="my-4">
+            <input type="file" name="foto_vehiculo" id="inputFoto" accept="image/jpeg, image/png, image/webp"
+                class="w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 border-2 border-dashed border-zinc-300 rounded-lg p-2 bg-zinc-50 cursor-pointer focus:outline-none focus:border-emerald-500 transition-colors">
+            
+            <p class="text-[11px] text-zinc-400 mt-2 font-medium">Formatos soportados: JPG, PNG, WEBP.</p>
+        </div>
+    </div>
+
+    <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-100">
+        <button @click="editarFoto = false"
+            class="px-4 py-2 text-zinc-600 bg-white border border-zinc-300 hover:bg-zinc-50 rounded-md text-sm font-medium transition-colors cursor-pointer shadow-sm">
+            Cancelar
+        </button>
+        <button @click="subirFoto()"
+            class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium shadow-sm transition-colors cursor-pointer">
+            Subir y guardar
+        </button>
+    </div>
+</div>
+    </div>
     </div>
 
     {{-- MODAL GLOBAL PARA FINALIZAR ORDEN --}}
-    {{-- Este vive fuera de los tabs para no depender de su visibilidad --}}
     <div x-data="finishOrderModal()" @open-finish-modal-global.window="open($event.detail)" x-show="isOpen" x-cloak
         class="fixed inset-0 z-200 flex items-center justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity>
 
@@ -740,10 +832,7 @@
                     // Comparamos cadenas (YYYY-MM-DD)
                     if (this.form.fechaTerminacion > this.maxDate) {
                         // Opción A: Resetear a HOY
-                        this.form.fechaTerminacion = this.maxDate;
-
-                        // Opción B: Si prefieres borrarlo
-                        // this.tempData.fechaTerminacion = '';
+                        this.form.fechaTerminacion = '';
 
                         // Usamos tu SweetAlert existente para un aviso sutil (Toast)
                         const Swal = window.Swal; // Aseguramos acceso a Swal

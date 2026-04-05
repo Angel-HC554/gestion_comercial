@@ -296,55 +296,16 @@ class Vehiculo extends Model
         return $data;
     }
 
+    public function fotoPerfil(){
+        return $this->hasOne(VehiculoArchivo::class, 'vehiculo_id')->where('nombre', 'foto perfil');
+    }
     public function getFotoUrlAttribute()
     {
-        // 1. Definir el catálogo
-        $modelos_fotos = [
-            'aveo'      => 'aveo.png',
-            'silverado' => 'silverado.jpg',
-            'f-150'     => 'f-150.png',
-            'frontier'  => 'frontier.jpg',
-            'logan'     => 'logan.jpg',
-            'mg'        => 'mg5.webp',
-            'np300'     => 'np300.webp',
-            'ram'       => 'ram.jpg',
-            's10'       => 'S10.jpg'
-        ];
-
-        // 2. Normalizar a minúsculas (PHP Nativo)
-        $modelo = strtolower($this->modelo ?? '');
-        $marca  = strtolower($this->marca ?? '');
-        
-        $fotoKey = null;
-
-        // 3. Lógica de coincidencia (Usando str_contains nativo de PHP 8)
-        // Nota: Si usas PHP 7, cambia str_contains(A, B) por: strpos(A, B) !== false
-        foreach ($modelos_fotos as $key => $filename) {
-            // Si el modelo (ej: "ford f-150") contiene la clave (ej: "f-150")
-            if ($key && str_contains($modelo, $key)) {
-                $fotoKey = $key;
-                break;
-            }
+        if ($this->fotoPerfil && $this->fotoPerfil->ruta_archivo) {
+            return $this->fotoPerfil->ruta_archivo;
         }
 
-        if (!$fotoKey) {
-        if (str_contains($marca, 'chevrolet')) {
-            $fotoKey = 'silverado';
-        } elseif (str_contains($marca, 'mg')) {
-            $fotoKey = 'mg';
-        } elseif (str_contains($marca, 'nissan')) {
-            $fotoKey = 'np300';
-        } elseif (str_contains($marca, 'renault')) {
-            $fotoKey = 'logan';
-        }   
-        }   
-
-        // 5. Retornar URL
-        $archivo = $fotoKey ? ($modelos_fotos[$fotoKey] ?? null) : null;
-        
-        return $archivo 
-            ? "/assets/img/vehiculos_default_fotos/{$archivo}" 
-            : "/assets/img/vehiculos_default_fotos/default.jpg";
+        return "/assets/img/vehiculos_default_fotos/default.jpg";
     }
 
     public function getEstadoMantenimientoAttribute()

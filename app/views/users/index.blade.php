@@ -3,7 +3,7 @@
 ])
 
 @section('content')
-    <div class="mx-auto px-4 sm:px-6 lg:px-8 py-6" x-data="{ openModal: false }">
+    <div class="mx-auto px-4 sm:px-6 lg:px-8 py-6" x-data="{ openModal: false, mostrarAreas: false }">
 
         <div class="flex justify-start gap-12 items-center mb-6">
             <h1 class="text-2xl font-bold text-zinc-900">Gestión de Usuarios</h1>
@@ -21,9 +21,9 @@
         <div x-show="openModal" x-cloak
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity>
 
-            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-3xl max-h-[90vh] flex flex-col"
+            <div class="bg-white rounded-lg shadow-xl overflow-hidden w-full max-w-3xl max-h-[90vh] flex flex-col"
                 @click.away="openModal = false">
-                <h3 class="text-xl font-bold text-zinc-900 mb-4">Nuevo Usuario</h3>
+                
 
                 <form hx-post="/users" hx-swap="none" class="overflow-hidden flex flex-col flex-1"
                     @htmx:after-request.self="
@@ -49,7 +49,8 @@
                    }">
 
                     @csrf
-                    <div class="flex-1 overflow-y-auto px-1 py-2 custom-scrollbar">
+                    <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+                        <h3 class="text-xl font-bold text-zinc-900 mb-4">Nuevo Usuario</h3>
                         <div class="space-y-4">
                             <div class="grid grid-cols-2 gap-3 w-full px-2">
                                 <div>
@@ -75,7 +76,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-zinc-700 mb-1">Rol</label>
-                                    <select name="main_role" required
+                                    <select name="main_role" @change="mostrarAreas = ($el.value !== 'admin')" required
                                         class="w-full border-2 border-gray-300 rounded-md px-2 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent cursor-pointer">
                                         <option value="admin">Administrador</option>
                                         <option value="supervisor">Supervisor</option>
@@ -83,6 +84,7 @@
                                     </select>
                                 </div>
                             </div>
+                            <div x-show="mostrarAreas">
                             <div x-data="{
                                 rows: [{ id: Date.now(), area_id: '', subarea_id: '' }],
                                 addRow() {
@@ -98,12 +100,11 @@
 
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">Proceso</label>
-                                            <select name="areas[]" required
+                                            <select name="areas[]" :required="mostrarAreas"
                                                 class="w-full rounded-md border-gray-300 focus:ring-2 focus:ring-emerald-600 sm:text-sm p-2 border-2 cursor-pointer"
                                                 @change="
-                        let target = $el.closest('.grid').querySelector('.subarea-select');
-                        htmx.ajax('GET', 'api/subareas-options?area_id=' + $el.value, {target: target, swap: 'innerHTML'})
-                    ">
+                                                    let target = $el.closest('.grid').querySelector('.subarea-select');
+                                                    htmx.ajax('GET', 'api/subareas-options?area_id=' + $el.value, {target: target, swap: 'innerHTML'})">
                                                 <option value="">Seleccione proceso...</option>
                                                 @foreach ($areas as $area)
                                                     <option value="{{ $area->id }}">{{ $area->nombre }}</option>
@@ -113,7 +114,7 @@
 
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">Subarea</label>
-                                            <select name="subareas[]" required
+                                            <select name="subareas[]" :required="mostrarAreas"
                                                 class="subarea-select w-full rounded-md border-gray-300 focus:ring-2 focus:ring-emerald-600 sm:text-sm p-2 border-2 disabled:bg-gray-100 cursor-pointer">
                                                 <option value="">Seleccione área primero...</option>
                                             </select>
@@ -143,6 +144,7 @@
                                     Agregar otra área/subárea
                                 </button>
                             </div>
+                            </div>
 
                             <div class="ml-2">
                                 <h3 class="text-sm font-medium text-zinc-900 mb-2">Permiso adicional</h3>
@@ -155,13 +157,13 @@
                         </div>
                     </div>
 
-                    <div class="pt-4 flex justify-end gap-2 border-t border-gray-300">
+                    <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-100 mt-auto">
                         <button type="button" @click="openModal = false"
-                            class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium cursor-pointer">
+                            class="px-4 py-2 text-zinc-600 bg-white border border-zinc-300 hover:bg-zinc-50 rounded-md text-sm font-medium transition-colors cursor-pointer shadow-sm">
                             Cancelar
                         </button>
                         <button type="submit"
-                            class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium cursor-pointer">
+                            class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium shadow-sm transition-colors cursor-pointer">
                             Guardar Usuario
                         </button>
                     </div>

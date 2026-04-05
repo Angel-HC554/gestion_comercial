@@ -41,6 +41,7 @@ public/escaneos_supervision_diaria
 public/ordenes_escaneos
 public/orden_vehiculos_arrendados
 public/expedientes
+public/vehiculos_fotos
 public/fotos_supervision_semanal
 storage/escaneos
 storage/orden_vehiculos

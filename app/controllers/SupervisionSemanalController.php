@@ -65,6 +65,11 @@ class SupervisionSemanalController extends Controller
             $queryVehiculos->where('departamento', $departamentoFilter);
         }
 
+        $ubicacionFilter = request()->get('ubicacion');
+        if ($ubicacionFilter) {
+            $queryVehiculos->where('ubicacion', $ubicacionFilter);
+        }
+
         // 4. Eager Loading (se mantiene igual)
         $queryVehiculos->with(['supervisioSemanal' => function ($q) use ($fechaInicioConsulta, $fechaFinConsulta) {
             $q->whereBetween('fecha_captura', [$fechaInicioConsulta, $fechaFinConsulta])
@@ -114,15 +119,22 @@ class SupervisionSemanalController extends Controller
 
         // 7. Datos para filtros (ACTUALIZADO: Traemos los departamentos únicos)
         $departamentos = Vehiculo::whereNotNull('departamento')->where('departamento', '!=', '')->distinct()->orderBy('departamento')->pluck('departamento');
-
+        // Solo cargamos las ubicaciones del departamento seleccionado. Si no hay, cargamos todas.
+        $queryUbicaciones = Vehiculo::whereNotNull('ubicacion')->where('ubicacion', '!=', '');
+        if ($departamentoFilter) {
+            $queryUbicaciones->where('departamento', $departamentoFilter);
+        }
+        $ubicaciones = $queryUbicaciones->distinct()->orderBy('ubicacion')->pluck('ubicacion');
         // 8. Renderizar
         render('supervision_semanal.index', [
             'vehiculos' => $vehiculosProcesados,
             'semanasDelMes' => $semanasDelMes,
             'nombreMes' => ucfirst($nombreMes),
             'departamentos' => $departamentos,
+            'ubicaciones' => $ubicaciones,
             'filtrosActuales' => [
                 'departamento' => $departamentoFilter,
+                'ubicacion' => $ubicacionFilter,
                 'cumplimiento' => $cumplimientoFilter,
                 'mes' => $mes,
                 'año' => $año
@@ -451,6 +463,7 @@ class SupervisionSemanalController extends Controller
         // ACTUALIZADO: Eliminamos el arreglo manual de claves DW01A...
         $mesInput = request()->get('mes');
         $añoInput = request()->get('año');
+        $departamentoFilter = request()->get('departamento');
 
         $mes = $mesInput ? (int)$mesInput : \Carbon\Carbon::now()->month;
         $año = $añoInput ? (int)$añoInput : \Carbon\Carbon::now()->year;
@@ -498,19 +511,26 @@ class SupervisionSemanalController extends Controller
         $inicioConsulta = $semanaSeleccionada['inicio_real'];
         $finConsulta = $semanaSeleccionada['fin_real'];
 
-        // 3. Consulta de Vehículos (ACTUALIZADO: Traemos el departamento en lugar de la agencia)
-        $todosLosVehiculos = \App\Models\Vehiculo::with(['supervisioSemanal' => function ($q) use ($inicioConsulta, $finConsulta){
-                $q->whereBetween('fecha_captura', [$inicioConsulta, $finConsulta]);
-            }])
-            ->select('id', 'no_economico', 'departamento', 'en_taller')
-            ->get();
+        $queryVehiculos = \App\Models\Vehiculo::with(['supervisioSemanal' => function ($q) use ($inicioConsulta, $finConsulta){
+            $q->whereBetween('fecha_captura', [$inicioConsulta, $finConsulta]);
+        }])
+        ->select('id', 'no_economico', 'departamento', 'ubicacion', 'en_taller');
+
+    // NUEVO: Si hay un departamento seleccionado, filtramos los vehículos
+    if ($departamentoFilter) {
+        $queryVehiculos->where('departamento', $departamentoFilter);
+    }
+
+    $todosLosVehiculos = $queryVehiculos->get();
+    $columnaAgrupacion = $departamentoFilter ? 'ubicacion' : 'departamento';
+    $tipoAgrupacion = $departamentoFilter ? 'Ubicación' : 'Proceso';
 
         // 4. Procesar la Matriz (ACTUALIZADO: Agrupamos dinámicamente por la columna departamento)
         $tablaResumen = [];
-        $gruposPorDepartamento = $todosLosVehiculos->groupBy('departamento');
+        $grupos = $todosLosVehiculos->groupBy($columnaAgrupacion);
 
-        foreach ($gruposPorDepartamento as $nombreDepto => $vehiculosGrupo) {
-            $nombre = $nombreDepto ?: 'SIN DEPARTAMENTO';
+        foreach ($grupos as $nombreDato => $vehiculosGrupo) {
+            $nombre = $nombreDato ?: 'SIN ' . $tipoAgrupacion;
             
             $totalVehiculos = $vehiculosGrupo->count();
             $totalEnTaller = $vehiculosGrupo->where('en_taller', 1)->count();
@@ -553,7 +573,29 @@ class SupervisionSemanalController extends Controller
             'rangoSemana' => $inicioConsulta->translatedFormat('d M') . ' - ' . $finConsulta->translatedFormat('d M'),
             'numeroSemana' => $semanaIndex + 1,
             'mes' => $mes,
-            'año' => $año
+            'año' => $año,
+            'departamentoActual' => $departamentoFilter,
+            'tipoAgrupacion' => $tipoAgrupacion
         ]);
     }
+
+    public function getUbicacionesPorDepartamento()
+{
+    $departamento = request()->get('departamento');
+    
+    $query = Vehiculo::whereNotNull('ubicacion')->where('ubicacion', '!=', '');
+    
+    if ($departamento) {
+        $query->where('departamento', $departamento);
+    }
+    
+    $ubicaciones = $query->distinct()->orderBy('ubicacion')->pluck('ubicacion');
+
+    $html = '<option value="">Todas las ubicaciones</option>';
+    foreach ($ubicaciones as $ubicacion) {
+        $html .= '<option value="' . $ubicacion . '">' . $ubicacion . '</option>';
+    }
+
+    echo $html; 
+}
 }

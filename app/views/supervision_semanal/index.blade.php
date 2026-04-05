@@ -18,7 +18,10 @@
                 
                 <div class="flex flex-col w-full md:w-auto">
                     <label class="text-sm font-bold text-zinc-700 mb-1">Proceso:</label>
-                    <select name="departamento" class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none">
+                    <select name="departamento"
+                    x-data="{}"
+                    @change="htmx.ajax('GET', '/api/ubicaciones-options?departamento=' + $el.value, {target: $el.closest('form').querySelector('.ubicacion-select'), swap: 'innerHTML'})" 
+                    class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none cursor-pointer">
                         <option value="">Todos los procesos</option>
                         @foreach($departamentos as $depto)
                             <option value="{{ $depto }}" {{ ($filtrosActuales['departamento'] ?? '') == $depto ? 'selected' : '' }}>
@@ -29,8 +32,20 @@
                 </div>
 
                 <div class="flex flex-col w-full md:w-auto">
+                    <label class="text-sm font-bold text-zinc-700 mb-1">Ubicación:</label>
+                    <select name="ubicacion" class="ubicacion-select w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none cursor-pointer">
+                        <option value="">Todas las ubicaciones</option>
+                        @foreach($ubicaciones as $ubicacion)
+                            <option value="{{ $ubicacion }}" {{ ($filtrosActuales['ubicacion'] ?? '') == $ubicacion ? 'selected' : '' }}>
+                                {{ $ubicacion }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="flex flex-col w-full md:w-auto">
                     <label class="text-sm font-bold text-zinc-700 mb-1">Cumplimiento:</label>
-                    <select name="cumplimiento" class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none">
+                    <select name="cumplimiento" class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 focus:ring-emerald-600 focus:border-emerald-600 outline-none cursor-pointer">
                         <option value="todos">Mostrar Todos</option>
                         <option value="no_cumple" {{ ($filtrosActuales['cumplimiento'] ?? '') == 'no_cumple' ? 'selected' : '' }}>
                             Mostrar Solo Incumplidos
@@ -38,7 +53,7 @@
                     </select>
                 </div>
 
-                <button type="submit" class="w-full md:w-auto h-10 px-6 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+                <button type="submit" class="mt-6 w-full md:w-auto h-10 px-6 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                     </svg>
@@ -47,11 +62,12 @@
                    <button 
                         type="button"
                         hx-get="/supervision-semanal/resumen-agencias?mes={{ $filtrosActuales['mes'] }}&año={{ $filtrosActuales['año'] }}"
+                        hx-include="closest form"
                         hx-target="#contenedor-principal"
                         hx-swap="innerHTML"
                         hx-indicator="#loader-tabla"
-                        class="w-full md:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer">
-                        Ver resumen por agencias
+                        class="mt-6 w-full md:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+                        Ver resumen por proceso
                     </button>
                 
             </div>
@@ -73,7 +89,7 @@
             <table class="tabla-matriz">
                 <thead>
                     <tr>
-                        <th class="bg-zinc-100 text-zinc-700 font-bold uppercase text-xs tracking-wider">Departamento / Ubicación</th>
+                        <th class="bg-zinc-100 text-zinc-700 font-bold uppercase text-xs tracking-wider">Proceso / Ubicación</th>
                         <th class="bg-zinc-100 text-zinc-700 font-bold uppercase text-xs tracking-wider shadow-r">Vehículo</th>
                         @foreach($semanasDelMes as $i => $semana)
                             <th class="bg-zinc-50 text-zinc-600 font-medium text-xs border-b-2 border-zinc-300">

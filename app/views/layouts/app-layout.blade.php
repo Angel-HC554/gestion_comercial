@@ -15,11 +15,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1/dist/fancybox/fancybox.css" />
 
     @vite(['css/app.css', 'js/app.js'])
-    {{-- <link rel="stylesheet" href="http://localhost/gestion_comercial-original/public/build/assets/app-CV5Aeeuw.css">
+    {{--
+    <link rel="stylesheet" href="http://localhost/gestion_comercial-original/public/build/assets/app-CV5Aeeuw.css">
     <link rel="stylesheet" href="http://localhost/gestion_comercial-original/public/build/assets/app-CV5Aeeuw.css"> --}}
 
     <!-- Alpine Plugins -->
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
 
     @alpine
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -49,7 +51,7 @@
 <body class="font-sans text-zinc-800 antialiased bg-zinc-100" x-data="{ mobileMenuOpen: false, notificationOpen: false }">
 
     <div class="min-h-screen flex flex-col">
-        <header class="sticky top-0 z-40 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
+        <header class="sticky top-0 z-40 w-full border-b border-zinc-200 bg-white/70 backdrop-blur-md">
             <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
 
                 <div class="flex items-center gap-4">
@@ -211,6 +213,37 @@
                 </div>
 
                 <div class="flex items-center gap-4">
+                    <div class="hidden lg:flex gap-2 items-center justify-end" x-data="citasNavbar()" x-cloak>
+                        <template x-if="lista_citas.length > 0">
+                            <div class="flex gap-2">
+                                <template x-for="cita in lista_citas" :key="cita.id">
+                                    <div :title="'Cita Confirmada\nFecha: ' + formatearFecha(cita.detalle_arrendado?.fecha_cita) +
+                                        '\nVehículo: ' + cita?.noeconomico"
+                                        class="flex items-center gap-2 px-3 py-1.5 bg-[#EBF3FC] cursor-help select-none hover:bg-[#D1E4F9] transition-colors">
+
+                                        <div class="text-[#0F6CBD]">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+
+                                        <div class="flex flex-col justify-center leading-tight">
+                                            <div class="flex items-center gap-1 text-[11px] text-[#0F6CBD]">
+                                                <span class="font-bold capitalize" x-text="cita.texto_fecha"></span>
+                                                <span class="font-medium"
+                                                    x-text="new Date(cita.detalle_arrendado?.fecha_cita.replace(/-/g, '/')).toLocaleTimeString('es-MX', {hour: '2-digit', minute:'2-digit'})"></span>
+                                            </div>
+                                            <span class="text-[10px] font-semibold text-blue-800"
+                                                x-text="'Vehículo: ' + cita?.noeconomico"></span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+
                     <div class="relative" x-data="{ notificationOpen: false }" @click.away="notificationOpen = false">
                         <button @click="notificationOpen = !notificationOpen"
                             class="text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 p-2 rounded-lg transition-colors cursor-pointer">
@@ -292,20 +325,24 @@
                                         </div>
                                     @endis
                                     @if (auth()->user()->is('admin') || auth()->user()->is('supervisor'))
-                                        <div x-data="{ count: 0 }" @notification-citas.window="count = $event.detail.count">
+                                        <div x-data="{ count: 0 }"
+                                            @notification-citas.window="count = $event.detail.count">
                                             <template x-if="count > 0">
-                                                <div class="p-3 border-b border-zinc-100 hover:bg-zinc-50 bg-purple-50">
+                                                <div
+                                                    class="p-3 border-b border-zinc-100 hover:bg-zinc-50 bg-purple-50">
                                                     <p class="text-sm font-bold text-purple-700">
-                                                        Tienes <span x-text="count"></span> vehículo(s) con cita asignada.
+                                                        Tienes <span x-text="count"></span> vehículo(s) con cita
+                                                        asignada.
                                                     </p>
                                                     <a href="/ordenvehiculos?filtro=citas"
-                                                        class="text-xs text-emerald-700 underline mt-1 block">Ver citas</a>
+                                                        class="text-xs text-emerald-700 underline mt-1 block">Ver
+                                                        citas</a>
                                                 </div>
                                             </template>
                                         </div>
                                     @endif
 
-                                    <div x-data="{ c500: 0, cTrans: 0 , cCitas: 0}"
+                                    <div x-data="{ c500: 0, cTrans: 0, cCitas: 0 }"
                                         @notification-update.window="c500 = $event.detail.count"
                                         @notification-admin.window="cTrans = $event.detail.count"
                                         @notification-citas.window="cCitas = $event.detail.count"
@@ -509,66 +546,66 @@
     </script>
     {{-- SISTEMA DE NOTIFICACIONES (Polling) --}}
     @if (auth()->user()->is('admin') || auth()->user()->is('supervisor'))
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('notificationSystemCitas', () => ({
-                hasPermission: false,
-                lastCount: 0,
-                firstLoad: true,
+        <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('notificationSystemCitas', () => ({
+                    hasPermission: false,
+                    lastCount: 0,
+                    firstLoad: true,
 
-                init() {
-                    if ("Notification" in window && Notification.permission !== "granted") {
-                        Notification.requestPermission().then(permission => {
-                            this.hasPermission = permission === "granted";
-                        });
-                    } else if (Notification.permission === "granted") {
-                        this.hasPermission = true;
-                    }
+                    init() {
+                        if ("Notification" in window && Notification.permission !== "granted") {
+                            Notification.requestPermission().then(permission => {
+                                this.hasPermission = permission === "granted";
+                            });
+                        } else if (Notification.permission === "granted") {
+                            this.hasPermission = true;
+                        }
 
-                    this.checkNotifications();
-                    setInterval(() => {
                         this.checkNotifications();
-                    }, 30000); // Consulta cada 30 segundos
-                },
+                        setInterval(() => {
+                            this.checkNotifications();
+                        }, 30000); // Consulta cada 30 segundos
+                    },
 
-                async checkNotifications() {
-                    try {
-                        const response = await fetch('/api/check-cita-asignada');
-                        const data = await response.json();
+                    async checkNotifications() {
+                        try {
+                            const response = await fetch('/api/check-cita-asignada');
+                            const data = await response.json();
 
-                        window.dispatchEvent(new CustomEvent('notification-citas', {
-                            detail: {
-                                count: data.count
+                            window.dispatchEvent(new CustomEvent('notification-citas', {
+                                detail: {
+                                    count: data.count
+                                }
+                            }));
+
+                            if (this.firstLoad) {
+                                this.lastCount = data.count;
+                                this.firstLoad = false;
+                                return;
                             }
-                        }));
 
-                        if (this.firstLoad) {
+                            if (data.alert && data.count > this.lastCount) {
+                                this.notify(data.message);
+                            }
                             this.lastCount = data.count;
-                            this.firstLoad = false;
-                            return;
+                        } catch (error) {
+                            console.error('Error notificaciones Citas:', error);
                         }
+                    },
 
-                        if (data.alert && data.count > this.lastCount) {
-                            this.notify(data.message);
-                        }
-                        this.lastCount = data.count;
-                    } catch (error) {
-                        console.error('Error notificaciones Citas:', error);
-                    }
-                },
+                    notify(message) {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: "top-end",
+                            showConfirmButton: false,
+                        });
 
-                notify(message) {
-                    const Toast = Swal.mixin({
-                        toast: true,
-                        position: "top-end",
-                        showConfirmButton: false,
-                    });
-
-                    Toast.fire({
-                        icon: "info",
-                        title: "Cita Asignada",
-                        text: message,
-                        html: `
+                        Toast.fire({
+                            icon: "info",
+                            title: "Cita Asignada",
+                            text: message,
+                            html: `
                         <div class="flex flex-col gap-2">
                             <span>${message}</span>
                             <div class="flex gap-2">
@@ -583,29 +620,29 @@
                             </div>
                         </div>
                         `
-                    });
-
-                    if (this.hasPermission) {
-                        const notification = new Notification("Cita vehiculo CFE", {
-                            body: message,
-                            icon: "/assets/img/logo_cfe.svg",
-                            requireInteraction: true,
-                            tag: "orden-citas-alert"
                         });
-                        notification.onclick = function() {
-                            window.focus();
-                            window.location.href = '/ordenvehiculos?filtro=citas';
-                            this.close();
-                        };
-                    }
-                }
-            }));
-        });
-    </script>
 
-    {{-- Inicializamos el componente de Citas --}}
-    <div x-data="notificationSystemCitas"></div>
-@endif
+                        if (this.hasPermission) {
+                            const notification = new Notification("Cita vehiculo CFE", {
+                                body: message,
+                                icon: "/assets/img/logo_cfe.svg",
+                                requireInteraction: true,
+                                tag: "orden-citas-alert"
+                            });
+                            notification.onclick = function() {
+                                window.focus();
+                                window.location.href = '/ordenvehiculos?filtro=citas';
+                                this.close();
+                            };
+                        }
+                    }
+                }));
+            });
+        </script>
+
+        {{-- Inicializamos el componente de Citas --}}
+        <div x-data="notificationSystemCitas"></div>
+    @endif
     @can('generar 500')
         <script>
             document.addEventListener('alpine:init', () => {
@@ -674,18 +711,18 @@
                             <div class="flex flex-col gap-2">
                                 <span>${message}</span>
                                 <div class="flex gap-2">
-        <a href="/ordenvehiculos?filtro=orden500" 
-           class="flex-1 bg-blue-600 text-white text-xs font-medium px-3 py-1.5 rounded text-center hover:bg-blue-700 transition-colors">
-            Ver Órdenes
-        </a>
-        
-        <button onclick="Swal.close()" 
-                class="flex-1 bg-zinc-100 text-zinc-600 border border-zinc-200 text-xs font-medium px-3 py-1.5 rounded text-center hover:bg-zinc-200 transition-colors cursor-pointer">
-            Cerrar
-        </button>
-    </div>
+                                    <a href="/ordenvehiculos?filtro=orden500" 
+                                       class="flex-1 bg-blue-600 text-white text-xs font-medium px-3 py-1.5 rounded text-center hover:bg-blue-700 transition-colors">
+                                        Ver Órdenes
+                                    </a>
+
+                                    <button onclick="Swal.close()" 
+                                            class="flex-1 bg-zinc-100 text-zinc-600 border border-zinc-200 text-xs font-medium px-3 py-1.5 rounded text-center hover:bg-zinc-200 transition-colors cursor-pointer">
+                                        Cerrar
+                                    </button>
+                                </div>
                             </div>
-                        `
+                            `
                         });
 
                         // B. Notificación Push Nativa (Escritorio)
@@ -809,10 +846,66 @@
                 }));
             });
         </script>
-
         {{-- Inicializamos el componente de PV --}}
         <div x-data="notificationSystemAdmin"></div>
     @endis
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('citasNavbar', () => ({
+                lista_citas: [],
+
+                init() {
+                    // Se ejecuta 1 sola vez cuando carga el navbar
+                    this.fetchCitasActivas();
+                },
+
+                async fetchCitasActivas() {
+                    try {
+                        const response = await fetch('/api/citas-activas');
+                        const data = await response.json();
+
+                        // Si el backend lo manda dentro de la propiedad 'citas'
+                        if (data.citas) {
+                            this.lista_citas = data.citas;
+
+                            const citasDeHoy = this.lista_citas.filter(cita => cita.texto_fecha === 'Hoy,');
+
+                            if (citasDeHoy.length > 0 && !sessionStorage.getItem('alertaCitasHoyMostrada')) {
+                                this.mostrarAlertaCitasHoy(citasDeHoy.length);
+                                sessionStorage.setItem('alertaCitasHoyMostrada', 'true');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error cargando citas para el navbar:', error);
+                    }
+                },
+
+                mostrarAlertaCitasHoy(cantidad) {
+                const plural = cantidad > 1 ? 's' : '';
+                const vehiculoPlural = cantidad > 1 ? 'vehículos' : 'vehículo';
+
+                Swal.fire({
+                    title: '¡Tienes citas para hoy!',
+                    text: `Recuerda que tienes ${cantidad} ${vehiculoPlural} con cita programada para ingresar al taller el día de hoy.`,
+                    icon: 'warning',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#059669', // Color emerald-600 para que combine con tu diseño
+                    allowOutsideClick: false
+                });
+            },
+
+                formatearFecha(fechaStr) {
+                    if (!fechaStr) return 'Sin fecha';
+                    const fechaLocal = new Date(fechaStr.replace(/-/g, '/'));
+                    return fechaLocal.toLocaleDateString('es-MX', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                    }).toUpperCase().replace(/\./g, '');
+                }
+            }));
+        });
+    </script>
 </body>
 
 </html>

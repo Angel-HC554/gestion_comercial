@@ -5,7 +5,7 @@ columns:
 seeds:
   data:
     - area_id: 2
-      nombre: 'CENTRO'
+      nombre: 'CENTRO 46'
     - area_id: 2
       nombre: 'NORTE'
     - area_id: 2

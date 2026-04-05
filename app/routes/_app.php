@@ -23,6 +23,7 @@ app()->group('/',['middleware' => 'auth.required', function () {
     app()->get('/api/check-orden-500', 'NotificationController@checkOrden500');
     app()->get('/api/check-orden-arrendado', 'NotificationController@checkOrdenArrendado');
     app()->get('/api/check-cita-asignada', 'NotificationController@checkCitaAsignada');
+    app()->get('/api/citas-activas', 'NotificationController@notificacionesActivas');    
     
     // --- ORDENES DE VEHICULOS ---
     app()->get('/ordenvehiculos/create', 'OrdenVehiculoController@create');
@@ -58,10 +59,12 @@ app()->group('/',['middleware' => 'auth.required', function () {
     app()->get('/vehiculos/{id}/historial', 'VehiculoController@historial');
     app()->get('/vehiculos/{id}/documentos', 'VehiculoController@getDocumentos');
     app()->post('/vehiculos/{id}/documentos', 'VehiculoController@storeDocumento');
+    app()->post('/vehiculos/{id}/actualizar-foto', 'VehiculoController@actualizarFoto');
 
     // --- SUPERVISIONES ---
     app()->get('/supervisiones/pdf/{id}', 'SupervisionSemanalController@generarReportePdf');
     app()->post('/supervision-semanal', 'SupervisionSemanalController@store');
+    app()->get('/api/ubicaciones-options', 'SupervisionSemanalController@getUbicacionesPorDepartamento');
     app()->get('/supervision-semanal',['middleware' => 'is:admin', 'SupervisionSemanalController@index']);
     app()->get('/supervision-semanal/resumen-agencias','SupervisionSemanalController@resumenAgencias');
     
