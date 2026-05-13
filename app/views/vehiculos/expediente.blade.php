@@ -100,7 +100,6 @@
             async fetchDocumentos() {
                 this.loadingDocs = true;
                 try {
-                    // Asegúrate de crear esta ruta en tu backend
                     const response = await fetch(`/vehiculos/${this.vehiculoId}/documentos`);
                     if (response.ok) {
                         this.documentos = await response.json();

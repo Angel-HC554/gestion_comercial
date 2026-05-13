@@ -8,8 +8,6 @@ use Carbon\Carbon;
 
 class Vehiculo extends Model
 {
-    // Si tu tabla en BD se llama diferente (ej: 'vehiculos'), descomenta esto:
-    // protected $table = 'vehiculos';
 
     protected $fillable = [
         'id',

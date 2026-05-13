@@ -102,6 +102,16 @@
     async submitForm() {
         this.loading = true;
 
+        let vehiculoValido = this.vehiculosDB.some(v => String(v.no_economico) === String(this.numeco));
+        if (!vehiculoValido) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Vehículo no válido',
+                text: 'El número económico ingresado no existe en el catálogo de arrendados. Por favor, ingresa uno válido.',
+            });
+            this.loading = false;
+            return; // Detenemos el envío
+        }
         // Captura todos los campos del formulario automáticamente
         const form = document.getElementById('ordenForm');
         const formData = new FormData(form);

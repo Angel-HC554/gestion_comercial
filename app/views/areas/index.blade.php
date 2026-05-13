@@ -1,7 +1,7 @@
 @extends('layouts.app-layout', ['title' => 'Gestión de Áreas'])
 
 @section('content')
-<div class="mx-auto px-4 sm:px-6 lg:px-8 py-6 h-auto">
+<div x-data="deleteManager()" class="mx-auto px-4 sm:px-6 lg:px-8 py-6 h-auto">
     
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-zinc-900">Catálogo de Areas y Subareas</h1>
@@ -38,10 +38,58 @@
             </div>
         </div>
 
+        <div x-show="showModal" x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity>
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm transform transition-all"
+            @click.away="showModal = false">
+            <h3 class="text-lg font-bold text-zinc-900">¿Eliminar <span x-text="itemName"></span>?</h3>
+            <p class="text-sm text-zinc-500 mt-2">Esta acción no se puede revertir.</p>
+            <div class="flex justify-end gap-2 mt-6">
+                <button @click="showModal = false"
+                    class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium cursor-pointer">Cancelar</button>
+                <button @click="executeDelete()"
+                    class="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-md text-sm font-medium cursor-pointer">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
     </div>
 </div>
 
 <script>
+    function deleteManager() {
+        return {
+            showModal: false,
+            deleteUrl: '',
+            targetElement: '',
+            itemName: '',
+            
+            confirmDelete(url, target, name) {
+                this.deleteUrl = url;
+                this.targetElement = target;
+                this.itemName = name;
+                this.showModal = true;
+            },
+            
+            executeDelete() {
+                // Ejecutamos la petición HTMX manualmente
+                htmx.ajax('DELETE', this.deleteUrl, {
+                    target: this.targetElement
+                });
+                
+                // Ocultamos el modal
+                this.showModal = false;
+                
+                // Si borramos un Área Padre, limpiamos la vista de la derecha
+                if (this.targetElement === '#areas-list') {
+                    document.getElementById('subareas-container').innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-zinc-400">
+                            <p class="text-center">Selecciona un area de la izquierda<br>para ver sus subareas.</p>
+                        </div>`;
+                }
+            }
+        }
+    }
     function highlightArea(element) {
         document.querySelectorAll('.area-item').forEach(el => {
             el.classList.remove('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
@@ -51,4 +99,7 @@
         element.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
     }
 </script>
+<style>
+    [x-cloak] { display: none !important; }
+</style>
 @endsection

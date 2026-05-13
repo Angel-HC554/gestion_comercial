@@ -80,7 +80,7 @@ class NotificationController extends Controller
                 $fechaCita = Carbon::parse($cita->detalleArrendado->fecha_cita)->startOfDay();
                 $hoy = Carbon::now()->startOfDay();
 
-                // Calculamos la diferencia en días (el 'false' es para que nos dé números negativos si la cita ya pasó)
+                // Calculamos la diferencia en días
                 $diferenciaDias = $hoy->diffInDays($fechaCita, false);
 
                 if ($diferenciaDias == 0) {
@@ -161,4 +161,66 @@ class NotificationController extends Controller
         });
         return response()->json(['citas' => $citas]);
     }
+
+public function checkSiniestrosPendientes()
+{
+    // Solo permitimos que el admin vea esta alerta
+    if (!auth()->user()->is('admin')) {
+        return response()->json(['alert' => false, 'count' => 0]);
+    }
+
+    $vehiculosConGolpeNoAtendido = 0;
+    $vehiculos = \App\Models\Vehiculo::all();
+
+    foreach ($vehiculos as $vehiculo) {
+        // 1. Obtener el reporte más reciente de cualquier tipo
+        $diaria = \App\Models\SupervisionDiaria::where('vehiculo_id', $vehiculo->id)
+            ->orderByDesc('fecha')->orderByDesc('created_at')->first();
+            
+        $semanal = \App\Models\SupervisionSemanal::where('vehiculo_id', $vehiculo->id)
+            ->orderByDesc('fecha_captura')->orderByDesc('created_at')->first();
+
+        $ultimoReporte = null;
+        $fechaReporte = null;
+        $tieneGolpe = false;
+
+        // Determinamos cuál es el reporte absoluto más reciente
+        if ($diaria && $semanal) {
+            $fD = \Carbon\Carbon::parse($diaria->fecha);
+            $fS = \Carbon\Carbon::parse($semanal->fecha_captura);
+            if ($fD->gt($fS)) {
+                $ultimoReporte = $diaria;
+                $fechaReporte = $fD;
+                $tieneGolpe = $diaria->golpes;
+            } else {
+                $ultimoReporte = $semanal;
+                $fechaReporte = $fS;
+                $tieneGolpe = !empty($semanal->foto_atent);
+            }
+        } elseif ($diaria) {
+            $fechaReporte = \Carbon\Carbon::parse($diaria->fecha);
+            $tieneGolpe = $diaria->golpes;
+        } elseif ($semanal) {
+            $fechaReporte = \Carbon\Carbon::parse($semanal->fecha_captura);
+            $tieneGolpe = !empty($semanal->foto_atent);
+        }
+
+        // 2. Si el último reporte tiene un golpe, verificar si ya se hizo una orden después
+        if ($tieneGolpe && $fechaReporte) {
+            $existeOrdenPosterior = \App\Models\OrdenVehiculo::where('noeconomico', $vehiculo->no_economico)
+                ->where('created_at', '>', $fechaReporte->endOfDay())
+                ->exists();
+
+            if (!$existeOrdenPosterior) {
+                $vehiculosConGolpeNoAtendido++;
+            }
+        }
+    }
+
+    return response()->json([
+        'alert' => $vehiculosConGolpeNoAtendido > 0,
+        'count' => $vehiculosConGolpeNoAtendido,
+        'message' => "Hay $vehiculosConGolpeNoAtendido vehículos con siniestros sin orden de reparación."
+    ]);
+}
 }

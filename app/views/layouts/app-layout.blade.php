@@ -266,6 +266,16 @@
                                     class="absolute -top-0.1 right-1 h-3.5 w-4.5 rounded-md bg-purple-600 ring-2 ring-white flex items-center justify-center text-xs text-white font-bold tabular-nums">
                                 </span>
                             @endif
+                            @is('admin')
+                                <span x-data="{ count: 0 }" 
+                                      @notification-siniestros.window="count = $event.detail.count"
+                                      x-show="count > 0" 
+                                      x-text="count" 
+                                      x-transition.scale 
+                                      style="display: none;"
+                                      class="absolute -top-0.1 -right-2 h-3.5 w-4.5 rounded-md bg-red-500 ring-2 ring-white flex items-center justify-center text-xs text-white font-bold tabular-nums">
+                                </span>
+                            @endis
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                 stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -341,6 +351,22 @@
                                             </template>
                                         </div>
                                     @endif
+                                    @is('admin')
+                                        <div x-data="{ count: 0 }"
+                                             @notification-siniestros.window="count = $event.detail.count">
+                                            <template x-if="count > 0">
+                                                <div class="p-3 border-b border-zinc-100 hover:bg-zinc-50 bg-amber-50">
+                                                    <p class="text-sm font-bold text-amber-700">
+                                                        Hay <span x-text="count"></span> vehículo(s) con siniestros sin orden de reparación.
+                                                    </p>
+                                                    <a href="/dashboard-vehiculos" 
+                                                       class="text-xs text-emerald-700 underline mt-1 block">
+                                                        Ver vehículos con siniestros pendientes
+                                                    </a>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    @endis
 
                                     <div x-data="{ c500: 0, cTrans: 0, cCitas: 0 }"
                                         @notification-update.window="c500 = $event.detail.count"
@@ -774,7 +800,6 @@
 
                     async checkNotifications() {
                         try {
-                            // Asegúrate de definir esta ruta en tu archivo routes/api.php
                             const response = await fetch('/api/check-orden-arrendado');
                             const data = await response.json();
 
@@ -889,7 +914,7 @@
                     text: `Recuerda que tienes ${cantidad} ${vehiculoPlural} con cita programada para ingresar al taller el día de hoy.`,
                     icon: 'warning',
                     confirmButtonText: 'Entendido',
-                    confirmButtonColor: '#059669', // Color emerald-600 para que combine con tu diseño
+                    confirmButtonColor: '#059669',
                     allowOutsideClick: false
                 });
             },
@@ -906,6 +931,102 @@
             }));
         });
     </script>
+    @is('admin')
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('notificationSystemSiniestros', () => ({
+                hasPermission: false,
+                lastCount: 0,
+                firstLoad: true,
+
+                init() {
+                    if ("Notification" in window && Notification.permission !== "granted") {
+                        Notification.requestPermission().then(permission => {
+                            this.hasPermission = permission === "granted";
+                        });
+                    } else if (Notification.permission === "granted") {
+                        this.hasPermission = true;
+                    }
+
+                    this.checkNotifications();
+                    setInterval(() => {
+                        this.checkNotifications();
+                    }, 30000); // cada 30 segundos
+                },
+
+                async checkNotifications() {
+                    try {
+                        const response = await fetch('/api/check-siniestros');
+                        const data = await response.json();
+
+                        window.dispatchEvent(new CustomEvent('notification-siniestros', {
+                            detail: { count: data.count }
+                        }));
+
+                        if (this.firstLoad) {
+                            this.lastCount = data.count;
+                            this.firstLoad = false;
+                            return;
+                        }
+
+                        if (data.alert && data.count > this.lastCount) {
+                            this.notify(data.message);
+                        }
+                        this.lastCount = data.count;
+                    } catch (error) {
+                        console.error('Error notificaciones Siniestros:', error);
+                    }
+                },
+
+                notify(message) {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                    });
+
+                    Toast.fire({
+                        icon: "warning",
+                        title: "Siniestros Pendientes",
+                        text: message,
+                        html: `
+                            <div class="flex flex-col gap-2">
+                                <span>${message}</span>
+                                <div class="flex gap-2">
+                                    <a href="/dashboard-vehiculos" 
+                                       class="flex-1 bg-amber-600 text-white text-xs font-medium px-3 py-1.5 rounded text-center hover:bg-amber-700 transition-colors">
+                                        Ver Siniestros
+                                    </a>
+                                    <button onclick="Swal.close()" 
+                                            class="flex-1 bg-zinc-100 text-zinc-600 border border-zinc-200 text-xs font-medium px-3 py-1.5 rounded text-center hover:bg-zinc-200 transition-colors cursor-pointer">
+                                        Cerrar
+                                    </button>
+                                </div>
+                            </div>
+                        `
+                    });
+
+                    if (this.hasPermission) {
+                        const notification = new Notification("Siniestros CFE", {
+                            body: message,
+                            icon: "/assets/img/logo_cfe.svg",
+                            requireInteraction: true,
+                            tag: "siniestros-alert"
+                        });
+                        notification.onclick = function() {
+                            window.focus();
+                            window.location.href = '/dashboard-vehiculos';
+                            this.close();
+                        };
+                    }
+                }
+            }));
+        });
+    </script>
+
+    <!-- Inicializamos el componente Alpine -->
+    <div x-data="notificationSystemSiniestros"></div>
+@endis
 </body>
 
 </html>

@@ -126,15 +126,14 @@ class OrdenVehiculoController extends Controller
         if ($vehiculoId) {
             $vehiculo = Vehiculo::find($vehiculoId);
             if ($vehiculo) {
-                // Reutilizamos tu lógica de obtener último KM (asegúrate que el modelo Vehiculo tenga este método o calculalo aquí)
-                $kmData = $vehiculo->ultimoKilometraje(); // Asumiendo que este método existe en tu modelo Vehiculo
+                $kmData = $vehiculo->ultimoKilometraje();
                 $ultimoKm = $kmData['kilometraje'] ?? 0;
 
                 $preseleccionado = [
                     'no_economico' => $vehiculo->no_economico,
                     'placas'       => $vehiculo->placas,
                     'marca'        => $vehiculo->marca,
-                    'modelo'       => $vehiculo->modelo, // Ejemplo de mapeo
+                    'modelo'       => $vehiculo->modelo,
                 ];
             }
         }
@@ -185,8 +184,7 @@ class OrdenVehiculoController extends Controller
         if ($vehiculoId) {
             $vehiculo = Vehiculo::find($vehiculoId);
             if ($vehiculo) {
-                // Reutilizamos tu lógica de obtener último KM (asegúrate que el modelo Vehiculo tenga este método o calculalo aquí)
-                $kmData = $vehiculo->ultimoKilometraje(); // Asumiendo que este método existe en tu modelo Vehiculo
+                $kmData = $vehiculo->ultimoKilometraje();
                 $ultimoKm = $kmData['kilometraje'] ?? 0;
 
                 $preseleccionado = [
@@ -235,6 +233,12 @@ class OrdenVehiculoController extends Controller
     {
         // 1. Obtener todos los datos
         $data = request()->body();
+        if (empty($data['noeconomico']) || empty($data['marca']) || empty($data['placas'])) {
+            return response()->json([
+                'status' => 'error', 
+                'message' => 'Faltan datos del vehículo. Asegúrate de seleccionar un número económico válido del catálogo.'
+            ], 400);
+        }
         // --- PASO DE LIMPIEZA ---
         // Eliminamos la coma (,) antes de cualquier validación o guardado
         if (isset($data['kilometraje'])) {
@@ -373,6 +377,13 @@ class OrdenVehiculoController extends Controller
         $data = request()->body();
         $files = $_FILES;
 
+        if (empty($data['noeconomico']) || empty($data['marca']) || empty($data['placas']) || empty($data['no_serie'])) {
+            return response()->json([
+                'status' => 'error', 
+                'message' => 'Faltan datos del vehículo. Asegúrate de seleccionar un número económico válido del catálogo.'
+            ], 400);
+        }
+
         // --- LIMPIEZA Y NORMALIZACIÓN ---
         if (isset($data['kilometraje'])) {
             $data['kilometraje'] = str_replace(',', '', $data['kilometraje']);
@@ -382,7 +393,7 @@ class OrdenVehiculoController extends Controller
         $requiere_servicio = request()->get('requiere_servicio') == '1' ? 1 : 0;
         $status = 'PENDIENTE';
 
-        // --- VALIDACIÓN DE ARCHIVOS (Igual que tu código original) ---
+        // --- VALIDACIÓN DE ARCHIVOS ---
         $hasUploadedFile = false;
         foreach ($files as $fieldName => $file) {
             if (is_array($file) && isset($file['error']) && $file['error'] === UPLOAD_ERR_OK) {
@@ -600,7 +611,7 @@ class OrdenVehiculoController extends Controller
 
         $TBS->LoadTemplate($templatePath, OPENTBS_ALREADY_UTF8);
 
-        // 3. Asignación de Datos (Copiado de tu lógica original)
+        // 3. Asignación de Datos
         $TBS->MergeField('pro.ordenq', $orden->id);
         $TBS->MergeField('pro.noorden', $orden->id);
         $TBS->MergeField('pro.area', strtoupper($detalle->area));
@@ -702,7 +713,6 @@ class OrdenVehiculoController extends Controller
             mkdir($outputDir, 0777, true);
         }
 
-        // ... El resto de tu lógica de LibreOffice se mantiene igual ...
         $sofficePath = getenv('LIBREOFFICE_PATH');
         if (!$sofficePath) {
             $sofficePath = 'C:\Program Files\LibreOffice\program\soffice.exe';
@@ -737,7 +747,7 @@ class OrdenVehiculoController extends Controller
         }
 
         // Get vehicles data (same as in create method)
-        $vehiculosRaw = Vehiculo::where('propiedad', 'Propio (CFE)')->get();
+        $vehiculosRaw = Vehiculo::where('propiedad', 'Propio')->get();
         $vehiculos = $vehiculosRaw->map(function ($v) {
             $k = $v->ultimoKilometraje();
             return [
@@ -783,7 +793,8 @@ class OrdenVehiculoController extends Controller
                 'placas'       => $v->placas,
                 'marca'        => $v->marca,
                 'modelo'       => $v->modelo,
-                'ultimo_km'    => $k['kilometraje'] ?? 0
+                'serie'        => $v->serie,
+                'ultimo_km'    => $k['kilometraje'] ?? 0,
             ];
         });
 
@@ -817,6 +828,13 @@ class OrdenVehiculoController extends Controller
 
         // 1. Get all form data
         $data = request()->body();
+
+        if (empty($data['noeconomico']) || empty($data['marca']) || empty($data['placas'])) {
+            return response()->json([
+                'status' => 'error', 
+                'message' => 'Faltan datos del vehículo. Asegúrate de ingresar un número económico válido.'
+            ], 400);
+        }
         // --- PASO DE LIMPIEZA ---
         // Eliminamos la coma (,) antes de cualquier validación o guardado
         if (isset($data['kilometraje'])) {
@@ -946,6 +964,12 @@ class OrdenVehiculoController extends Controller
         $data = request()->body();
         $files = $_FILES; // Aquí SÍ llegarán los archivos porque usamos POST
 
+        if (empty($data['noeconomico']) || empty($data['marca']) || empty($data['placas']) || empty($data['no_serie'])) {
+            return response()->json([
+                'status' => 'error', 
+                'message' => 'Faltan datos del vehículo. Asegúrate de ingresar un número económico válido.'
+            ], 400);
+        }
         // Limpieza KM
         if (isset($data['kilometraje'])) {
             $data['kilometraje'] = str_replace(',', '', $data['kilometraje']);
@@ -1065,8 +1089,12 @@ class OrdenVehiculoController extends Controller
             // Buscamos en el detalle propio
             $fechaEntrada = $orden->detallePropio->fechafirm ?? null;
         } elseif ($orden->tipo_vehiculo === 'arrendado') {
-            // Buscamos en el detalle arrendado (allí se llama fecha_gen)
-            $fechaEntrada = $orden->detalleArrendado->fecha_gen ?? null;
+            $fechaCita = $orden->detalleArrendado->fecha_cita ?? null;
+            if ($fechaCita) {
+                $fechaEntrada = date('Y-m-d', strtotime($fechaCita));
+            } else {
+                $fechaEntrada = null;
+            }
         }
 
         // Si por alguna razón sigue siendo null, usamos la fecha de creación del registro padre
@@ -1620,10 +1648,22 @@ class OrdenVehiculoController extends Controller
      */
     public function ingresarTallerArrendado($id)
     {
-        $orden = OrdenVehiculo::find($id);
+        $orden = OrdenVehiculo::with('detalleArrendado')->find($id);
 
         if (!$orden || $orden->tipo_vehiculo !== 'arrendado') {
             return response()->json(['status' => 'error', 'message' => 'Orden no válida'], 404);
+        }
+        $fechaCita = $orden->detalleArrendado->fecha_cita ?? null;
+        if ($fechaCita) {
+            $fechaCitaCarbon = \Carbon\Carbon::parse($fechaCita)->startOfDay();
+            $hoy = \Carbon\Carbon::now()->startOfDay();
+
+            if ($hoy->lt($fechaCitaCarbon)) {
+                return response()->json([
+                    'status' => 'error', 
+                    'message' => 'No puedes ingresar el vehículo al taller antes del día de la cita programada.'
+                ], 400);
+            }
         }
 
         try {

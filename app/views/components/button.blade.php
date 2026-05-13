@@ -6,7 +6,7 @@
     $size = $size ?? 'base'; // base, sm, xs
     $icon = $icon ?? null; // true si solo es un icono cuadrado
     
-    // 2. Lógica de Tamaños (Réplica exacta de Flux)
+    // 2. Lógica de Tamaños
     $sizeClasses = match ($size) {
         'base' => 'h-10 text-sm rounded-lg ' . ($icon ? 'w-10 px-0' : 'px-4 py-2'),
         'sm'   => 'h-8 text-sm rounded-md ' . ($icon ? 'w-8 px-0' : 'px-3'),
@@ -14,8 +14,7 @@
         default => 'h-10 text-sm rounded-lg px-4'
     };
 
-    // 3. Lógica de Variantes (Los colores y sombras mágicas)
-    // Aquí he fijado el color "Emerald" como tu color de acento principal
+    // 3. Lógica de Variantes
     $variantClasses = match ($variant) {
         'primary' => '
             bg-emerald-600 

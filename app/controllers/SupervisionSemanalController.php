@@ -15,7 +15,20 @@ class SupervisionSemanalController extends Controller
      * Muestra la matriz de supervisión semanal
      */
 
-    public function index()
+    private function getDatosFiltros($departamentoFilter)
+    {
+        $departamentos = Vehiculo::whereNotNull('departamento')->where('departamento', '!=', '')->distinct()->orderBy('departamento')->pluck('departamento');
+        
+        $queryUbicaciones = Vehiculo::whereNotNull('ubicacion')->where('ubicacion', '!=', '');
+        if ($departamentoFilter) {
+            $queryUbicaciones->where('departamento', $departamentoFilter);
+        }
+        $ubicaciones = $queryUbicaciones->distinct()->orderBy('ubicacion')->pluck('ubicacion');
+
+        return [$departamentos, $ubicaciones];
+    }
+
+    public function detallado()
     {
         // 1. Configuración de Fechas (se mantiene igual)
         $mesInput = request()->get('mes', Carbon::now()->month);
@@ -91,7 +104,7 @@ class SupervisionSemanalController extends Controller
 
                 if ($supervision) {
                     $status = ['tipo' => 'cumplido', 'id' => $supervision->id, 'fecha' => $supervision->fecha_captura->format('d/m/Y')];
-                } elseif ($semana['fin_real']->isFuture()) {
+                } elseif ($semana['inicio_real']->isFuture()) {
                     $status = ['tipo' => 'futuro'];
                 } else {
                     if ($vehiculo->en_taller) {
@@ -117,16 +130,10 @@ class SupervisionSemanalController extends Controller
             });
         }
 
-        // 7. Datos para filtros (ACTUALIZADO: Traemos los departamentos únicos)
-        $departamentos = Vehiculo::whereNotNull('departamento')->where('departamento', '!=', '')->distinct()->orderBy('departamento')->pluck('departamento');
-        // Solo cargamos las ubicaciones del departamento seleccionado. Si no hay, cargamos todas.
-        $queryUbicaciones = Vehiculo::whereNotNull('ubicacion')->where('ubicacion', '!=', '');
-        if ($departamentoFilter) {
-            $queryUbicaciones->where('departamento', $departamentoFilter);
-        }
-        $ubicaciones = $queryUbicaciones->distinct()->orderBy('ubicacion')->pluck('ubicacion');
+        // 7. Datos para filtros
+        list($departamentos, $ubicaciones) = $this->getDatosFiltros($departamentoFilter);
         // 8. Renderizar
-        render('supervision_semanal.index', [
+        render('supervision_semanal.detallado', [
             'vehiculos' => $vehiculosProcesados,
             'semanasDelMes' => $semanasDelMes,
             'nombreMes' => ucfirst($nombreMes),
@@ -141,6 +148,148 @@ class SupervisionSemanalController extends Controller
             ]
         ]);
     }
+
+    public function index()
+{
+    // 1. Obtener parámetros de manera segura
+    $mesInput = request()->get('mes');
+    $añoInput = request()->get('año');
+    $departamentoFilter = request()->get('departamento');
+    $ubicacionFilter = request()->get('ubicacion');
+
+    $mes = ($mesInput && is_numeric($mesInput)) ? (int)$mesInput : Carbon::now()->month;
+    $año = ($añoInput && is_numeric($añoInput)) ? (int)$añoInput : Carbon::now()->year;
+
+    Carbon::setLocale('es');
+    $fechaInicioMes = Carbon::create($año, $mes, 1)->startOfDay();
+    $fechaFinMes = $fechaInicioMes->copy()->endOfMonth();
+
+    // 2. Construcción de Semanas Laborales
+    $inicioSemana = $fechaInicioMes->copy()->startOfWeek(Carbon::MONDAY);
+    $semanasDelMes = [];
+    while ($inicioSemana <= $fechaFinMes) {
+        $finSemana = $inicioSemana->copy()->addDays(5)->endOfDay();
+        if ($finSemana->month != $mes) {
+            $finSemana = $fechaFinMes->copy()->endOfDay();
+        }
+        
+        if ($inicioSemana->month == $mes || $finSemana->month == $mes) {
+            $semanasDelMes[] = [
+                'inicio_real' => $inicioSemana->copy(), 
+                'fin_real' => $finSemana->copy()
+            ];
+        }
+        $inicioSemana->addWeek();
+    }
+
+    $totalSemanas = count($semanasDelMes);
+    $semanaPorDefecto = 0;
+    
+    if ($totalSemanas > 0) {
+        foreach ($semanasDelMes as $idx => $s) {
+            if (Carbon::now()->between($s['inicio_real'], $s['fin_real'])) {
+                $semanaPorDefecto = $idx;
+                break;
+            }
+        }
+    }
+
+    // 3. Obtener el índice de la semana seleccionada de manera segura
+    $semanaIndexInput = request()->get('semana_index');
+    $semanaIndex = ($semanaIndexInput !== null && $semanaIndexInput !== '') ? (int)$semanaIndexInput : $semanaPorDefecto;
+    
+    if ($semanaIndex < 0) $semanaIndex = 0;
+    if ($totalSemanas > 0 && $semanaIndex >= $totalSemanas) {
+        $semanaIndex = max(0, $totalSemanas - 1);
+    }
+
+    $semanaSeleccionada = $semanasDelMes[$semanaIndex] ?? null;
+    
+    $tablaResumen = [];
+    $tipoAgrupacion = $departamentoFilter ? 'Ubicación' : 'Proceso';
+
+    // 4. Lógica de agrupamiento y consulta
+    if ($semanaSeleccionada) {
+        $inicioConsulta = $semanaSeleccionada['inicio_real'];
+        $finConsulta = $semanaSeleccionada['fin_real'];
+
+        $queryVehiculos = Vehiculo::with(['supervisioSemanal' => function ($q) use ($inicioConsulta, $finConsulta){
+            $q->whereBetween('fecha_captura', [$inicioConsulta, $finConsulta]);
+        }])->select('id', 'no_economico', 'departamento', 'ubicacion', 'en_taller');
+
+        if ($departamentoFilter) {
+            $queryVehiculos->where('departamento', $departamentoFilter);
+        }
+        if ($ubicacionFilter) {
+            $queryVehiculos->where('ubicacion', $ubicacionFilter);
+        }
+
+        $todosLosVehiculos = $queryVehiculos->get();
+        $columnaAgrupacion = $departamentoFilter ? 'ubicacion' : 'departamento';
+
+        $grupos = $todosLosVehiculos->groupBy($columnaAgrupacion);
+        
+        foreach ($grupos as $nombreDato => $vehiculosGrupo) {
+            $nombre = $nombreDato ?: 'SIN ' . strtoupper($tipoAgrupacion);
+            $totalVehiculos = $vehiculosGrupo->count();
+            $vehiculosEnTallerColeccion = $vehiculosGrupo->where('en_taller', 1);
+            $totalEnTaller = $vehiculosEnTallerColeccion->count();
+            $listaEnTaller = $vehiculosEnTallerColeccion->pluck('no_economico')->toArray();
+            $supervisionesRealizadas = 0;
+            $pendientes = 0;
+
+            foreach ($vehiculosGrupo as $vehiculo) {
+                if ($vehiculo->supervisioSemanal->isNotEmpty()) {
+                    $supervisionesRealizadas++;
+                } else {
+                    if (!$vehiculo->en_taller) {
+                        $pendientes++; 
+                    }
+                }
+            }
+            
+            $vehiculosActivos = $totalVehiculos - $totalEnTaller;
+            $porcentaje = ($vehiculosActivos > 0) ? round(($supervisionesRealizadas / $vehiculosActivos) * 100) : 0;
+
+            $tablaResumen[] = [
+                'nombre' => $nombre, 
+                'total_vehiculos' => $totalVehiculos,
+                'en_taller' => $totalEnTaller,
+                'vehiculos_en_taller' => $listaEnTaller, 
+                'pendientes' => $pendientes,
+                'cumplidos' => $supervisionesRealizadas, 
+                'porcentaje' => $porcentaje
+            ];
+        }
+        
+        // Ordenar alfabéticamente
+        usort($tablaResumen, function($a, $b) { 
+            return strcmp($a['nombre'], $b['nombre']); 
+        });
+    }
+
+    list($departamentos, $ubicaciones) = $this->getDatosFiltros($departamentoFilter);
+
+    // 5. Renderizar a la vista
+    render('supervision_semanal.index', [
+        'nombreMes' => ucfirst($fechaInicioMes->translatedFormat('F Y')),
+        'resumen' => $tablaResumen,
+        'semanaIndex' => $semanaIndex,
+        'totalSemanas' => $totalSemanas,
+        'rangoSemana' => $semanaSeleccionada ? ($inicioConsulta->translatedFormat('d M') . ' - ' . $finConsulta->translatedFormat('d M')) : 'Sin semanas',
+        'numeroSemana' => $semanaIndex + 1,
+        'tipoAgrupacion' => $tipoAgrupacion,
+        'departamentos' => $departamentos,
+        'ubicaciones' => $ubicaciones,
+        'filtrosActuales' => [
+            'departamento' => $departamentoFilter, 
+            'ubicacion' => $ubicacionFilter,
+            'mes' => $mes, 
+            'año' => $año, 
+            'semana_index' => $semanaIndex
+        ]
+    ]);
+}
 
     public function store()
     {
@@ -218,7 +367,7 @@ class SupervisionSemanalController extends Controller
             SupervisionSemanal::create($saveData);
 
             return response()->json([
-                'status' => 'success', // Tu JS espera esto para el SweetAlert
+                'status' => 'success',
                 'message' => 'Supervisión semanal guardada correctamente.'
             ]);
         } catch (\Exception $e) {
@@ -303,9 +452,8 @@ class SupervisionSemanalController extends Controller
             die("Error: No se encuentra la plantilla PDF en " . $templatePath);
         }
 
-        // 3. Mapear las columnas de tu BD al Array de 9 fotos
+        // 3. Mapear las columnas de el BD al Array de 9 fotos
         // El orden es: 0-5 (Página 1), 6-8 (Página 2)
-        // Usa los nombres de columnas de tu YAML anterior
         $listaImagenes = [
             $supervision->foto_del,         // [0] Frente
             $supervision->foto_tra,         // [1] Trasera
@@ -335,7 +483,7 @@ class SupervisionSemanalController extends Controller
             }
         }
 
-        // ---------------- INICIO LÓGICA FPDI (Tu código adaptado) ----------------
+        // ---------------- INICIO LÓGICA FPDI ----------------
         $pdf = new Fpdi('L', 'mm', 'A4');
         $pdf->SetAutoPageBreak(false);
         $pdf->SetMargins(0, 0, 0);
@@ -346,13 +494,13 @@ class SupervisionSemanalController extends Controller
         $tpl = $pdf->importPage(1);
         $pdf->useTemplate($tpl, 0, 0, 297); // Importar fondo CFE
 
-        // Datos del Vehículo (Opcional: Poner No. Económico en el encabezado)
+        // Datos del Vehículo
         $pdf->SetFont('Helvetica', 'B', 20);
-        $pdf->SetXY(220, 15); // Ajusta según tu plantilla
+        $pdf->SetXY(220, 15);
         $pdf->Cell(50, 5, 'Eco: ' . $supervision->no_eco, 0, 0, 'R');
 
         // Configuración de fotos Pag 1
-        $top    = 45;  // Bajé un poco para dar aire al logo
+        $top    = 45;
         $left   = 15;
         $ancho  = 85;
         $alto   = 65;
@@ -391,9 +539,9 @@ class SupervisionSemanalController extends Controller
         $pdf->AddPage();
         $pdf->useTemplate($tpl, 0, 0, 297); // Importar fondo CFE nuevamente
 
-        // Datos del Vehículo (Opcional: Poner No. Económico en el encabezado)
+        // Datos del Vehículo
         $pdf->SetFont('Helvetica', 'B', 20);
-        $pdf->SetXY(220, 15); // Ajusta según tu plantilla
+        $pdf->SetXY(220, 15);
         $pdf->Cell(50, 5, 'Eco: ' . $supervision->no_eco, 0, 0, 'R');
 
         // Mismas dimensiones que la página 1
@@ -426,7 +574,7 @@ class SupervisionSemanalController extends Controller
         }
 
         // --- TEXTOS ---
-        $pdf->SetFont('Helvetica', 'B', 14); // Un poco más pequeño para asegurar que quepa
+        $pdf->SetFont('Helvetica', 'B', 14);
         $pdf->SetTextColor(0, 100, 0); // Verde oscuro
 
         // Texto dinámico: Si hay foto de atentado, cambiamos el texto
@@ -456,127 +604,6 @@ class SupervisionSemanalController extends Controller
         // 'I' para mostrar en navegador, 'D' para forzar descarga
         $pdf->Output('Supervision_' . $supervision->no_eco . '.pdf', 'I');
         exit;
-    }
-
-    public function resumenAgencias()
-    {   
-        // ACTUALIZADO: Eliminamos el arreglo manual de claves DW01A...
-        $mesInput = request()->get('mes');
-        $añoInput = request()->get('año');
-        $departamentoFilter = request()->get('departamento');
-
-        $mes = $mesInput ? (int)$mesInput : \Carbon\Carbon::now()->month;
-        $año = $añoInput ? (int)$añoInput : \Carbon\Carbon::now()->year;
-
-        \Carbon\Carbon::setLocale('es');
-
-        $fechaInicioMes = \Carbon\Carbon::create($año, $mes, 1)->startOfDay();
-        $fechaFinMes = $fechaInicioMes->copy()->endOfMonth();
-
-        $inicioSemana = $fechaInicioMes->copy()->startOfWeek(\Carbon\Carbon::MONDAY);
-        $semanasDelMes = [];
-
-        while ($inicioSemana <= $fechaFinMes) {
-            $finSemana = $inicioSemana->copy()->addDays(5)->endOfDay();
-            if ($finSemana->month != $mes) $finSemana = $fechaFinMes->copy()->endOfDay();
-            
-            if ($inicioSemana->month == $mes || $finSemana->month == $mes) {
-                $semanasDelMes[] = [
-                    'inicio_real' => $inicioSemana->copy(),
-                    'fin_real' => $finSemana->copy()
-                ];
-            }
-            $inicioSemana->addWeek();
-        }
-
-        if (empty($semanasDelMes)) {
-            echo '<div class="p-8 text-center bg-white rounded-lg border border-zinc-200 shadow-sm"><p class="text-zinc-500 font-medium">No hay semanas laborales registradas para este mes.</p><button hx-get="/supervision-semanal" hx-target="#contenedor-principal" class="mt-4 text-emerald-600 font-bold hover:underline">Volver</button></div>';
-            return; 
-        }
-
-        $totalSemanas = count($semanasDelMes);
-        $semanaPorDefecto = 0;
-        foreach ($semanasDelMes as $idx => $s) {
-            if (\Carbon\Carbon::now()->between($s['inicio_real'], $s['fin_real'])) {
-                $semanaPorDefecto = $idx;
-                break;
-            }
-        }
-
-        $semanaIndex = (int) request()->get('semana_index', $semanaPorDefecto);
-        if ($semanaIndex < 0) $semanaIndex = 0;
-        if ($semanaIndex >= $totalSemanas) $semanaIndex = max(0, $totalSemanas - 1);
-
-        $semanaSeleccionada = $semanasDelMes[$semanaIndex];
-        $inicioConsulta = $semanaSeleccionada['inicio_real'];
-        $finConsulta = $semanaSeleccionada['fin_real'];
-
-        $queryVehiculos = \App\Models\Vehiculo::with(['supervisioSemanal' => function ($q) use ($inicioConsulta, $finConsulta){
-            $q->whereBetween('fecha_captura', [$inicioConsulta, $finConsulta]);
-        }])
-        ->select('id', 'no_economico', 'departamento', 'ubicacion', 'en_taller');
-
-    // NUEVO: Si hay un departamento seleccionado, filtramos los vehículos
-    if ($departamentoFilter) {
-        $queryVehiculos->where('departamento', $departamentoFilter);
-    }
-
-    $todosLosVehiculos = $queryVehiculos->get();
-    $columnaAgrupacion = $departamentoFilter ? 'ubicacion' : 'departamento';
-    $tipoAgrupacion = $departamentoFilter ? 'Ubicación' : 'Proceso';
-
-        // 4. Procesar la Matriz (ACTUALIZADO: Agrupamos dinámicamente por la columna departamento)
-        $tablaResumen = [];
-        $grupos = $todosLosVehiculos->groupBy($columnaAgrupacion);
-
-        foreach ($grupos as $nombreDato => $vehiculosGrupo) {
-            $nombre = $nombreDato ?: 'SIN ' . $tipoAgrupacion;
-            
-            $totalVehiculos = $vehiculosGrupo->count();
-            $totalEnTaller = $vehiculosGrupo->where('en_taller', 1)->count();
-            $supervisionesRealizadas = 0;
-            $pendientes = 0;
-
-            foreach ($vehiculosGrupo as $vehiculo) {
-                if ($vehiculo->supervisioSemanal->isNotEmpty()) {
-                    $supervisionesRealizadas++;
-                } else {
-                    if (!$vehiculo->en_taller) $pendientes++; 
-                }
-            }
-            
-            $vehiculosActivos = $totalVehiculos - $totalEnTaller;
-            $porcentaje = ($vehiculosActivos > 0) ? round(($supervisionesRealizadas / $vehiculosActivos) * 100) : 0;
-
-            $tablaResumen[] = [
-                'nombre' => $nombre,
-                'total_vehiculos' => $totalVehiculos,
-                'en_taller' => $totalEnTaller,
-                'pendientes' => $pendientes,
-                'cumplidos' => $supervisionesRealizadas,
-                'porcentaje' => $porcentaje
-            ];
-        }
-
-        // Ordenamos alfabéticamente
-        usort($tablaResumen, function($a, $b) {
-            return strcmp($a['nombre'], $b['nombre']);
-        });
-
-        $nombreMes = $fechaInicioMes->translatedFormat('F Y');
-
-        render('supervision_semanal.partials.resumen_agencias', [
-            'nombreMes' => ucfirst($nombreMes),
-            'resumen' => $tablaResumen,
-            'semanaIndex' => $semanaIndex,
-            'totalSemanas' => $totalSemanas,
-            'rangoSemana' => $inicioConsulta->translatedFormat('d M') . ' - ' . $finConsulta->translatedFormat('d M'),
-            'numeroSemana' => $semanaIndex + 1,
-            'mes' => $mes,
-            'año' => $año,
-            'departamentoActual' => $departamentoFilter,
-            'tipoAgrupacion' => $tipoAgrupacion
-        ]);
     }
 
     public function getUbicacionesPorDepartamento()

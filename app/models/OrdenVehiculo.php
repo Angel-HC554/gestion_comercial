@@ -42,7 +42,6 @@ class OrdenVehiculo extends Model
 
     /**
      * Relación para obtener UN SOLO archivo (el más reciente).
-     * Esta es la que usa tu botón de descarga.
      */
     public function archivo()
     {

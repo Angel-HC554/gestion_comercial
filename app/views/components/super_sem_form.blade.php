@@ -208,7 +208,7 @@
         }
     }
 
-    // 1. Selecciona los elementos (USA LOS IDs DE TU FORMULARIO)
+    // 1. Selecciona los elementos
     const formulario = document.getElementById('vehicleForm');
     const barraProgreso = document.getElementById('barra-progreso');
     const porcentajeTexto = document.getElementById('porcentaje');
@@ -226,7 +226,7 @@
         botonEnviar.disabled = true;
         botonEnviar.innerText = 'Enviando...';
 
-        // 5. Prepara los datos del formulario (funciona con tu @csrf y todo)
+        // 5. Prepara los datos del formulario
         const datosFormulario = new FormData(formulario);
 
         // 6. Crea la petición AJAX
@@ -323,7 +323,7 @@
             alert('Error de red. Revisa tu conexión.');
         };
 
-        // 10. Abre y envía la petición (usa el 'action' y 'method' de tu form)
+        // 10. Abre y envía la petición
         xhr.open(formulario.method, formulario.action);
         xhr.send(datosFormulario);
     });

@@ -286,9 +286,10 @@ class VehiculoController extends Controller
         $id_supervision     = $supervision_existe ? $vehiculo->obtenerIdSupervisionSemanal() : null;
 
         // Buscar una orden que NO esté terminada para este vehículo
-        $ordenActiva = OrdenVehiculo::where('noeconomico', $vehiculo->no_economico)
+        $ordenActiva = OrdenVehiculo::with(['detallePropio', 'detalleArrendado'])
+            ->where('noeconomico', $vehiculo->no_economico)
             ->whereIn('status', ['VEHICULO TALLER'])
-            ->latest() // Por si hubiera error y hay 2, tomamos la última
+            ->latest() 
             ->first();
 
         // Renderizar vista
@@ -387,7 +388,7 @@ class VehiculoController extends Controller
                     $vehiculo = Vehiculo::where('no_economico', $noEconomico)->first();
                 }
 
-                // Preparar array de datos (Mapeo exacto de tu archivo anterior)
+                // Preparar array de datos
                 $vehiculoData = [
                     'no_economico'  => $noEconomico,
                     'serie'         => $getVal('Serie'),
@@ -618,7 +619,7 @@ class VehiculoController extends Controller
 
         try {
             // 3. Preparar el directorio de subida (ej. public/expedientes/5/)
-            $basePath = dirname(__DIR__, 2); // Ajusta según la estructura de tu proyecto Leaf
+            $basePath = dirname(__DIR__, 2);
             $uploadDir = $basePath . '/public/expedientes/' . $id . '/';
 
             if (!is_dir($uploadDir)) {

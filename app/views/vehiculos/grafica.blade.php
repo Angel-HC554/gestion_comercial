@@ -108,7 +108,7 @@
                 chartInstance: null,
 
                 init() {
-                    // Timeout pequeño para asegurar que el DOM (canvas) esté listo dentro del tab
+                    // Timeout pequeño para asegurar que el DOM esté listo dentro del tab
                     setTimeout(() => {
                         this.renderChart();
                     }, 100);

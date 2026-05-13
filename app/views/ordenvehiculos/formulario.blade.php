@@ -36,11 +36,7 @@
                     // Opción A: Resetear a HOY
                     el.value = this.maxDate;
 
-                    // Opción B: Si prefieres borrarlo
-                    // this.tempData.fechaTerminacion = '';
-
-                    // Usamos tu SweetAlert existente para un aviso sutil (Toast)
-                    const Swal = window.Swal; // Aseguramos acceso a Swal
+                    const Swal = window.Swal;
                     if (Swal) {
                         Swal.fire({
                             toast: true,
@@ -61,10 +57,11 @@
         if (encontrado) {
             this.placa = encontrado.placas;
             this.marca = encontrado.marca + ' ' + (encontrado.modelo || '');
-            // ¡AQUÍ ESTÁ LA CLAVE!: Actualizamos el límite dinámicamente
             this.minKilometraje = parseInt(encontrado.ultimo_km) || 0;
         }else{
             this.minKilometraje = 0;
+            this.marca = '';
+            this.placa = '';
         }
     },
 
@@ -79,6 +76,17 @@
     // 3. ENVIAR FORMULARIO (AJAX)
     async submitForm() {
         this.loading = true;
+        let vehiculoValido = this.vehiculosDB.some(v => String(v.no_economico) === String(this.numeco));
+        
+        if (!vehiculoValido) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Vehículo no válido',
+                text: 'El número económico ingresado no existe en el catálogo. Por favor, ingresa uno válido.',
+            });
+            this.loading = false;
+            return; // Detenemos el envío
+        }
 
         // Captura todos los campos del formulario automáticamente
         const form = document.getElementById('ordenForm');

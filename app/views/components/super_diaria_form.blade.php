@@ -215,11 +215,7 @@
                     // Opción A: Resetear a HOY
                     this.form.fecha = this.maxDate;
 
-                    // Opción B: Si prefieres borrarlo
-                    // this.tempData.fechaTerminacion = '';
-
-                    // Usamos tu SweetAlert existente para un aviso sutil (Toast)
-                    const Swal = window.Swal; // Aseguramos acceso a Swal
+                    const Swal = window.Swal;
                     if (Swal) {
                         Swal.fire({
                             toast: true,

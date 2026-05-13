@@ -356,7 +356,7 @@
 
             <div class="space-y-4 mb-6">
 
-                <div class="p-3 rounded-md border border-emerald-100 space-y-3">
+                <div class="p-3 space-y-3">
                     <div>
                         <label class="block text-sm font-medium text-zinc-700 mb-1">Kilometraje Salida <span
                                 class="text-red-500">*</span></label>
@@ -375,7 +375,10 @@
                                 class="text-red-500">*</span></label>
                         <input type="date" x-model="tempData.fechaTerminacion" required
                             class="w-full border border-gray-300 rounded-md focus:ring-emerald-600 focus:border-emerald-600 p-2 shadow-sm"
-                            x-bind:max="maxDate" @blur="validateFecha()">
+                            x-bind:max="maxDate" 
+                            x-bind:min="minDateTerminacion" 
+                            @blur="validateFecha()" 
+                            @change="validateFecha()">
                     </div>
                 </div>
             </div>
@@ -452,10 +455,19 @@
             </div>
 
             <div class="flex flex-col gap-2">
-                <button @click="saveAction('ingresarTaller')"
-                    class="w-full px-4 py-2 bg-orange-500 text-white hover:bg-orange-600 rounded-md text-sm font-bold shadow-sm cursor-pointer">
-                    Ya lo dejé en el Taller
-                </button>
+                <template x-if="canIngresarTaller()">
+                    <button @click="saveAction('ingresarTaller')"
+                        class="w-full px-4 py-2 bg-orange-500 text-white hover:bg-orange-600 rounded-md text-sm font-bold shadow-sm cursor-pointer">
+                        Ya lo dejé en el Taller
+                    </button>
+                </template>
+
+                <template x-if="!canIngresarTaller()">
+                    <div class="p-3 bg-amber-50 rounded-md border border-amber-200 text-sm text-amber-700 text-center font-medium shadow-inner">
+                        Podrás marcar el ingreso al taller a partir del día de la cita.
+                    </div>
+                </template>
+
                 <button @click="modals.verCita = false"
                     class="w-full px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium cursor-pointer">
                     Cerrar y volver
@@ -512,12 +524,13 @@
             },
             maxDate: new Date().toLocaleDateString('en-CA'),
             minDateCita: new Date().toLocaleDateString('en-CA'),
+            minDateTerminacion: '',
 
             // Datos Temporales para Edición
             selectedOrden: null,
             historial: [],
             historialLoading: false,
-            // Mapas de configuración (copiados de tu PHP array)
+            // Mapas de configuración
             badgeClasses: {
                 'orden_creado': 'bg-green-100 text-green-700',
                 'orden_creada': 'bg-green-100 text-green-700', // Por si acaso el typo en store
@@ -573,17 +586,15 @@
             validateFecha() {
                 // Si no hay fecha, no hacemos nada
                 if (!this.tempData.fechaTerminacion) return;
+                const year = this.tempData.fechaTerminacion.split('-')[0];
+                if (year.length < 4 || parseInt(year) < 2000) return;
 
                 // Comparamos cadenas (YYYY-MM-DD)
                 if (this.tempData.fechaTerminacion > this.maxDate) {
                     // Opción A: Resetear a HOY
                     this.tempData.fechaTerminacion = '';
 
-                    // Opción B: Si prefieres borrarlo
-                    // this.tempData.fechaTerminacion = '';
-
-                    // Usamos tu SweetAlert existente para un aviso sutil (Toast)
-                    const Swal = window.Swal; // Aseguramos acceso a Swal
+                    const Swal = window.Swal;
                     if (Swal) {
                         Swal.fire({
                             toast: true,
@@ -595,6 +606,21 @@
                         });
                     } else {
                         alert('No puedes seleccionar fechas futuras');
+                    } return;
+                }
+                if (this.minDateTerminacion && this.tempData.fechaTerminacion < this.minDateTerminacion) {
+                    this.tempData.fechaTerminacion = '';
+                    
+                    // Formateamos para mostrar DD/MM/YYYY en la alerta
+                    const [yyyy, mm, dd] = this.minDateTerminacion.split('-');
+                    const fechaAmigable = `${dd}/${mm}/${yyyy}`;
+
+                    if (Swal) {
+                        Swal.fire({
+                            toast: true, position: 'top-end', icon: 'warning',
+                            title: `La fecha no puede ser anterior al ${fechaAmigable}`,
+                            showConfirmButton: false, timer: 4500
+                        });
                     }
                 }
             },
@@ -602,13 +628,15 @@
                 // Si no hay fecha, no hacemos nada
                 if (!this.tempData.fechaCita) return;
 
+                const year = this.tempData.fechaCita.split('-')[0];
+                if (year.length < 4 || parseInt(year) < 2000) return;
                 const fechaSeleccionada = this.tempData.fechaCita.split('T')[0];
                 // Comparamos cadenas (YYYY-MM-DD)
                 if (fechaSeleccionada < this.minDateCita) {
                     // Opción A: Resetear a HOY
                     this.tempData.fechaCita = '';
 
-                    const Swal = window.Swal; // Aseguramos acceso a Swal
+                    const Swal = window.Swal;
                     if (Swal) {
                         Swal.fire({
                             toast: true,
@@ -722,6 +750,17 @@
                     comentarios: '',
                     taller: ''
                 };
+                if (type === 'status') {
+                    let baseDate = '';
+                    if (orden.tipo_vehiculo === 'propio') {
+                        baseDate = orden.detalle_propio?.fechafirm || orden.created_at || '';
+                    } else if (orden.tipo_vehiculo === 'arrendado') {
+                        baseDate = orden.detalle_arrendado?.fecha_cita || orden.created_at || '';
+                    }
+                    
+                    // Extraer siempre formato YYYY-MM-DD
+                    this.minDateTerminacion = baseDate ? baseDate.split('T')[0].split(' ')[0] : '';
+                }
 
 
                 this.modals[type] = true;
@@ -737,7 +776,7 @@
                 this.historialLoading = true;
                 this.historial = []; // Limpiar anterior
                 try {
-                    const res = await fetch(`/api/ordenes/${id}/historial`); // Ajusta tu ruta según definas en Leaf
+                    const res = await fetch(`/api/ordenes/${id}/historial`);
                     if (res.ok) {
                         this.historial = await res.json();
                     }
@@ -775,6 +814,20 @@
                     month: 'short',
                     year: 'numeric'
                 }).toUpperCase().replace(/\./g, '');
+            },
+            canIngresarTaller() {
+                if (!this.selectedOrden?.detalle_arrendado?.fecha_cita) return false;
+                
+                // Convertimos la fecha de la cita a objeto Date
+                const citaDate = new Date(this.selectedOrden.detalle_arrendado.fecha_cita.replace(' ', 'T'));
+                citaDate.setHours(0, 0, 0, 0); // Normalizamos a la medianoche
+                
+                // Obtenemos el día de hoy
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // Normalizamos a la medianoche
+
+                // Retorna true si hoy es el día de la cita o un día posterior
+                return today >= citaDate;
             },
             getTitulo(tipo) {
                 return this.titleMap[tipo] || tipo.replace('_', ' ').toUpperCase();
@@ -914,6 +967,15 @@
                     };
 
                     if (type === 'code500') {
+                        if (!this.tempData.orden_500 || this.tempData.orden_500.trim() === '') {
+                            Swal.fire({
+                                toast: true, position: "top-end", icon: 'warning',
+                                title: 'Ingresa un código válido',
+                                showConfirmButton: false, timer: 3000,
+                                didOpen: () => Swal.hideLoading()
+                            });
+                            return;
+                        }
                         url = `/ordenvehiculos/code500/${this.selectedOrden.id}`;
                         data.orden_500 = this.tempData.orden_500;
                     } else if (type === 'status') {
@@ -932,6 +994,18 @@
                                 }
                             });
                             return; // Detiene la ejecución para que no se envíe nada
+                        }
+                        if (!this.tempData.fechaTerminacion) {
+                            Swal.fire({
+                                toast: true, position: "top-end", icon: 'warning',
+                                allowOutsideClick: false, title: 'Selecciona una fecha válida',
+                                timer: 3000, showConfirmButton: false,
+                                timerProgressBar: false,
+                                didOpen: (toast) => {
+                                    Swal.hideLoading();
+                                }
+                            });
+                            return;
                         }
                         url = `/ordenvehiculos/modal/${this.selectedOrden.id}`;
                         data.status = this.tempData.newStatus;

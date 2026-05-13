@@ -5,7 +5,7 @@
 @section('content')
     <div x-data="{
         tab: 'estado',
-        tabHistorial: 'analisis',
+        tabHistorial: new URLSearchParams(window.location.search).get('tab') || 'analisis',
         editarFoto: false,
         async subirFoto() {
             const input = document.getElementById('inputFoto');
@@ -779,7 +779,8 @@
                             class="text-red-500">*</span></label>
                     <input type="date" x-model="form.fechaTerminacion" required
                         class="w-full border border-gray-300 rounded-md focus:ring-emerald-600 focus:border-emerald-600 p-2 shadow-sm"
-                        x-bind:max="maxDate" @blur="validateFecha()">
+                        x-bind:max="maxDate" x-bind:min="minDateTerminacion"
+                        @change="validateFecha()" @blur="validateFecha()">
                 </div>
             </div>
 
@@ -812,74 +813,81 @@
                 orden: null,
                 form: {
                     kilometraje: '',
-                    fechaTerminacion: '', // Hoy por defecto
-                    status: 'TERMINADO' // Forzamos terminado
+                    fechaTerminacion: '',
+                    status: 'TERMINADO' 
                 },
                 maxDate: new Date().toLocaleDateString('en-CA'),
+                minDateTerminacion: '', // <-- Agregado
+                
                 open(ordenData) {
                     this.orden = ordenData;
-                    this.form.kilometraje = ''; // Limpiar km
-                    this.form.fechaTerminacion = ''; // No establecer fecha por defecto
+                    this.form.kilometraje = ''; 
+                    this.form.fechaTerminacion = ''; 
+
+                    // CORRECCIÓN: Extracción de fecha blindada para evitar que pasen horas (00:00:00)
+                    let baseDate = '';
+                    if (ordenData.tipo_vehiculo === 'propio') {
+                        baseDate = ordenData.detalle_propio?.fechafirm || ordenData.created_at || '';
+                    } else if (ordenData.tipo_vehiculo === 'arrendado') {
+                        baseDate = ordenData.detalle_arrendado?.fecha_cita || ordenData.created_at || '';
+                    }
+
+                    this.minDateTerminacion = baseDate ? baseDate.split('T')[0].split(' ')[0] : '';
+
                     this.isOpen = true;
                 },
                 close() {
                     this.isOpen = false;
                 },
                 validateFecha() {
-                    // Si no hay fecha, no hacemos nada
                     if (!this.form.fechaTerminacion) return;
 
-                    // Comparamos cadenas (YYYY-MM-DD)
-                    if (this.form.fechaTerminacion > this.maxDate) {
-                        // Opción A: Resetear a HOY
-                        this.form.fechaTerminacion = '';
+                    // CORRECCIÓN: Evitar validación ansiosa. Si están escribiendo el año (ej. 202) esperamos a que terminen.
+                    const year = this.form.fechaTerminacion.split('-')[0];
+                    if (year.length < 4 || parseInt(year) < 2000) return;
 
-                        // Usamos tu SweetAlert existente para un aviso sutil (Toast)
-                        const Swal = window.Swal; // Aseguramos acceso a Swal
+                    const Swal = window.Swal;
+
+                    // 1. Validar maxDate
+                    if (this.form.fechaTerminacion > this.maxDate) {
+                        this.form.fechaTerminacion = '';
                         if (Swal) {
-                            Swal.fire({
-                                toast: true,
-                                position: 'top-end',
-                                icon: 'warning',
-                                title: 'No puedes seleccionar fechas futuras',
-                                showConfirmButton: false,
-                                timer: 3000
-                            });
-                        } else {
-                            alert('No puedes seleccionar fechas futuras');
+                            Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'No puedes seleccionar fechas futuras', showConfirmButton: false, timer: 3000 });
+                        }
+                        return;
+                    }
+
+                    // 2. Validar minDate
+                    if (this.minDateTerminacion && this.form.fechaTerminacion < this.minDateTerminacion) {
+                        this.form.fechaTerminacion = '';
+                        const [yyyy, mm, dd] = this.minDateTerminacion.split('-');
+                        const fechaAmigable = `${dd}/${mm}/${yyyy}`;
+                        if (Swal) {
+                            Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: `La fecha no puede ser anterior al ${fechaAmigable}`, showConfirmButton: false, timer: 4500 });
                         }
                     }
                 },
                 async save() {
+                    // Validar KM
                     if (!this.form.kilometraje) {
-                        Swal.fire({
-                            toast: true,
-                            position: "top-end",
-                            icon: 'warning',
-                            allowOutsideClick: false,
-                            title: 'El kilometraje es obligatorio',
-                            timer: 3000,
-                            showConfirmButton: false
-                        });
+                        Swal.fire({ toast: true, position: "top-end", icon: 'warning', allowOutsideClick: false, title: 'El kilometraje es obligatorio', timer: 3000, showConfirmButton: false });
+                        return;
+                    }
+                    // Validar Fecha Vacía
+                    if (!this.form.fechaTerminacion) {
+                        Swal.fire({ toast: true, position: "top-end", icon: 'warning', allowOutsideClick: false, title: 'Selecciona una fecha válida', timer: 3000, showConfirmButton: false });
                         return;
                     }
 
                     this.loading = true;
-
-                    // Usamos el mismo endpoint que usabas en la tabla
                     const url = `/ordenvehiculos/modal/${this.orden.id}`;
-
-                    // Token CSRF (Leaf/Laravel)
                     const tokenInput = document.querySelector('input[name="_token"]');
                     const csrfToken = tokenInput ? tokenInput.value : '';
 
                     try {
                         const response = await fetch(url, {
-                            method: 'PUT', // Tu controlador espera PUT
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': csrfToken
-                            },
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                             body: JSON.stringify({
                                 kilometraje: this.form.kilometraje,
                                 fecha_terminacion: this.form.fechaTerminacion,
@@ -888,44 +896,15 @@
                         });
 
                         const data = await response.json();
-
                         if (data.status === 'success') {
                             this.close();
-                            await Swal.fire({
-                                icon: 'success',
-                                title: '¡Vehículo Liberado!',
-                                text: 'La orden se finalizó correctamente.',
-                                timer: 2000,
-                                showConfirmButton: false
-                            });
-                            // Recargamos la página para que desaparezca la alerta amarilla
-                            // y aparezcan los formularios de supervisión
+                            await Swal.fire({ icon: 'success', title: '¡Vehículo Liberado!', text: 'La orden se finalizó correctamente.', timer: 2000, showConfirmButton: false });
                             window.location.reload();
                         } else {
                             throw new Error(data.message || 'Error desconocido');
                         }
-
                     } catch (error) {
-                        Swal.fire({
-                            toast: true,
-                            position: "top-end",
-                            icon: "warning",
-                            allowOutsideClick: false,
-                            title: error.message || 'Ocurrió un error',
-                            showConfirmButton: false,
-                            timer: 3000,
-                            didOpen: () => {
-                                const backdrop = document.querySelector('.swal2-backdrop-show');
-                                if (backdrop) {
-                                    backdrop.addEventListener('click', (e) => {
-                                        e
-                                            .stopPropagation(); // evita que el clic llegue al @click.away
-                                        // Opcional: también puedes evitar que se cierre Swal si quieres
-                                        // e.preventDefault();
-                                    });
-                                }
-                            }
-                        });
+                        Swal.fire({ toast: true, position: "top-end", icon: "warning", allowOutsideClick: false, title: error.message || 'Ocurrió un error', showConfirmButton: false, timer: 3000 });
                     } finally {
                         this.loading = false;
                     }

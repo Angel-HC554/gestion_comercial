@@ -34,9 +34,7 @@
                             {{ $sub->nombre }}
                         </td>
                         <td class="px-6 py-3 whitespace-nowrap text-right text-sm font-medium">
-                            <button hx-delete="/subareas/{{ $sub->id }}"
-                                    hx-confirm="¿Eliminar la ubicación {{ $sub->nombre }}?"
-                                    hx-target="#subareas-container"
+                            <button @click.stop="confirmDelete('/subareas/{{ $sub->id }}', '#subareas-container', 'la ubicación {{ $sub->nombre }}')"
                                     class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                 Eliminar
                             </button>
