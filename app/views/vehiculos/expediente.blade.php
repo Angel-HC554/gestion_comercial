@@ -77,7 +77,11 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
                     </a>
-                    ##Incluye un icono aqui de eliminar que solo lo pueda ver un usuario administrador, por el momento solo ponle un href a # para que no haga nada. AI!
+                    <a href="#" title="Eliminar documento" class="ml-2 flex-shrink-0 text-red-400 hover:text-red-600 cursor-pointer p-1" @click.prevent="eliminarDocumento(doc.id)">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.714a17.003 17.003 0 00-1.589 0H6.178a17.003 17.003 0 00-1.589 3.714L4.5 12m5.422-1.667a2.437 2.437 0 01-1.115-2.012c.087-.793.392-1.693.897-2.513.474-.782.995-1.45 1.595-1.988.616-.59 1.364-.847 2.156-.847 0 0 0 .001 0 0 0 0 0 0 0 0 .001 0zm4.568 0a2.437 2.437 0 01-1.115 2.012c-.304.214-.612.38-.909.497-.692.295-1.454.443-2.208.443a3.844 3.844 0 00-1.595-.001zm1.595 2.117a17.003 17.003 0 001.589 0H20.32a17.003 17.003 0 001.589-3.714L19.5 12m0 0L16.5 9.75m3 3L16.5 12"/>
+                        </svg>
+                    </a>
                 </div>
             </template>
         </div>
