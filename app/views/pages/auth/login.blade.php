@@ -1,8 +1,7 @@
 @extends('layouts.auth')
 
 @section('content')
-    <div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
-
+    <div class="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans bg-cover bg-center bg-no-repeat" style="background-image: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url('/assets/img/fondo_login.png');">
 
 
         <div class="sm:mx-auto sm:w-full sm:max-w-[480px]">
@@ -11,6 +10,7 @@
                     <div class="flex justify-center">
                         <img src="/assets/img/logo_cfe.png" alt="CFE" class="h-24 w-auto">
                     </div>
+                    <div class="text-center text-lg font-semibold text-emerald-700 mt-2">Gestion de vehiculos</div>
                     <div class="border-b border-gray-200 pb-6 mb-6"></div>
 
                 </div>

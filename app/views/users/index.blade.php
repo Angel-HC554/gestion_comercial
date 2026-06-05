@@ -64,7 +64,8 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-zinc-700 mb-1">Nombre</label>
-                                    <input type="text" name="name" required placeholder="Nombre"
+                                    <input type="text" name="name" required pattern="^[a-zA-ZÀ-ÿ\s]+$"
+                                        title="El nombre solo puede contener letras y espacios" placeholder="Nombre"
                                         class="w-full border-2 border-gray-300 px-2 py-2 rounded-md focus:outline-none focus:ring-emerald-600 focus:border-emerald-600 text-sm">
                                 </div>
                             </div>

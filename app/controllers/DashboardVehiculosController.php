@@ -7,33 +7,85 @@ use App\Models\SupervisionSemanal;
 use App\Models\Vehiculo;
 use App\Models\OrdenVehiculo;
 use App\Models\Area;
+use App\Models\AreaUsuario;
 use Carbon\Carbon;
 
 class DashboardVehiculosController extends Controller
 {
     public function index()
     {
-        Carbon::setLocale('es');
+    
+    Carbon::setLocale('es');
+
+        // IDENTIFICAR USUARIO Y ROL
+        $user = auth()->user();
+        $isAdmin = $user->is('admin');
 
         // 1. OBTENER FILTRO Y ÁREAS (PROCESOS)
         $procesoFiltro = request()->get('proceso', '');
-        $areas = Area::orderBy('nombre')->get();
+        $areasQuery = Area::orderBy('nombre');
 
         // Query base para filtrar vehículos por Proceso
-        $vehiculosQuery = Vehiculo::query();
+        $vehiculosQuery = Vehiculo::query()->where('estado', '!=', 'Fuera de circulacion');
+
+        // LÓGICA DE SUPERVISORES: Filtrar solo sus áreas asignadas
+        if (!$isAdmin) {
+            $asignaciones = AreaUsuario::with('area', 'subarea')->where('user_id', $user->id)->get();
+            
+            // Extraer solo los nombres de las áreas a las que tiene acceso para poblar el <select>
+            $nombresAreasAsignadas = [];
+            foreach ($asignaciones as $asig) {
+                if ($asig->area) {
+                    $nombresAreasAsignadas[] = $asig->area->nombre;
+                }
+            }
+            $areasQuery->whereIn('nombre', array_unique($nombresAreasAsignadas));
+
+            // Filtramos la query maestra de vehículos
+            $vehiculosQuery->where(function ($q) use ($asignaciones) {
+                foreach ($asignaciones as $asignacion) {
+                    $q->orWhere(function ($subQuery) use ($asignacion) {
+                        if ($asignacion->area) {
+                            $subQuery->where('departamento', $asignacion->area->nombre);
+                        }
+                        if ($asignacion->subarea) {
+                            $subQuery->where('ubicacion', $asignacion->subarea->nombre);
+                        }
+                    });
+                }
+            });
+        }
+
+        $areas = $areasQuery->get();
+
+        // Aplicamos el filtro del select si existe
         if ($procesoFiltro) {
             $vehiculosQuery->where('departamento', $procesoFiltro);
         }
         
-        $noEconomicosValidos = $vehiculosQuery->pluck('no_economico')->toArray();
-        $vehiculosIdsValidos = $vehiculosQuery->pluck('id')->toArray();
+        // Determinar si debemos restringir las búsquedas posteriores (si no es admin o si hay filtro)
+        $necesitaFiltro = $procesoFiltro || !$isAdmin;
+
+        $noEconomicosValidos = [];
+        $vehiculosIdsValidos = [];
+
+        if ($necesitaFiltro) {
+            $noEconomicosValidos = $vehiculosQuery->pluck('no_economico')->toArray();
+            $vehiculosIdsValidos = $vehiculosQuery->pluck('id')->toArray();
+
+            // Seguro contra queries masivas si un supervisor no tiene vehículos
+            if (empty($vehiculosIdsValidos)) {
+                $noEconomicosValidos = [-1];
+                $vehiculosIdsValidos = [-1];
+            }
+        }
 
         // 2. VEHÍCULOS EN TALLER
         $ordenesTallerQuery = OrdenVehiculo::with('detallePropio', 'detalleArrendado')
             ->where('status', 'VEHICULO TALLER')
             ->orderByDesc('created_at');
             
-        if ($procesoFiltro) {
+        if ($necesitaFiltro) {
             $ordenesTallerQuery->whereIn('noeconomico', $noEconomicosValidos);
         }
         
@@ -86,7 +138,7 @@ class DashboardVehiculosController extends Controller
             ->orderByDesc('total')
             ->limit(6);
             
-        if ($procesoFiltro) {
+        if ($necesitaFiltro) {
             $topReingresosQuery->whereIn('noeconomico', $noEconomicosValidos);
         }
         $topReingresos = $topReingresosQuery->get();
@@ -110,7 +162,7 @@ class DashboardVehiculosController extends Controller
 
         // 4. GRÁFICA DE STATUS
         $statusBreakdownQuery = OrdenVehiculo::selectRaw('status, COUNT(*) as total')->groupBy('status')->orderBy('status');
-        if ($procesoFiltro) {
+        if ($necesitaFiltro) {
             $statusBreakdownQuery->whereIn('noeconomico', $noEconomicosValidos);
         }
         $statusBreakdown = $statusBreakdownQuery->pluck('total', 'status')->toArray();
@@ -121,7 +173,7 @@ class DashboardVehiculosController extends Controller
         $topChartValues = $vehiculosFrecuentes->pluck('veces')->toArray();
 
         // 5. PRÓXIMOS A MANTENIMIENTO
-        $vehiculosMantenimientoQuery = clone $vehiculosQuery;
+        $vehiculosMantenimientoQuery = clone $vehiculosQuery; // Usa la query ya restringida
         $vehiculosMantenimiento = $vehiculosMantenimientoQuery->with(['latestSupervision', 'latestMantenimiento'])
             ->select('id', 'no_economico', 'marca', 'modelo', 'placas', 'departamento', 'rpe_responsable')
             ->get();
@@ -145,28 +197,25 @@ class DashboardVehiculosController extends Controller
             return in_array($vehiculo['estado'], ['amarillo', 'rojo', 'rojo_pasado'], true);
         })->values();
 
-        // 6. SINIESTROS - LÓGICA DE ÚLTIMO REPORTE (AUTO-CANCELACIÓN)
-        // A) Obtener el último reporte diario de CADA vehículo
+        // 6. SINIESTROS - LÓGICA DE ÚLTIMO REPORTE
         $diariasQuery = SupervisionDiaria::with('vehiculo')
             ->orderByDesc('fecha')->orderByDesc('created_at');
-        if ($procesoFiltro) {
+        if ($necesitaFiltro) {
             $diariasQuery->whereIn('vehiculo_id', $vehiculosIdsValidos);
         }
-        // unique('vehiculo_id') nos asegura quedarnos solo con la más reciente de cada vehículo
         $latestDiarias = $diariasQuery->get()->unique('vehiculo_id')->keyBy('vehiculo_id');
 
-        // B) Obtener el último reporte semanal de CADA vehículo
         $semanalesQuery = SupervisionSemanal::with('vehiculo')
             ->orderByDesc('fecha_captura')->orderByDesc('created_at');
-        if ($procesoFiltro) {
+        if ($necesitaFiltro) {
             $semanalesQuery->whereIn('vehiculo_id', $vehiculosIdsValidos);
         }
         $latestSemanales = $semanalesQuery->get()->unique('vehiculo_id')->keyBy('vehiculo_id');
 
         $todosSiniestrosActivos = collect();
-        $vehiculosAEvaluar = $procesoFiltro ? $vehiculosIdsValidos : Vehiculo::pluck('id')->toArray();
+        // Limitamos los vehiculos a evaluar si tienen filtro o son supervisores
+        $vehiculosAEvaluar = $necesitaFiltro ? $vehiculosIdsValidos : Vehiculo::where('estado', '!=', 'Fuera de circulacion')->pluck('id')->toArray();
 
-        // C) Evaluar cuál es el reporte ABSOLUTO más reciente de cada vehículo
         foreach ($vehiculosAEvaluar as $vid) {
             $diaria = $latestDiarias->get($vid);
             $semanal = $latestSemanales->get($vid);
@@ -178,7 +227,6 @@ class DashboardVehiculosController extends Controller
                 $fechaD = Carbon::parse($diaria->fecha)->startOfDay();
                 $fechaS = Carbon::parse($semanal->fecha_captura)->startOfDay();
                 
-                // Si son del mismo día, priorizamos la que TENGA reporte de golpe para no ocultarlo accidentalmente ese mismo día
                 if ($fechaD->equalTo($fechaS)) {
                     if ($diaria->golpes) {
                         $latestRecord = $diaria;
@@ -202,7 +250,6 @@ class DashboardVehiculosController extends Controller
                 $tipoLatest = 'semanal';
             }
 
-            // D) Solo si su ÚLTIMO reporte indica golpe/atentado, lo mostramos
             if ($latestRecord) {
                 if ($tipoLatest === 'diaria' && $latestRecord->golpes) {
                     $todosSiniestrosActivos->push((object)[
@@ -226,7 +273,6 @@ class DashboardVehiculosController extends Controller
             }
         }
 
-        // Ordenamos los siniestros activos para mostrarlos en la tabla
         $todosSiniestros = $todosSiniestrosActivos->sortByDesc('fecha')->values();
         $siniestrosVehiculosUnicos = $todosSiniestros->unique('no_eco')->count();
 
@@ -238,7 +284,7 @@ class DashboardVehiculosController extends Controller
             ->where('orden_500', '<>', 'NO')
             ->orderByDesc('created_at');
             
-        if ($procesoFiltro) {
+        if ($necesitaFiltro) {
             $ordenes500Query->whereIn('noeconomico', $noEconomicosValidos);
         }
         $ordenes500 = $ordenes500Query->get();
@@ -260,7 +306,7 @@ class DashboardVehiculosController extends Controller
             'proximosMantenimientoCount' => $proximosMantenimiento->count(),
             
             'siniestros' => $todosSiniestros,
-            'siniestrosCount' => $siniestrosVehiculosUnicos, // KPI: Vehículos únicos
+            'siniestrosCount' => $siniestrosVehiculosUnicos,
             
             'ordenes500' => $ordenes500,
             'ordenes500Count' => $ordenes500->count()

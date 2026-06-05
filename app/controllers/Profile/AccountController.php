@@ -1,32 +1,45 @@
 <?php
 
 namespace App\Controllers\Profile;
+use Leaf\Helpers\Password;
 
 class AccountController extends Controller
 {
     public function show_update()
     {
         $user = auth()->user();
+        $ultimoRespaldo = $this->obtenerUltimoRespaldo();
 
         response()->view('pages.profile.update', [
             'errors' => flash()->display('errors') ?? [],
+            'flash' => [
+                'success' => flash()->display('success')
+            ],
             'name' => $user->name ?? null,
             'user' => $user->user ?? null,
+            'ultimo_respaldo' => $ultimoRespaldo,
         ]);
     }
 
     public function update()
     {
-        $data = request()->get(['user', 'name']);
+        $data = request()->get(['user', 'name', 'password']);
+
+        //validar contraseña
+        if (empty($data['password'])) {
+            unset($data['password']);
+        } else {
+            $data['password'] = Password::hash($data['password']);
+        }
         
-        // Validate user (alphanumeric only, optional)
+        // Validate usuario
         if (isset($data['user']) && !preg_match('/^[a-zA-Z0-9]+$/', $data['user'])) {
             return response()
                 ->withFlash('errors', ['user' => 'El nombre de usuario solo puede contener letras y números'])
                 ->redirect('/settings/profile');
         }
         
-        // Validate name (text, optional)
+        // Validate nombre
         if (isset($data['name']) && !preg_match('/^[\p{L}\s]+$/u', $data['name'])) {
             return response()
                 ->withFlash('errors', ['name' => 'El nombre solo puede contener letras y espacios'])
@@ -47,6 +60,8 @@ class AccountController extends Controller
                 ->redirect('/settings/profile');
         }
 
-        response()->redirect('/dashboard');
+        response()
+        ->withFlash('success', '¡Información actualizada correctamente!')
+        ->redirect('/settings/profile');
     }
 }

@@ -36,12 +36,10 @@
             display: none !important;
         }
 
-        /* CAMBIO: Aplicar Inter a todo el cuerpo */
         body {
             font-family: 'Inter', font-sans;
         }
 
-        /* Opcional: Para que los números se vean mejor alineados en tablas */
         .tabular-nums {
             font-variant-numeric: tabular-nums;
         }
@@ -119,7 +117,7 @@
                                     Vehículos
                                 </a>
 
-                                @if (auth()->user()->is('admin'))
+                                @if (auth()->user()->is('admin') || auth()->user()->is('supervisor'))
                                     <a href="/dashboard-vehiculos"
                                         class="flex items-center gap-3 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 hover:text-emerald-700 transition-colors">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -129,6 +127,9 @@
                                         </svg>
                                         Estadísticas de Vehículos
                                     </a>
+                                @endif
+
+                                @if (auth()->user()->is('admin'))
 
                                     <div class="border-t border-zinc-200 my-2"></div>
                                     <div class="px-4 py-1 text-xs font-bold tracking-wider text-zinc-500 uppercase">
@@ -199,12 +200,10 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                             stroke-width="1.5" stroke="currentColor" class="size-6">
                                             <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                                d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                         </svg>
 
-                                        Perfil
+                                        Mi Perfil
                                     </a>
                                 </div>
                             </div>
@@ -244,38 +243,38 @@
                         </template>
                     </div>
 
-                    <div class="relative" x-data="{ notificationOpen: false }" @click.away="notificationOpen = false">
+                    <div class="relative" x-data="{
+                        notificationOpen: false,
+                        c500: 0,
+                        cTrans: 0,
+                        cCitas: 0,
+                        cSiniestros: 0,
+                        cMant: 0,
+                        get hasNotifications() {
+                            let total = 0;
+                            {{-- El servidor solo compila las sumas si el usuario cumple con los permisos --}}
+                            @can('generar 500') total += this.c500; @endcan
+                            @is('admin')
+                            total += this.cTrans;
+                            @endis
+                            @if (auth()->user()->is('admin') || auth()->user()->is('supervisor')) total += this.cCitas + this.cSiniestros + this.cMant; @endif
+                            return total > 0;
+                        }
+                    }" {{-- Escuchadores de eventos protegidos desde el servidor --}} @can('generar 500')
+                            @notification-update.window="c500 = $event.detail.count" @endcan @is('admin')
+                        @notification-admin.window="cTrans = $event.detail.count" @endis
+                        @if (auth()->user()->is('admin') || auth()->user()->is('supervisor'))
+                        @notification-citas.window="cCitas = $event.detail.count"
+                        @notification-siniestros.window="cSiniestros = $event.detail.count"
+                        @notification-mantenimientos.window="cMant = $event.detail.count"
+                        @endif
+                        @click.away="notificationOpen = false">
                         <button @click="notificationOpen = !notificationOpen"
                             class="text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 p-2 rounded-lg transition-colors cursor-pointer">
-                            @can('generar 500')
-                                {{-- Badge dinámico con Alpine.js --}}
-                                <span x-data="{ count: 0 }" @notification-update.window="count = $event.detail.count"
-                                    x-show="count > 0" x-text="count" x-transition.scale style="display: none;"
-                                    class="absolute -top-0.1 -right-2 h-3.5 w-4.5 rounded-md bg-red-500 ring-2 ring-white flex items-center justify-center text-xs text-white font-bold tabular-nums">
-                                </span>
-                            @endcan
-                            @is('admin')
-                                <span x-data="{ count: 0 }" @notification-admin.window="count = $event.detail.count"
-                                    x-show="count > 0" x-text="count" x-transition.scale style="display: none;"
-                                    class="absolute -top-0.1 -right-2 h-3.5 w-4.5 rounded-md bg-red-500 ring-2 ring-white flex items-center justify-center text-xs text-white font-bold tabular-nums">
-                                </span>
-                            @endis
-                            @if (auth()->user()->is('admin') || auth()->user()->is('supervisor'))
-                                <span x-data="{ count: 0 }" @notification-citas.window="count = $event.detail.count"
-                                    x-show="count > 0" x-text="count" x-transition.scale style="display: none;"
-                                    class="absolute -top-0.1 right-1 h-3.5 w-4.5 rounded-md bg-purple-600 ring-2 ring-white flex items-center justify-center text-xs text-white font-bold tabular-nums">
-                                </span>
-                            @endif
-                            @is('admin')
-                                <span x-data="{ count: 0 }" 
-                                      @notification-siniestros.window="count = $event.detail.count"
-                                      x-show="count > 0" 
-                                      x-text="count" 
-                                      x-transition.scale 
-                                      style="display: none;"
-                                      class="absolute -top-0.1 -right-2 h-3.5 w-4.5 rounded-md bg-red-500 ring-2 ring-white flex items-center justify-center text-xs text-white font-bold tabular-nums">
-                                </span>
-                            @endis
+                            {{-- Indicador visual protegido por la propiedad computada segura --}}
+                            <span x-show="hasNotifications" x-transition.scale style="display: none;"
+                                class="absolute top-1 right-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white animate-pulse">
+                            </span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                 stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -303,76 +302,67 @@
                                     </button>
                                 </div>
                                 <div class="max-h-96 overflow-y-auto">
-
                                     @can('generar 500')
-                                        <div x-data="{ count: 0 }"
-                                            @notification-update.window="count = $event.detail.count">
-                                            <template x-if="count > 0">
-                                                <div class="p-3 border-b border-zinc-100 hover:bg-zinc-50 bg-blue-50">
-                                                    <p class="text-sm font-bold text-red-600">
-                                                        Tienes <span x-text="count"></span> solicitud(es) 500 pendientes.
-                                                    </p>
-                                                    <a href="/ordenvehiculos?filtro=orden500"
-                                                        class="text-xs text-emerald-700 underline mt-1 block">Ir a
-                                                        atender</a>
-                                                </div>
-                                            </template>
-                                        </div>
+                                        <template x-if="c500 > 0">
+                                            <div class="p-3 border-b border-zinc-100 hover:bg-zinc-50 bg-blue-50">
+                                                <p class="text-sm font-bold text-red-600">
+                                                    Tienes <span x-text="c500"></span> solicitud(es) 500 pendientes.
+                                                </p>
+                                                <a href="/ordenvehiculos?filtro=orden500"
+                                                    class="text-xs text-emerald-700 underline mt-1 block">Ir a atender</a>
+                                            </div>
+                                        </template>
                                     @endcan
+
                                     @is('admin')
-                                        <div x-data="{ count: 0 }"
-                                            @notification-admin.window="count = $event.detail.count">
-                                            <template x-if="count > 0">
-                                                <div class="p-3 border-b border-zinc-100 hover:bg-zinc-50 bg-blue-50">
-                                                    <p class="text-sm font-bold text-red-600">
-                                                        Tienes <span x-text="count"></span> órdenes por atender.
-                                                    </p>
-                                                    <a href="/ordenvehiculos?filtro=por_atender"
-                                                        class="text-xs text-emerald-700 underline mt-1 block">Ir a
-                                                        atender</a>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    @endis
-                                    @if (auth()->user()->is('admin') || auth()->user()->is('supervisor'))
-                                        <div x-data="{ count: 0 }"
-                                            @notification-citas.window="count = $event.detail.count">
-                                            <template x-if="count > 0">
-                                                <div
-                                                    class="p-3 border-b border-zinc-100 hover:bg-zinc-50 bg-purple-50">
-                                                    <p class="text-sm font-bold text-purple-700">
-                                                        Tienes <span x-text="count"></span> vehículo(s) con cita
-                                                        asignada.
-                                                    </p>
-                                                    <a href="/ordenvehiculos?filtro=citas"
-                                                        class="text-xs text-emerald-700 underline mt-1 block">Ver
-                                                        citas</a>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    @endif
-                                    @is('admin')
-                                        <div x-data="{ count: 0 }"
-                                             @notification-siniestros.window="count = $event.detail.count">
-                                            <template x-if="count > 0">
-                                                <div class="p-3 border-b border-zinc-100 hover:bg-zinc-50 bg-amber-50">
-                                                    <p class="text-sm font-bold text-amber-700">
-                                                        Hay <span x-text="count"></span> vehículo(s) con siniestros sin orden de reparación.
-                                                    </p>
-                                                    <a href="/dashboard-vehiculos" 
-                                                       class="text-xs text-emerald-700 underline mt-1 block">
-                                                        Ver vehículos con siniestros pendientes
-                                                    </a>
-                                                </div>
-                                            </template>
-                                        </div>
+                                        <template x-if="cTrans > 0">
+                                            <div class="p-3 border-b border-zinc-100 hover:bg-zinc-50 bg-blue-50">
+                                                <p class="text-sm font-bold text-red-600">
+                                                    Tienes <span x-text="cTrans"></span> órdenes por atender.
+                                                </p>
+                                                <a href="/ordenvehiculos?filtro=por_atender"
+                                                    class="text-xs text-emerald-700 underline mt-1 block">Ir a atender</a>
+                                            </div>
+                                        </template>
                                     @endis
 
-                                    <div x-data="{ c500: 0, cTrans: 0, cCitas: 0 }"
-                                        @notification-update.window="c500 = $event.detail.count"
-                                        @notification-admin.window="cTrans = $event.detail.count"
-                                        @notification-citas.window="cCitas = $event.detail.count"
-                                        x-show="c500 === 0 && cTrans === 0 && cCitas === 0"
+                                    @if (auth()->user()->is('admin') || auth()->user()->is('supervisor'))
+                                        <template x-if="cCitas > 0">
+                                            <div class="p-3 border-b border-zinc-100 hover:bg-zinc-50 bg-purple-50">
+                                                <p class="text-sm font-bold text-purple-700">
+                                                    Tienes <span x-text="cCitas"></span> vehículo(s) con cita asignada.
+                                                </p>
+                                                <a href="/ordenvehiculos?filtro=citas"
+                                                    class="text-xs text-emerald-700 underline mt-1 block">Ver citas</a>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="cSiniestros > 0">
+                                            <div class="p-3 border-b border-zinc-100 hover:bg-zinc-50 bg-amber-50">
+                                                <p class="text-sm font-bold text-amber-700">
+                                                    Hay <span x-text="cSiniestros"></span> vehículo(s) con siniestros
+                                                    sin orden.
+                                                </p>
+                                                <a href="/dashboard-vehiculos?tab=siniestros"
+                                                    class="text-xs text-emerald-700 underline mt-1 block">Ver
+                                                    vehículos</a>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="cMant > 0">
+                                            <div class="p-3 border-b border-zinc-100 hover:bg-zinc-50 bg-yellow-50/50">
+                                                <p class="text-sm font-bold text-yellow-700">
+                                                    Hay <span x-text="cMant"></span> vehículo(s) con alertas de
+                                                    mantenimiento.
+                                                </p>
+                                                <a href="/vehiculos?mantenimiento=amarillo"
+                                                    class="text-xs text-emerald-700 underline mt-1 block">Ver
+                                                    vehículos</a>
+                                            </div>
+                                        </template>
+                                    @endif
+                                    {{-- Mensaje de bandeja vacía --}}
+                                    <div x-show="!hasNotifications"
                                         class="p-3 border-b border-gray-100 hover:bg-gray-50">
                                         <p class="text-sm text-gray-600">No tienes notificaciones nuevas</p>
                                     </div>
@@ -414,12 +404,10 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor" class="size-6">
                                     <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                        d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                 </svg>
 
-                                Perfil
+                                Mi Perfil
                             </a>
 
                             <form action="/auth/logout" method="POST" class="block border-t border-zinc-100 mt-1">
@@ -459,7 +447,7 @@
                     <div class="flex items-center justify-between px-6 mb-6">
                         <div class="flex items-center gap-2 font-bold text-zinc-900 text-xl">
                             <img src="/assets/img/logo_cfe.svg" alt="CFE" class="h-8 w-auto">
-                            <span class="text-sm">Gestión</span>
+                            <span class="text-sm">Gestión Vehicular</span>
                         </div>
                         <button type="button" @click="mobileMenuOpen = false"
                             class="-m-2.5 p-2.5 text-zinc-700 hover:text-red-600 transition-colors">
@@ -471,69 +459,164 @@
                         </button>
                     </div>
 
-                    <nav class="flex flex-col gap-1 px-4 overflow-y-auto">
+                    <nav class="flex flex-col gap-1 px-4 overflow-y-auto custom-scrollbar">
                         <a href="/dashboard"
-                            class="flex items-center gap-3 rounded-lg bg-zinc-50 px-3 py-2 text-base font-medium text-zinc-900">
+                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium text-zinc-900 hover:bg-zinc-50">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-zinc-500">
+                                stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-emerald-600">
                                 <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                                    d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
                             </svg>
                             Inicio
                         </a>
 
-                        <div class="mt-4 mb-2 px-3 text-xs font-bold tracking-wider text-zinc-400 uppercase">Módulos
+                        <div x-data="{ open: false }" class="mt-2">
+                            <button @click="open = !open"
+                                class="w-full flex items-center justify-between px-3 py-2 text-base font-bold tracking-wider text-zinc-500 uppercase">
+                                <span>Opciones</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="1.5" stroke="currentColor" class="w-4 h-4 transition-transform"
+                                    :class="open ? 'rotate-180' : ''">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </button>
+                            <div x-show="open" x-collapse x-cloak class="mt-1 space-y-1 pl-4">
+                                <a href="/ordenvehiculos"
+                                    class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-600 hover:text-emerald-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+                                    </svg>
+                                    Generación de órdenes
+                                </a>
+                                <a href="/vehiculos"
+                                    class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-600 hover:text-emerald-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" height="20" width="20"
+                                        viewBox="0 -960 960 960" fill="currentColor">
+                                        <path
+                                            d="M90-100q-12.38 0-21.19-8.81T60-130v-310l81.16-193q6.27-15.41 19.71-24.47 13.44-9.07 29.9-9.07h344.61q16.37 0 30 9.07 13.64 9.06 20 24.47l80.77 193v310q0 12.38-8.8 21.19-8.81 8.81-21.2 8.81h-24.61q-12.75 0-21.38-8.81-8.62-8.81-8.62-21.19v-48.08H144.61V-130q0 12.38-8.8 21.19Q127-100 114.61-100H90Zm55.08-399.61h435.38l-44.54-106.93H190.23l-45.15 106.93ZM120-238.08h486.15v-201.54H120v201.54Zm101.24-48.46q21.84 0 37.03-15 15.19-15 15.19-36.94 0-21.95-15.28-37.31-15.28-15.36-37.12-15.36-21.83 0-37.02 15.36-15.19 15.36-15.19 37.31 0 21.94 15.28 36.94 15.28 15 37.11 15Zm283.85 0q21.83 0 37.03-15 15.19-15 15.19-36.94 0-21.95-15.29-37.31-15.28-15.36-37.11-15.36t-37.02 15.36q-15.2 15.36-15.2 37.31 0 21.94 15.29 36.94 15.28 15 37.11 15ZM720-216.92v-327.85l-73.77-177.15H246.62l11.07-26.46q6.37-15.41 20-24.48 13.64-9.06 30-9.06H650q16.27 0 29.83 9.04 13.55 9.04 19.78 24.5L780-556.92v304.61q0 14.69-10.35 25.04-10.34 10.35-25.04 10.35H720Zm115.38-116.93v-327.84L762-837.31H363.92L375-863.77q6.36-15.41 20-24.47 13.64-9.07 30-9.07h340.77q16.27 0 29.82 9.04 13.56 9.04 19.79 24.5l80 190.31v304.23q0 14.69-10.34 25.04-10.35 10.34-25.04 10.34h-24.62Zm-472.3-5Z" />
+                                    </svg>
+                                    Vehículos
+                                </a>
+                                @if (auth()->user()->is('admin') || auth()->user()->is('supervisor'))
+                                    <a href="/dashboard-vehiculos"
+                                        class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-600 hover:text-emerald-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125z" />
+                                        </svg>
+                                        Estadísticas de Vehículos
+                                    </a>
+                                @endif
+                            </div>
                         </div>
 
-                        <a href="/ordenes"
-                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-zinc-400">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                            </svg>
-                            Ordenes
-                        </a>
-                        <a href="/vehiculos"
-                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-zinc-400">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-3 0h3m-3 8.25a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3-1.5H4.75a1.125 1.125 0 01-1.125-1.125V4.125C3.625 3.504 4.129 3 4.75 3h12.75c.621 0 1.125.504 1.125 1.125V14.25" />
-                            </svg>
-                            Vehículos
-                        </a>
-                        <a href="/dashboard-vehiculos"
-                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-zinc-400">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-                            </svg>
-                            Estadísticas de Vehículos
-                        </a>
+                        @is('admin')
+                            <div x-data="{ open: false }" class="mt-2">
+                                <button @click="open = !open"
+                                    class="w-full flex items-center justify-between px-3 py-2 text-base font-bold tracking-wider text-zinc-500 uppercase text-left">
+                                    <span>Supervisiones</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="1.5" stroke="currentColor" class="w-4 h-4 transition-transform"
+                                        :class="open ? 'rotate-180' : ''">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                    </svg>
+                                </button>
+                                <div x-show="open" x-collapse x-cloak class="mt-1 space-y-1 pl-4">
+                                    <a href="/dashboard-semanal"
+                                        class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-600 hover:text-emerald-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                                        </svg>
+                                        Semanal
+                                    </a>
+                                    <a href="/dashboard-diario"
+                                        class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-600 hover:text-emerald-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                                        </svg>
+                                        Diario
+                                    </a>
+                                </div>
+                            </div>
+                        @endis
 
-                        <div class="mt-4 mb-2 px-3 text-xs font-bold tracking-wider text-zinc-400 uppercase">
-                            Supervisiones
+                        @is('admin')
+                            <div x-data="{ open: false }" class="mt-2">
+                                <button @click="open = !open"
+                                    class="w-full flex items-center justify-between px-3 py-2 text-base font-bold tracking-wider text-zinc-500 uppercase text-left">
+                                    <span>Ajustes</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="1.5" stroke="currentColor" class="w-4 h-4 transition-transform"
+                                        :class="open ? 'rotate-180' : ''">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                    </svg>
+                                </button>
+                                <div x-show="open" x-collapse x-cloak class="mt-1 space-y-1 pl-4">
+                                    <a href="/users"
+                                        class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-600 hover:text-emerald-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                                        </svg>
+                                        Usuarios
+                                    </a>
+                                    <a href="/areas"
+                                        class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-600 hover:text-emerald-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+                                        </svg>
+                                        Áreas
+                                    </a>
+                                </div>
+                            </div>
+                        @endis
+
+                        <div class="mt-auto border-t border-zinc-100 pt-4">
+                            <div class="px-3 py-2 mb-2 flex items-center gap-3">
+                                <div
+                                    class="h-10 w-10 flex items-center justify-center rounded-full bg-emerald-600 text-white font-bold">
+                                    {{ substr(auth()->user()->name ?? 'U', 0, 1) }}
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-zinc-900 leading-tight">
+                                        {{ auth()->user()->name ?? 'Usuario' }}</p>
+                                    <p class="text-xs text-zinc-500">{{ auth()->user()->user ?? 'sin usuario' }}</p>
+                                </div>
+                            </div>
+                            <a href="/settings/profile"
+                                class="flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium text-zinc-600 hover:bg-zinc-50 hover:text-emerald-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                </svg>
+                                Mi Perfil
+                            </a>
+                            <form action="/auth/logout" method="POST">
+                                <button type="submit"
+                                    class="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium text-zinc-600 hover:bg-red-50 hover:text-red-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                                    </svg>
+                                    Cerrar sesión
+                                </button>
+                            </form>
                         </div>
-                        <a href="/supervision-semanal"
-                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-zinc-400">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                            </svg>
-                            Semanal
-                        </a>
-                        <a href="/supervision-diaria"
-                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-zinc-400">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                            </svg>
-                            Diaria
-                        </a>
                     </nav>
                 </div>
             </div>
@@ -893,9 +976,11 @@
                         if (data.citas) {
                             this.lista_citas = data.citas;
 
-                            const citasDeHoy = this.lista_citas.filter(cita => cita.texto_fecha === 'Hoy,');
+                            const citasDeHoy = this.lista_citas.filter(cita => cita.texto_fecha ===
+                                'Hoy,');
 
-                            if (citasDeHoy.length > 0 && !sessionStorage.getItem('alertaCitasHoyMostrada')) {
+                            if (citasDeHoy.length > 0 && !sessionStorage.getItem(
+                                    'alertaCitasHoyMostrada')) {
                                 this.mostrarAlertaCitasHoy(citasDeHoy.length);
                                 sessionStorage.setItem('alertaCitasHoyMostrada', 'true');
                             }
@@ -906,18 +991,18 @@
                 },
 
                 mostrarAlertaCitasHoy(cantidad) {
-                const plural = cantidad > 1 ? 's' : '';
-                const vehiculoPlural = cantidad > 1 ? 'vehículos' : 'vehículo';
+                    const plural = cantidad > 1 ? 's' : '';
+                    const vehiculoPlural = cantidad > 1 ? 'vehículos' : 'vehículo';
 
-                Swal.fire({
-                    title: '¡Tienes citas para hoy!',
-                    text: `Recuerda que tienes ${cantidad} ${vehiculoPlural} con cita programada para ingresar al taller el día de hoy.`,
-                    icon: 'warning',
-                    confirmButtonText: 'Entendido',
-                    confirmButtonColor: '#059669',
-                    allowOutsideClick: false
-                });
-            },
+                    Swal.fire({
+                        title: '¡Tienes citas para hoy!',
+                        text: `Recuerda que tienes ${cantidad} ${vehiculoPlural} con cita programada para ingresar al taller el día de hoy.`,
+                        icon: 'warning',
+                        confirmButtonText: 'Entendido',
+                        confirmButtonColor: '#059669',
+                        allowOutsideClick: false
+                    });
+                },
 
                 formatearFecha(fechaStr) {
                     if (!fechaStr) return 'Sin fecha';
@@ -931,69 +1016,71 @@
             }));
         });
     </script>
-    @is('admin')
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('notificationSystemSiniestros', () => ({
-                hasPermission: false,
-                lastCount: 0,
-                firstLoad: true,
+    @if (auth()->user()->is('admin') || auth()->user()->is('supervisor'))
+        <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('notificationSystemSiniestros', () => ({
+                    hasPermission: false,
+                    lastCount: 0,
+                    firstLoad: true,
 
-                init() {
-                    if ("Notification" in window && Notification.permission !== "granted") {
-                        Notification.requestPermission().then(permission => {
-                            this.hasPermission = permission === "granted";
-                        });
-                    } else if (Notification.permission === "granted") {
-                        this.hasPermission = true;
-                    }
+                    init() {
+                        if ("Notification" in window && Notification.permission !== "granted") {
+                            Notification.requestPermission().then(permission => {
+                                this.hasPermission = permission === "granted";
+                            });
+                        } else if (Notification.permission === "granted") {
+                            this.hasPermission = true;
+                        }
 
-                    this.checkNotifications();
-                    setInterval(() => {
                         this.checkNotifications();
-                    }, 30000); // cada 30 segundos
-                },
+                        setInterval(() => {
+                            this.checkNotifications();
+                        }, 30000); // cada 30 segundos
+                    },
 
-                async checkNotifications() {
-                    try {
-                        const response = await fetch('/api/check-siniestros');
-                        const data = await response.json();
+                    async checkNotifications() {
+                        try {
+                            const response = await fetch('/api/check-siniestros');
+                            const data = await response.json();
 
-                        window.dispatchEvent(new CustomEvent('notification-siniestros', {
-                            detail: { count: data.count }
-                        }));
+                            window.dispatchEvent(new CustomEvent('notification-siniestros', {
+                                detail: {
+                                    count: data.count
+                                }
+                            }));
 
-                        if (this.firstLoad) {
+                            if (this.firstLoad) {
+                                this.lastCount = data.count;
+                                this.firstLoad = false;
+                                return;
+                            }
+
+                            if (data.alert && data.count > this.lastCount) {
+                                this.notify(data.message);
+                            }
                             this.lastCount = data.count;
-                            this.firstLoad = false;
-                            return;
+                        } catch (error) {
+                            console.error('Error notificaciones Siniestros:', error);
                         }
+                    },
 
-                        if (data.alert && data.count > this.lastCount) {
-                            this.notify(data.message);
-                        }
-                        this.lastCount = data.count;
-                    } catch (error) {
-                        console.error('Error notificaciones Siniestros:', error);
-                    }
-                },
+                    notify(message) {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: "top-end",
+                            showConfirmButton: false,
+                        });
 
-                notify(message) {
-                    const Toast = Swal.mixin({
-                        toast: true,
-                        position: "top-end",
-                        showConfirmButton: false,
-                    });
-
-                    Toast.fire({
-                        icon: "warning",
-                        title: "Siniestros Pendientes",
-                        text: message,
-                        html: `
+                        Toast.fire({
+                            icon: "warning",
+                            title: "Siniestros Pendientes",
+                            text: message,
+                            html: `
                             <div class="flex flex-col gap-2">
                                 <span>${message}</span>
                                 <div class="flex gap-2">
-                                    <a href="/dashboard-vehiculos" 
+                                    <a href="/dashboard-vehiculos?tab=siniestros" 
                                        class="flex-1 bg-amber-600 text-white text-xs font-medium px-3 py-1.5 rounded text-center hover:bg-amber-700 transition-colors">
                                         Ver Siniestros
                                     </a>
@@ -1004,29 +1091,125 @@
                                 </div>
                             </div>
                         `
-                    });
-
-                    if (this.hasPermission) {
-                        const notification = new Notification("Siniestros CFE", {
-                            body: message,
-                            icon: "/assets/img/logo_cfe.svg",
-                            requireInteraction: true,
-                            tag: "siniestros-alert"
                         });
-                        notification.onclick = function() {
-                            window.focus();
-                            window.location.href = '/dashboard-vehiculos';
-                            this.close();
-                        };
-                    }
-                }
-            }));
-        });
-    </script>
 
-    <!-- Inicializamos el componente Alpine -->
-    <div x-data="notificationSystemSiniestros"></div>
-@endis
+                        if (this.hasPermission) {
+                            const notification = new Notification("Siniestros CFE", {
+                                body: message,
+                                icon: "/assets/img/logo_cfe.svg",
+                                requireInteraction: true,
+                                tag: "siniestros-alert"
+                            });
+                            notification.onclick = function() {
+                                window.focus();
+                                window.location.href = '/dashboard-vehiculos?tab=siniestros';
+                                this.close();
+                            };
+                        }
+                    }
+                }));
+            });
+        </script>
+
+        <!-- Inicializamos el componente Alpine -->
+        <div x-data="notificationSystemSiniestros"></div>
+
+        <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('notificationSystemMantenimientos', () => ({
+                    hasPermission: false,
+                    lastCount: 0,
+                    firstLoad: true,
+
+                    init() {
+                        if ("Notification" in window && Notification.permission !== "granted") {
+                            Notification.requestPermission().then(permission => {
+                                this.hasPermission = permission === "granted";
+                            });
+                        } else if (Notification.permission === "granted") {
+                            this.hasPermission = true;
+                        }
+
+                        this.checkNotifications();
+                        setInterval(() => {
+                            this.checkNotifications();
+                        }, 30000); // Consulta cada 30 segundos
+                    },
+
+                    async checkNotifications() {
+                        try {
+                            const response = await fetch('/api/check-mantenimientos');
+                            const data = await response.json();
+
+                            window.dispatchEvent(new CustomEvent('notification-mantenimientos', {
+                                detail: {
+                                    count: data.count
+                                }
+                            }));
+
+                            if (this.firstLoad) {
+                                this.lastCount = data.count;
+                                this.firstLoad = false;
+                                return;
+                            }
+
+                            if (data.alert && data.count > this.lastCount) {
+                                this.notify(data.message);
+                            }
+                            this.lastCount = data.count;
+                        } catch (error) {
+                            console.error('Error notificaciones Mantenimientos:', error);
+                        }
+                    },
+
+                    notify(message) {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: "top-end",
+                            showConfirmButton: false,
+                        });
+
+                        Toast.fire({
+                            icon: "warning",
+                            title: "Alerta de Mantenimiento",
+                            text: message,
+                            html: `
+                        <div class="flex flex-col gap-2">
+                            <span>${message}</span>
+                            <div class="flex gap-2">
+                                <a href="/vehiculos?mantenimiento=amarillo" 
+                                   class="flex-1 bg-yellow-600 text-white text-xs font-medium px-3 py-1.5 rounded text-center hover:bg-yellow-700 transition-colors">
+                                    Ver Vehículos
+                                </a>
+                                <button onclick="Swal.close()" 
+                                        class="flex-1 bg-zinc-100 text-zinc-600 border border-zinc-200 text-xs font-medium px-3 py-1.5 rounded text-center hover:bg-zinc-200 transition-colors cursor-pointer">
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    `
+                        });
+
+                        if (this.hasPermission) {
+                            const notification = new Notification("Mantenimientos CFE", {
+                                body: message,
+                                icon: "/assets/img/logo_cfe.svg",
+                                requireInteraction: true,
+                                tag: "mantenimientos-alert"
+                            });
+                            notification.onclick = function() {
+                                window.focus();
+                                window.location.href = '/vehiculos?mantenimiento=urgente';
+                                this.close();
+                            };
+                        }
+                    }
+                }));
+            });
+        </script>
+
+        <div x-data="notificationSystemMantenimientos"></div>
+    @endif
 </body>
 
 </html>

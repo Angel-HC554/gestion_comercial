@@ -50,7 +50,7 @@ class OrdenVehiculoController extends Controller
                 'orden_500'
             );
 
-        if (!$user->is('admin')) {
+        if (!$user->is('admin') && !$user->is('oficinista')) {
             $asignaciones = AreaUsuario::with('area', 'subarea')
                 ->where('user_id', $user->id)
                 ->get();
@@ -141,7 +141,9 @@ class OrdenVehiculoController extends Controller
         $nextId = OrdenVehiculo::max('id') + 1;
         $nextId = $nextId ?: 1; // Si no hay registros, comenzar desde 1
 
-        $vehiculosRaw = Vehiculo::where('propiedad', 'Propio')->get();
+        $vehiculosRaw = Vehiculo::where('propiedad', 'Propio')
+        ->where('estado', '!=', 'Fuera de circulacion')
+        ->get();
 
         $vehiculos = $vehiculosRaw->map(function ($v) {
             // Calculamos el KM para CADA vehículo de la lista
@@ -200,7 +202,9 @@ class OrdenVehiculoController extends Controller
         $nextId = OrdenVehiculo::max('id') + 1;
         $nextId = $nextId ?: 1; // Si no hay registros, comenzar desde 1
 
-        $vehiculosRaw = Vehiculo::where('propiedad', 'Arrendado')->get();
+        $vehiculosRaw = Vehiculo::where('propiedad', 'Arrendado')
+        ->where('estado', '!=', 'Fuera de circulacion')
+        ->get();
 
         $vehiculos = $vehiculosRaw->map(function ($v) {
             // Calculamos el KM para CADA vehículo de la lista
@@ -747,7 +751,9 @@ class OrdenVehiculoController extends Controller
         }
 
         // Get vehicles data (same as in create method)
-        $vehiculosRaw = Vehiculo::where('propiedad', 'Propio')->get();
+        $vehiculosRaw = Vehiculo::where('propiedad', 'Propio')
+        ->where('estado', '!=', 'Fuera de circulacion')
+        ->get();
         $vehiculos = $vehiculosRaw->map(function ($v) {
             $k = $v->ultimoKilometraje();
             return [
@@ -784,7 +790,9 @@ class OrdenVehiculoController extends Controller
         }
 
         // 3. Obtener lista de vehículos arrendados (Igual que en create_arrendado)
-        $vehiculosRaw = Vehiculo::where('propiedad', 'Arrendado')->get();
+        $vehiculosRaw = Vehiculo::where('propiedad', 'Arrendado')
+        ->where('estado', '!=', 'Fuera de circulacion')
+        ->get();
 
         $vehiculos = $vehiculosRaw->map(function ($v) {
             $k = $v->ultimoKilometraje();

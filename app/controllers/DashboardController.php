@@ -14,7 +14,7 @@ class DashboardController extends Controller
         $hoy = Carbon::today();
 
         // 1. KPIs Generales
-        $totalVehiculos = Vehiculo::count();
+        $totalVehiculos = Vehiculo::where('estado', '!=', 'Fuera de circulacion')->count();
         $totalSupervisionesHoy = SupervisionDiaria::whereDate('fecha', $hoy)->count();
         
         // Calcular porcentaje de avance diario (evitando división por cero)

@@ -46,3 +46,4 @@ public/fotos_supervision_semanal
 storage/escaneos
 storage/orden_vehiculos
 storage/pdf_exports
+.aider*

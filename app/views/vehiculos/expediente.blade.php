@@ -77,13 +77,38 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
                     </a>
-                    <a href="#" title="Eliminar documento" class="ml-2 flex-shrink-0 text-red-400 hover:text-red-600 cursor-pointer p-1" @click.prevent="eliminarDocumento(doc.id)">
-                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.714a17.003 17.003 0 00-1.589 0H6.178a17.003 17.003 0 00-1.589 3.714L4.5 12m5.422-1.667a2.437 2.437 0 01-1.115-2.012c.087-.793.392-1.693.897-2.513.474-.782.995-1.45 1.595-1.988.616-.59 1.364-.847 2.156-.847 0 0 0 .001 0 0 0 0 0 0 0 0 .001 0zm4.568 0a2.437 2.437 0 01-1.115 2.012c-.304.214-.612.38-.909.497-.692.295-1.454.443-2.208.443a3.844 3.844 0 00-1.595-.001zm1.595 2.117a17.003 17.003 0 001.589 0H20.32a17.003 17.003 0 001.589-3.714L19.5 12m0 0L16.5 9.75m3 3L16.5 12"/>
+                    @if (auth()->user()->is('admin'))
+                    <a href="#" title="Eliminar documento" class="ml-2 shrink-0 text-red-400 hover:text-red-600 cursor-pointer p-1" @click.prevent="confirmarEliminacion(doc.id)">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                     </a>
+                    @endif
                 </div>
             </template>
+        </div>
+    </div>
+    <div x-show="showDeleteModal" x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" 
+        x-transition.opacity>
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm transform transition-all"
+            @click.away="showDeleteModal = false">
+            <h3 class="text-lg font-bold text-zinc-900">¿Eliminar este archivo?</h3>
+            <p class="text-sm text-zinc-500 mt-2">Esta acción no se puede revertir.</p>
+            <div class="flex justify-end gap-2 mt-6">
+                <button @click="showDeleteModal = false" :disabled="isDeleting"
+                    class="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50">
+                    Cancelar
+                </button>
+                <button @click="ejecutarEliminacion()" :disabled="isDeleting"
+                    class="flex items-center gap-2 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50">
+                    <span x-show="!isDeleting">Eliminar</span>
+                    <span x-show="isDeleting">
+                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </span>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -93,6 +118,9 @@
         return {
             vehiculoId: vehiculoId,
             openUpload: false,
+            showDeleteModal: false,
+            docToDelete: null,
+            isDeleting: false,
             uploading: false,
             loadingDocs: true,
             documentos: [],
@@ -120,7 +148,9 @@
                 const archivoInput = this.$refs.archivoPdf;
                 
                 if (!archivoInput.files.length) {
-                    alert("Por favor selecciona un archivo PDF.");
+                    if (window.Swal) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'Por favor selecciona un archivo PDF.', showConfirmButton: false, timer: 3000 });
+                    }
                     return;
                 }
 
@@ -129,13 +159,6 @@
                 const formData = new FormData();
                 formData.append('nombre', this.nombreDoc);
                 formData.append('archivo', archivoInput.files[0]);
-                
-                // Obtenemos el token CSRF global de Laravel
-                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
-                            || document.querySelector('input[name="_token"]')?.value;
-                if (token) {
-                    formData.append('_token', token);
-                }
 
                 try {
                     const response = await fetch(`/vehiculos/${this.vehiculoId}/documentos`, {
@@ -162,13 +185,55 @@
                             Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Documento subido', showConfirmButton: false, timer: 3000 });
                         }
                     } else {
-                        alert(data.message || "Error al subir el archivo.");
+                        if (window.Swal) {
+                            Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: data.message || 'Error al subir el archivo.', showConfirmButton: false, timer: 3000 });
+                        }
                     }
                 } catch (error) {
                     console.error("Error al subir:", error);
-                    alert("Ocurrió un error de conexión.");
+                    if (window.Swal) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Ocurrió un error de conexión.', showConfirmButton: false, timer: 3000 });
+                    }
                 } finally {
                     this.uploading = false;
+                }
+            },
+
+            confirmarEliminacion(id) {
+                this.docToDelete = id;
+                this.showDeleteModal = true;
+            },
+            async ejecutarEliminacion(id) {
+                if (!this.docToDelete) return;
+                this.isDeleting = true;
+
+                try {
+                    const response = await fetch(`/vehiculos/${this.vehiculoId}/documentos/${this.docToDelete}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Accept': 'application/json',
+                        }
+                    });
+
+                    if (response.ok) {
+                        this.documentos = this.documentos.filter(doc => doc.id !== this.docToDelete);
+                        this.showDeleteModal = false;
+                        this.docToDelete = null;
+                        if (window.Swal) {
+                            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Documento eliminado', showConfirmButton: false, timer: 3000 });
+                        }
+                    } else {
+                        if (window.Swal) {
+                            Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Error al eliminar el documento.', showConfirmButton: false, timer: 3000 });
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error al eliminar:", error);
+                    if (window.Swal) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Ocurrió un error de conexión.', showConfirmButton: false, timer: 3000 });
+                    }
+                } finally {
+                    this.isDeleting = false;
                 }
             },
 

@@ -44,7 +44,7 @@
                         <label class="text-sm font-bold text-zinc-700 mb-1">Proceso:</label>
                         <select name="departamento" x-data="{}"
                             @change="htmx.ajax('GET', '/api/ubicaciones-options?departamento=' + $el.value, {target: '.ubicacion-select', swap: 'innerHTML'})"
-                            class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 outline-none">
+                            class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 outline-none cursor-pointer">
                             <option value="">Todos los procesos</option>
                             @foreach ($departamentos as $depto)
                                 <option value="{{ $depto }}"
@@ -57,7 +57,7 @@
                     <div class="flex flex-col w-full md:w-auto">
                         <label class="text-sm font-bold text-zinc-700 mb-1">Ubicación:</label>
                         <select name="ubicacion"
-                            class="ubicacion-select w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 outline-none">
+                            class="ubicacion-select w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 outline-none cursor-pointer">
                             <option value="">Todas las ubicaciones</option>
                             @foreach ($ubicaciones as $ubicacion)
                                 <option value="{{ $ubicacion }}"
@@ -70,7 +70,7 @@
                     <div class="flex flex-col w-full md:w-auto">
                         <label class="text-sm font-bold text-zinc-700 mb-1">Cumplimiento:</label>
                         <select name="cumplimiento"
-                            class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 outline-none">
+                            class="w-full md:w-64 h-10 border border-gray-300 bg-gray-50 rounded-md px-3 text-gray-700 outline-none cursor-pointer">
                             <option value="todos">Mostrar Todos</option>
                             <option value="no_cumple"
                                 {{ ($filtrosActuales['cumplimiento'] ?? '') == 'no_cumple' ? 'selected' : '' }}>Mostrar
@@ -80,12 +80,12 @@
 
                     <div class="flex flex-col w-full md:w-auto gap-2">
                         <button type="submit" formaction="/supervision-diaria/detallado"
-                            class="flex-1 md:flex-none h-10 px-6 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-md flex items-center justify-center transition-colors">
+                            class="flex-1 md:flex-none h-10 px-6 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-md flex items-center justify-center transition-colors cursor-pointer">
                             Filtrar Matriz
                         </button>
 
                         <button type="submit" formaction="/supervision-diaria"
-                            class="flex-1 md:flex-none h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md flex items-center justify-center transition-colors">
+                            class="flex-1 md:flex-none h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md flex items-center justify-center transition-colors cursor-pointer">
                             Volver al Resumen
                         </button>
                     </div>

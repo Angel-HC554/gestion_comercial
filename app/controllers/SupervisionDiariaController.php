@@ -45,6 +45,7 @@ class SupervisionDiariaController extends Controller
         $queryVehiculos = Vehiculo::with(['supervisioDiaria' => function ($q) use ($fechaInicioMes, $fechaFinMes){
                 $q->whereBetween('fecha', [$fechaInicioMes->format('Y-m-d'), $fechaFinMes->format('Y-m-d')]);
             }])
+            ->where('estado', '!=', 'Fuera de circulacion')
             ->select('id', 'no_economico', 'departamento', 'ubicacion', 'en_taller');
         
         if ($departamentoFilter) $queryVehiculos->where('departamento', $departamentoFilter);
@@ -149,6 +150,7 @@ class SupervisionDiariaController extends Controller
         }
 
         $queryVehiculos = Vehiculo::query()
+            ->where('estado', '!=', 'Fuera de circulacion')
             ->select('id', 'no_economico', 'departamento', 'ubicacion', 'en_taller')
             ->orderBy('departamento')
             ->orderBy('no_economico');

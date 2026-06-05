@@ -25,6 +25,9 @@ app()->group('/',['middleware' => 'auth.required', function () {
     app()->get('/api/check-cita-asignada', 'NotificationController@checkCitaAsignada');
     app()->get('/api/citas-activas', 'NotificationController@notificacionesActivas');
     app()->get('/api/check-siniestros', 'NotificationController@checkSiniestrosPendientes');
+    app()->get('/api/check-mantenimientos', 'NotificationController@checkAlertasMantenimiento');
+    app()->post('/api/ejecutar-respaldo', 'Controller@ejecutarRespaldo');
+    app()->get('/api/ultimo-respaldo', 'Controller@obtenerUltimoRespaldo');
     
     // --- ORDENES DE VEHICULOS ---
     app()->get('/ordenvehiculos/create', 'OrdenVehiculoController@create');
@@ -60,6 +63,7 @@ app()->group('/',['middleware' => 'auth.required', function () {
     app()->get('/vehiculos/{id}/historial', 'VehiculoController@historial');
     app()->get('/vehiculos/{id}/documentos', 'VehiculoController@getDocumentos');
     app()->post('/vehiculos/{id}/documentos', 'VehiculoController@storeDocumento');
+    app()->delete('/vehiculos/{id}/documentos/{documentoId}', 'VehiculoController@deleteDocumento');
     app()->post('/vehiculos/{id}/actualizar-foto', 'VehiculoController@actualizarFoto');
 
     // --- SUPERVISIONES ---
@@ -77,7 +81,7 @@ app()->group('/',['middleware' => 'auth.required', function () {
     // --- DASHBOARDS ESPECIFICOS ---
     app()->get('/dashboard-diario', ['middleware' => 'is:admin', 'DashboardController@index']);
     app()->get('/dashboard-semanal', ['middleware' => 'is:admin', 'DashboardSemanalController@index']);
-    app()->get('/dashboard-vehiculos',['middleware' => 'is:admin', 'DashboardVehiculosController@index']);
+    app()->get('/dashboard-vehiculos', 'DashboardVehiculosController@index');
 
     // --- USUARIOS ---
     app()->get('/users', ['middleware' => 'is:admin', 'UserController@index']);
@@ -100,7 +104,6 @@ app()->group('/',['middleware' => 'auth.required', function () {
 
     // --- UTILS ADMIN ---
     app()->get('/hacerme-admin', function() {
-        // Como ya estamos dentro del grupo protegido, auth()->user() siempre devolverá un usuario[cite: 67].
         $user = auth()->user();
         $user->assign('admin');
         response()->json([

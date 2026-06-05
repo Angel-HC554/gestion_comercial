@@ -117,7 +117,7 @@
                 icon: 'warning',
                 title: 'Faltan reparaciones',
                 text: 'Debes seleccionar al menos una reparación a efectuar antes de generar el documento.',
-                confirmButtonColor: '#059669' // Color emerald para combinar
+                confirmButtonColor: '#059669'
             });
             this.loading = false;
             return; // Detenemos el envío

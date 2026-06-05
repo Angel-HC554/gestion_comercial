@@ -7,50 +7,61 @@
         tab: 'estado',
         tabHistorial: new URLSearchParams(window.location.search).get('tab') || 'analisis',
         editarFoto: false,
+        isUploading: false,
         async subirFoto() {
             const input = document.getElementById('inputFoto');
-            if (input.files.length === 0){
+            if (input.files.length === 0) {
                 Swal.fire({
-                    toast: true, position: 'top-end', icon: 'warning',
-                    title: 'Por favor selecciona una foto', showConfirmButton: false, timer: 3000
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'warning',
+                    title: 'Por favor selecciona una foto',
+                    showConfirmButton: false,
+                    timer: 3000
                 });
                 return;
             }
-            
+    
+            if (this.isUploading) return;
+            this.isUploading = true;
+    
             const formData = new FormData();
             formData.append('foto_vehiculo', input.files[0]);
             const tokenInput = document.querySelector('input[name=\'_token\']');
             const csrfToken = tokenInput ? tokenInput.value : '';
-
-            try{
+    
+            try {
                 const response = await fetch(`/vehiculos/{{ $vehiculo->id }}/actualizar-foto`, {
                     method: 'POST', // Usamos POST para subir archivos
                     headers: {
-                    'X-CSRF-TOKEN': csrfToken
+                        'X-CSRF-TOKEN': csrfToken
                     },
-                body: formData
+                    body: formData
                 });
-
+    
                 const data = await response.json();
                 if (data.status === 'success') {
                     this.editarFoto = false;
-
+    
                     await Swal.fire({
-                        icon: 'success', 
-                        title: '¡Listo!', 
+                        icon: 'success',
+                        title: '¡Listo!',
                         text: 'Foto actualizada correctamente',
-                        timer: 2000, 
+                        timer: 2000,
                         showConfirmButton: false
                     });
-                    window.location.reload(); 
+                    window.location.reload();
                 } else {
-                 throw new Error(data.message || 'Error desconocido del servidor');
+                    throw new Error(data.message || 'Error desconocido del servidor');
                 }
             } catch (error) {
                 Swal.fire({
-                toast: true, position: 'top-end', icon: 'error',
-                title: error.message || 'Hubo un problema al subir la foto',
-                showConfirmButton: false, timer: 3000
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: error.message || 'Hubo un problema al subir la foto',
+                    showConfirmButton: false,
+                    timer: 3000
                 });
             }
         }
@@ -77,14 +88,18 @@
                 <div class="rounded-xl border border-zinc-300 bg-white p-5 shadow-md">
                     <div
                         class="flex items-start gap-4 bg-gradient-to-t from-emerald-600 to-emerald-900 text-white rounded-t-lg -m-5 mb-2 p-4 md:p-5">
-                        <div class="relative group h-20 w-36 shrink-0 overflow-hidden rounded-md bg-gray-100 ring-1 ring-white/20">
-                            <img src="{{ $vehiculo->foto_url }}"
-                                alt="foto del vehículo" 
-                                class="h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-60"                       >
-    
-                            <button class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 text-white" @click="editarFoto = true">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-6 drop-shadow-md cursor-pointer">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                        <div
+                            class="relative group h-20 w-36 shrink-0 overflow-hidden rounded-md bg-gray-100 ring-1 ring-white/20">
+                            <img src="{{ $vehiculo->foto_url }}" alt="foto del vehículo"
+                                class="h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-60">
+
+                            <button
+                                class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 text-white"
+                                @click="editarFoto = true">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                                    stroke="currentColor" class="size-6 drop-shadow-md cursor-pointer">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                                 </svg>
                             </button>
                         </div>
@@ -123,8 +138,8 @@
                         </div>
                     </div>
                     <div class="flex text-sm flex-col mt-3">
-                            <span class="font-semibold text-gray-700">Ubicación:</span>
-                            <span class="text-gray-600">{{ $vehiculo->ubicacion ?? '—' }}</span>
+                        <span class="font-semibold text-gray-700">Ubicación:</span>
+                        <span class="text-gray-600">{{ $vehiculo->ubicacion ?? '—' }}</span>
                     </div>
                 </div>
             </div>
@@ -291,7 +306,11 @@
                                     </div>
                                     {{-- Icono fondo --}}
                                     <div class="absolute right-2 bottom-5 opacity-10 text-gray-800">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="#000000" width="100px" height="100px" viewBox="-1 0 19 19" class="cf-icon-svg"><path d="M16.417 9.583A7.917 7.917 0 1 1 8.5 1.666a7.917 7.917 0 0 1 7.917 7.917zm-3.948-1.455-.758-1.955a.816.816 0 0 0-.726-.498H6.054a.816.816 0 0 0-.727.498L4.57 8.128a1.43 1.43 0 0 0-1.052 1.375v2.046a.318.318 0 0 0 .317.317h.496v1.147a.238.238 0 0 0 .238.237h.892a.238.238 0 0 0 .237-.237v-1.147h5.644v1.147a.238.238 0 0 0 .237.237h.892a.238.238 0 0 0 .238-.237v-1.147h.496a.318.318 0 0 0 .317-.317V9.503a1.43 1.43 0 0 0-1.052-1.375zm-7.445.582a.792.792 0 1 0 .792.792.792.792 0 0 0-.792-.792zm5.96-2.402a.192.192 0 0 1 .137.094l.65 1.676H5.267l.65-1.676a.192.192 0 0 1 .136-.094h4.93zm1.04 2.402a.792.792 0 1 0 .792.792.792.792 0 0 0-.791-.792z"/></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="#000000" width="100px" height="100px"
+                                            viewBox="-1 0 19 19" class="cf-icon-svg">
+                                            <path
+                                                d="M16.417 9.583A7.917 7.917 0 1 1 8.5 1.666a7.917 7.917 0 0 1 7.917 7.917zm-3.948-1.455-.758-1.955a.816.816 0 0 0-.726-.498H6.054a.816.816 0 0 0-.727.498L4.57 8.128a1.43 1.43 0 0 0-1.052 1.375v2.046a.318.318 0 0 0 .317.317h.496v1.147a.238.238 0 0 0 .238.237h.892a.238.238 0 0 0 .237-.237v-1.147h5.644v1.147a.238.238 0 0 0 .237.237h.892a.238.238 0 0 0 .238-.237v-1.147h.496a.318.318 0 0 0 .317-.317V9.503a1.43 1.43 0 0 0-1.052-1.375zm-7.445.582a.792.792 0 1 0 .792.792.792.792 0 0 0-.792-.792zm5.96-2.402a.192.192 0 0 1 .137.094l.65 1.676H5.267l.65-1.676a.192.192 0 0 1 .136-.094h4.93zm1.04 2.402a.792.792 0 1 0 .792.792.792.792 0 0 0-.791-.792z" />
+                                        </svg>
                                     </div>
                                 </div>
 
@@ -327,7 +346,9 @@
                                 {{-- TARJETA 3: ESTADO DE SALUD (Las Barras) --}}
                                 <div
                                     class="flex flex-col justify-center p-4 bg-white rounded-lg border border-zinc-300 {{ $estadoKm === 'rojo' || $estadoFecha === 'rojo' ? 'border-red-500' : ($estadoKm === 'amarillo' || $estadoFecha === 'amarillo' ? 'border-l-yellow-400' : 'border-l-emerald-500') }} border-l-8 shadow-sm">
-                                    <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-600 mb-3 border-b border-gray-100 pb-1">Próximo
+                                    <h2
+                                        class="text-xs font-semibold uppercase tracking-wider text-gray-600 mb-3 border-b border-gray-100 pb-1">
+                                        Próximo
                                         Servicio</h2>
 
                                     {{-- 1. BARRA KILOMETRAJE --}}
@@ -461,18 +482,24 @@
                             Listado de órdenes
                         </button>
                         @if (!auth()->user()->is('oficinista'))
-                        <button @click="tabHistorial = 'semanal'"
-                        :class="tabHistorial === 'semanal' ? 'bg-emerald-600 text-white' :
-                                'text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
-                            class="px-4 py-2 rounded-t-md text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer">
-                            Supervisión Semanal
-                        </button>
+                            <button @click="tabHistorial = 'semanal'"
+                                :class="tabHistorial === 'semanal' ? 'bg-emerald-600 text-white' :
+                                    'text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                                class="px-4 py-2 rounded-t-md text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer">
+                                Supervisión Semanal
+                            </button>
                         @endif
                         <button @click="tabHistorial = 'diaria'"
                             :class="tabHistorial === 'diaria' ? 'bg-emerald-600 text-white' :
                                 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
                             class="px-4 py-2 rounded-t-md text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer">
                             Supervisión Diaria
+                        </button>
+                        <button @click="tabHistorial = 'siniestros'"
+                            :class="tabHistorial === 'siniestros' ? 'bg-emerald-600 text-white' :
+                                'text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                            class="px-4 py-2 rounded-t-md text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer">
+                            Historial de Siniestros
                         </button>
                         <button @click="tabHistorial = 'expediente'"
                             :class="tabHistorial === 'expediente' ? 'bg-emerald-600 text-white' :
@@ -500,7 +527,10 @@
                                 Todas las órdenes del vehículo
                             </h3>
                             <a href="{{ $vehiculo->propiedad === 'Arrendado'
-                                ? '/ordenvehiculos/create_arrendado?vehiculo_id=' . $vehiculo->id . '&return_url=/' . urlencode(request()->getPath())
+                                ? '/ordenvehiculos/create_arrendado?vehiculo_id=' .
+                                    $vehiculo->id .
+                                    '&return_url=/' .
+                                    urlencode(request()->getPath())
                                 : '/ordenvehiculos/create?vehiculo_id=' . $vehiculo->id . '&return_url=/' . urlencode(request()->getPath()) }}"
                                 class="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition ease-in-out duration-150">
                                 Crear Orden
@@ -510,87 +540,87 @@
                         @include('ordenvehiculos.tabla', ['noEconomico' => $vehiculo->no_economico])
                     </div>
 
-                    @if(!auth()->user()->is('oficinista'))
-                    <div x-show="tabHistorial === 'semanal'" x-cloak>
-                        {{-- CASO 1: VEHÍCULO EN MANTENIMIENTO --}}
-                        @if ($vehiculo->estado === 'En Mantenimiento')
-                            <div class="bg-amber-50 border-l-4 border-amber-500 p-6 rounded-r shadow-sm">
-                                <div class="flex items-start">
-                                    <div class="flex-shrink-0">
-                                        <svg class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24"
-                                            stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                    </div>
-                                    <div class="ml-4">
-                                        <h3 class="text-lg font-medium text-amber-800">Vehículo en Mantenimiento</h3>
-                                        <p class="mt-2 text-sm text-amber-700">
-                                            No es posible realizar supervisiones mientras el vehículo tenga una orden de
-                                            servicio activa.
-                                            <br>Estado actual de la orden:
-                                            <strong>{{ $ordenActiva->status ?? 'Pendiente' }}</strong>
-                                        </p>
+                    @if (!auth()->user()->is('oficinista'))
+                        <div x-show="tabHistorial === 'semanal'" x-cloak>
+                            {{-- CASO 1: VEHÍCULO EN MANTENIMIENTO --}}
+                            @if ($vehiculo->estado === 'En Mantenimiento')
+                                <div class="bg-amber-50 border-l-4 border-amber-500 p-6 rounded-r shadow-sm">
+                                    <div class="flex items-start">
+                                        <div class="flex-shrink-0">
+                                            <svg class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                        </div>
+                                        <div class="ml-4">
+                                            <h3 class="text-lg font-medium text-amber-800">Vehículo en Mantenimiento</h3>
+                                            <p class="mt-2 text-sm text-amber-700">
+                                                No es posible realizar supervisiones mientras el vehículo tenga una orden de
+                                                servicio activa.
+                                                <br>Estado actual de la orden:
+                                                <strong>{{ $ordenActiva->status ?? 'Pendiente' }}</strong>
+                                            </p>
 
-                                        @if (isset($ordenActiva))
-                                            <div class="mt-4">
-                                                <button type="button"
-                                                    @click="$dispatch('open-finish-modal-global', {{ json_encode($ordenActiva) }})"
-                                                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors cursor-pointer">
-                                                    <svg class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24"
-                                                        stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2"
-                                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            @if (isset($ordenActiva))
+                                                <div class="mt-4">
+                                                    <button type="button"
+                                                        @click="$dispatch('open-finish-modal-global', {{ json_encode($ordenActiva) }})"
+                                                        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors cursor-pointer">
+                                                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none"
+                                                            viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        Finalizar Orden y Liberar Vehículo
+                                                    </button>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- CASO 2: SUPERVISIÓN YA HECHA --}}
+                            @elseif ($supervision_existe)
+                                <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r shadow-sm">
+                                    <div class="flex items-center">
+                                        <div class="shrink-0">
+                                            <svg class="h-5 w-5 text-emerald-500" xmlns="http://www.w3.org/2000/svg"
+                                                viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd"
+                                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <div class="ml-3 flex-1 flex justify-start items-center gap-4">
+                                            <p class="text-md text-emerald-700">
+                                                La supervisión semanal ya fue realizada para este vehículo.
+                                            </p>
+                                            <p class="mt-2 text-md md:mt-0 md:ml-6 hover:underline">
+                                                <a href="{{ '/supervisiones/pdf/' . $id_supervision }}" target="_blank"
+                                                    class="whitespace-nowrap font-bold text-emerald-700 hover:text-emerald-600 flex items-center gap-1">
+                                                    Ver supervisión PDF <svg xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 20 20" fill="currentColor" class="size-5">
+                                                        <path fill-rule="evenodd"
+                                                            d="M5.22 14.78a.75.75 0 0 0 1.06 0l7.22-7.22v5.69a.75.75 0 0 0 1.5 0v-7.5a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0 0 1.5h5.69l-7.22 7.22a.75.75 0 0 0 0 1.06Z"
+                                                            clip-rule="evenodd" />
                                                     </svg>
-                                                    Finalizar Orden y Liberar Vehículo
-                                                </button>
-                                            </div>
-                                        @endif
+                                                </a>
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-
-                            {{-- CASO 2: SUPERVISIÓN YA HECHA --}}
-                        @elseif ($supervision_existe)
-                            <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r shadow-sm">
-                                <div class="flex items-center">
-                                    <div class="shrink-0">
-                                        <svg class="h-5 w-5 text-emerald-500" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd"
-                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </div>
-                                    <div class="ml-3 flex-1 flex justify-start items-center gap-4">
-                                        <p class="text-md text-emerald-700">
-                                            La supervisión semanal ya fue realizada para este vehículo.
-                                        </p>
-                                        <p class="mt-2 text-md md:mt-0 md:ml-6 hover:underline">
-                                            <a href="{{ '/supervisiones/pdf/' . $id_supervision }}" target="_blank"
-                                                class="whitespace-nowrap font-bold text-emerald-700 hover:text-emerald-600 flex items-center gap-1">
-                                                Ver supervisión PDF <svg xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20" fill="currentColor" class="size-5">
-                                                    <path fill-rule="evenodd"
-                                                        d="M5.22 14.78a.75.75 0 0 0 1.06 0l7.22-7.22v5.69a.75.75 0 0 0 1.5 0v-7.5a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0 0 1.5h5.69l-7.22 7.22a.75.75 0 0 0 0 1.06Z"
-                                                        clip-rule="evenodd" />
-                                                </svg>
-                                            </a>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        @else
-                            {{-- INCLUIMOS EL FORMULARIO --}}
-                            @include('components.super_sem_form', [
-                                'vehiculo_id' => $vehiculo->id,
-                                'no_economico' => $vehiculo->no_economico,
-                            ])
-                        @endif
-                    </div>
+                            @else
+                                {{-- INCLUIMOS EL FORMULARIO --}}
+                                @include('components.super_sem_form', [
+                                    'vehiculo_id' => $vehiculo->id,
+                                    'no_economico' => $vehiculo->no_economico,
+                                ])
+                            @endif
+                        </div>
                     @endif
 
                     <div x-show="tabHistorial === 'diaria'" x-cloak x-data="{ subTab: 'form' }">
@@ -693,47 +723,66 @@
                     <div x-show="tabHistorial === 'expediente'" x-cloak>
                         @include('vehiculos.expediente')
                     </div>
+                    <div x-show="tabHistorial === 'siniestros'" x-cloak>
+                        @include('vehiculos.siniestros')
+                    </div>
                 </div>
             </div>
         </div>
         <div x-show="editarFoto" x-cloak
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity>
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all overflow-hidden"
-    @click.away="editarFoto = false">
-    
-    <div class="p-6">
-        <div class="flex items-center gap-3 mb-2">
-            <div class="p-2 bg-emerald-100 rounded-full text-emerald-600 shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                </svg>
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity>
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all overflow-hidden"
+                @click.away="editarFoto = false">
+
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="p-2 bg-emerald-100 rounded-full text-emerald-600 shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke-width="1.5" stroke="currentColor" class="size-6">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-zinc-900">Actualizar fotografía</h3>
+                    </div>
+
+                    <p class="text-sm text-zinc-500 mb-5">Selecciona una imagen desde tu dispositivo para asignarla como la
+                        foto principal de este vehículo.</p>
+
+                    <div class="my-4">
+                        <input type="file" name="foto_vehiculo" id="inputFoto"
+                            accept="image/jpeg, image/png, image/webp"
+                            class="w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 border-2 border-dashed border-zinc-300 rounded-lg p-2 bg-zinc-50 cursor-pointer focus:outline-none focus:border-emerald-500 transition-colors">
+
+                        <p class="text-[11px] text-zinc-400 mt-2 font-medium">Formatos soportados: JPG, PNG, WEBP.</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-100">
+                    <button @click="editarFoto = false"
+                        class="px-4 py-2 text-zinc-600 bg-white border border-zinc-300 hover:bg-zinc-50 rounded-md text-sm font-medium transition-colors cursor-pointer shadow-sm">
+                        Cancelar
+                    </button>
+                    <button @click="subirFoto()" :disabled="isUploading"
+                        class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium shadow-sm transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed min-w-[140px]">
+                        <span x-show="!isUploading">Subir y guardar</span>
+                        <span x-show="isUploading" class="flex items-center gap-2">
+                            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
+                            </svg>
+                            Guardando...
+                        </span>
+                    </button>
+                </div>
             </div>
-            <h3 class="text-xl font-bold text-zinc-900">Actualizar fotografía</h3>
         </div>
-
-        <p class="text-sm text-zinc-500 mb-5">Selecciona una imagen desde tu dispositivo para asignarla como la foto principal de este vehículo.</p>
-
-        <div class="my-4">
-            <input type="file" name="foto_vehiculo" id="inputFoto" accept="image/jpeg, image/png, image/webp"
-                class="w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 border-2 border-dashed border-zinc-300 rounded-lg p-2 bg-zinc-50 cursor-pointer focus:outline-none focus:border-emerald-500 transition-colors">
-            
-            <p class="text-[11px] text-zinc-400 mt-2 font-medium">Formatos soportados: JPG, PNG, WEBP.</p>
-        </div>
-    </div>
-
-    <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-100">
-        <button @click="editarFoto = false"
-            class="px-4 py-2 text-zinc-600 bg-white border border-zinc-300 hover:bg-zinc-50 rounded-md text-sm font-medium transition-colors cursor-pointer shadow-sm">
-            Cancelar
-        </button>
-        <button @click="subirFoto()"
-            class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium shadow-sm transition-colors cursor-pointer">
-            Subir y guardar
-        </button>
-    </div>
-</div>
-    </div>
     </div>
 
     {{-- MODAL GLOBAL PARA FINALIZAR ORDEN --}}
@@ -779,8 +828,8 @@
                             class="text-red-500">*</span></label>
                     <input type="date" x-model="form.fechaTerminacion" required
                         class="w-full border border-gray-300 rounded-md focus:ring-emerald-600 focus:border-emerald-600 p-2 shadow-sm"
-                        x-bind:max="maxDate" x-bind:min="minDateTerminacion"
-                        @change="validateFecha()" @blur="validateFecha()">
+                        x-bind:max="maxDate" x-bind:min="minDateTerminacion" @change="validateFecha()"
+                        @blur="validateFecha()">
                 </div>
             </div>
 
@@ -814,15 +863,15 @@
                 form: {
                     kilometraje: '',
                     fechaTerminacion: '',
-                    status: 'TERMINADO' 
+                    status: 'TERMINADO'
                 },
                 maxDate: new Date().toLocaleDateString('en-CA'),
                 minDateTerminacion: '', // <-- Agregado
-                
+
                 open(ordenData) {
                     this.orden = ordenData;
-                    this.form.kilometraje = ''; 
-                    this.form.fechaTerminacion = ''; 
+                    this.form.kilometraje = '';
+                    this.form.fechaTerminacion = '';
 
                     // CORRECCIÓN: Extracción de fecha blindada para evitar que pasen horas (00:00:00)
                     let baseDate = '';
@@ -852,7 +901,14 @@
                     if (this.form.fechaTerminacion > this.maxDate) {
                         this.form.fechaTerminacion = '';
                         if (Swal) {
-                            Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'No puedes seleccionar fechas futuras', showConfirmButton: false, timer: 3000 });
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'warning',
+                                title: 'No puedes seleccionar fechas futuras',
+                                showConfirmButton: false,
+                                timer: 3000
+                            });
                         }
                         return;
                     }
@@ -863,19 +919,42 @@
                         const [yyyy, mm, dd] = this.minDateTerminacion.split('-');
                         const fechaAmigable = `${dd}/${mm}/${yyyy}`;
                         if (Swal) {
-                            Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: `La fecha no puede ser anterior al ${fechaAmigable}`, showConfirmButton: false, timer: 4500 });
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'warning',
+                                title: `La fecha no puede ser anterior al ${fechaAmigable}`,
+                                showConfirmButton: false,
+                                timer: 4500
+                            });
                         }
                     }
                 },
                 async save() {
                     // Validar KM
                     if (!this.form.kilometraje) {
-                        Swal.fire({ toast: true, position: "top-end", icon: 'warning', allowOutsideClick: false, title: 'El kilometraje es obligatorio', timer: 3000, showConfirmButton: false });
+                        Swal.fire({
+                            toast: true,
+                            position: "top-end",
+                            icon: 'warning',
+                            allowOutsideClick: false,
+                            title: 'El kilometraje es obligatorio',
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
                         return;
                     }
                     // Validar Fecha Vacía
                     if (!this.form.fechaTerminacion) {
-                        Swal.fire({ toast: true, position: "top-end", icon: 'warning', allowOutsideClick: false, title: 'Selecciona una fecha válida', timer: 3000, showConfirmButton: false });
+                        Swal.fire({
+                            toast: true,
+                            position: "top-end",
+                            icon: 'warning',
+                            allowOutsideClick: false,
+                            title: 'Selecciona una fecha válida',
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
                         return;
                     }
 
@@ -887,7 +966,10 @@
                     try {
                         const response = await fetch(url, {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken
+                            },
                             body: JSON.stringify({
                                 kilometraje: this.form.kilometraje,
                                 fecha_terminacion: this.form.fechaTerminacion,
@@ -898,13 +980,27 @@
                         const data = await response.json();
                         if (data.status === 'success') {
                             this.close();
-                            await Swal.fire({ icon: 'success', title: '¡Vehículo Liberado!', text: 'La orden se finalizó correctamente.', timer: 2000, showConfirmButton: false });
+                            await Swal.fire({
+                                icon: 'success',
+                                title: '¡Vehículo Liberado!',
+                                text: 'La orden se finalizó correctamente.',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
                             window.location.reload();
                         } else {
                             throw new Error(data.message || 'Error desconocido');
                         }
                     } catch (error) {
-                        Swal.fire({ toast: true, position: "top-end", icon: "warning", allowOutsideClick: false, title: error.message || 'Ocurrió un error', showConfirmButton: false, timer: 3000 });
+                        Swal.fire({
+                            toast: true,
+                            position: "top-end",
+                            icon: "warning",
+                            allowOutsideClick: false,
+                            title: error.message || 'Ocurrió un error',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
                     } finally {
                         this.loading = false;
                     }

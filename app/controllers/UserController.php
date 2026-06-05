@@ -132,6 +132,14 @@ class UserController extends Controller
     {
         $data = request()->body();
 
+        if (isset($data['user']) && !preg_match('/^[a-zA-Z0-9]+$/', $data['user'])) {
+            return response()->json(['message' => 'El nombre de usuario solo puede contener letras y números'], 400);
+        }
+
+        if (isset($data['name']) && !preg_match('/^[\p{L}\s]+$/u', $data['name'])) {
+            return response()->json(['message' => 'El nombre solo puede contener letras y espacios'], 400);
+        }
+
         if (User::where('user', $data['user'])->exists()) {
             return response()->json(['message' => 'El identificador ya está registrado.'], 400);
         }
@@ -222,6 +230,14 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
         $data = request()->body();
+
+        if (isset($data['user']) && !preg_match('/^[a-zA-Z0-9]+$/', $data['user'])) {
+            return response()->json(['message' => 'El nombre de usuario solo puede contener letras y números'], 400);
+        }
+
+        if (isset($data['name']) && !preg_match('/^[\p{L}\s]+$/u', $data['name'])) {
+            return response()->json(['message' => 'El nombre solo puede contener letras y espacios'], 400);
+        }
         
         try {
             // Update basic user info

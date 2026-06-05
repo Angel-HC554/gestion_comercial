@@ -39,13 +39,14 @@ class VehiculoController extends Controller
 
         $query = Vehiculo::with([
             'fotoPerfil',
+            'latestSupervisionSemanal',
             'latestSupervision' => function ($q) {
                 $q->select('id', 'vehiculo_id', 'kilometraje', 'fecha', 'hora_fin');
             },
             'latestMantenimiento'
         ]);
 
-        if (!$user->is('admin')) {
+        if (!$user->is('admin') && !$user->is('oficinista')) {
             $asignaciones = AreaUsuario::with('area', 'subarea')
                 ->where('user_id', $user->id)
                 ->get();
@@ -185,7 +186,7 @@ class VehiculoController extends Controller
         }
 
         // Cargar relaciones necesarias para los cálculos del modelo
-        $vehiculo->load(['supervisioDiaria', 'supervisioSemanal']);
+        $vehiculo->load(['supervisioDiaria', 'supervisioSemanal','fotoPerfil', 'latestSupervisionSemanal']);
         $vehiculo->load(['latestSupervision', 'latestMantenimiento']);
 
         $numero_eco = $vehiculo->no_economico;
@@ -392,8 +393,8 @@ class VehiculoController extends Controller
                 $vehiculoData = [
                     'no_economico'  => $noEconomico,
                     'serie'         => $getVal('Serie'),
-                    'departamento'  => $getVal('Departamento'),
-                    'ubicacion'     => $getVal('Ubicación'),
+                    'departamento'  => strtoupper(trim($getVal('Departamento'))),
+                    'ubicacion'     => strtoupper(trim($getVal('Ubicación'))),
                     'placas'        => $getVal('Placas'),
                     'tipo_vehiculo' => $getVal('Tipo Vehículo'),
                     'marca'         => $getVal('Marca'),
@@ -654,6 +655,33 @@ class VehiculoController extends Controller
                 'message' => 'Error en el servidor: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function deleteDocumento($id, $documentoId)
+    {
+        $documento = VehiculoArchivo::where('id', $documentoId)
+                                    ->where('vehiculo_id', $id)
+                                    ->first();
+
+        if (!$documento) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Documento no encontrado o no pertenece a este vehículo.'
+            ], 404);
+        }
+
+        $basePath = dirname(__DIR__, 2) . '/public';
+        $rutaFisica = $basePath . $documento->ruta_archivo;
+
+        if (file_exists($rutaFisica) && !is_dir($rutaFisica)) {
+            unlink($rutaFisica);
+        }
+
+        $documento->delete();
+
+        return response()->json([
+            'status' => 'success',
+        ]);
     }
 
     public function actualizarFoto($id)

@@ -14,6 +14,7 @@
                 <span x-text="flashMessage"></span>
             </div>
 
+            @if(auth()->user()->is('admin'))
             <div class="flex space-x-2">
                 <div class="relative" x-data="{ open: false }" @click.away="open = false">
                     <button @click="open = !open"
@@ -58,6 +59,7 @@
                     Nuevo Vehículo
                 </button>
             </div>
+            @endif
         </div>
 
         <div
@@ -410,6 +412,7 @@
                         this.page++;
                         this.fetchVehiculos();
                     }
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 },
 
                 prevPage() {
@@ -417,6 +420,7 @@
                         this.page--;
                         this.fetchVehiculos();
                     }
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 },
 
                 resetFilters() {

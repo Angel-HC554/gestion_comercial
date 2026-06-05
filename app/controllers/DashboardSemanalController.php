@@ -16,7 +16,7 @@ class DashboardSemanalController extends Controller
         $inicioSemana = Carbon::now()->startOfWeek();
         $finSemana = Carbon::now()->endOfWeek();
         
-        $totalVehiculos = Vehiculo::count();
+        $totalVehiculos = Vehiculo::where('estado', '!=', 'Fuera de circulacion')->count();
 
         // --- 2. KPI: Cumplimiento Semana Actual ---
         // Contamos supervisiones únicas por vehículo en este rango

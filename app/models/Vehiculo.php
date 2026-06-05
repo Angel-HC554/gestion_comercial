@@ -50,6 +50,12 @@ class Vehiculo extends Model
                     ->latest('hora_fin');
     }
 
+    public function latestSupervisionSemanal()
+    {
+        // Obtiene la supervisión semanal más reciente basada en la fecha de captura
+        return $this->hasOne(SupervisionSemanal::class)->latest('fecha_captura')->latest('id');
+    }
+
     /**
      * Obtiene la ÚLTIMA orden de mantenimiento/servicio (el KM base).
      */
@@ -297,10 +303,19 @@ class Vehiculo extends Model
     public function fotoPerfil(){
         return $this->hasOne(VehiculoArchivo::class, 'vehiculo_id')->where('nombre', 'foto perfil');
     }
+
     public function getFotoUrlAttribute()
     {
         if ($this->fotoPerfil && $this->fotoPerfil->ruta_archivo) {
             return $this->fotoPerfil->ruta_archivo;
+        }
+
+        $ultimaSemanal = $this->relationLoaded('latestSupervisionSemanal') 
+        ? $this->latestSupervisionSemanal 
+        : $this->latestSupervisionSemanal()->first();
+
+        if ($ultimaSemanal && $ultimaSemanal->foto_del) {
+            return $ultimaSemanal->foto_del;
         }
 
         return "/assets/img/vehiculos_default_fotos/default.jpg";
@@ -310,5 +325,37 @@ class Vehiculo extends Model
     {
         $info = $this->info_mantenimiento;
         return $info['estatus_general'] ?? 'gris';
+    }
+
+    public function getHistorialSiniestrosAttribute()
+    {
+        $diarias = $this->supervisioDiaria()
+            ->where('golpes', true)
+            ->orderByDesc('fecha')
+            ->get()
+            ->map(function ($item) {
+                return (object) [
+                    'tipo' => 'Supervisión Diaria',
+                    'fecha' => $item->fecha,
+                    'detalles' => $item->golpes_coment ?? 'GOLPE REPORTADO SIN DETALLE',
+                    'link_evidencia' => null,
+                ];
+            });
+
+        $semanales = $this->supervisioSemanal()
+            ->whereNotNull('foto_atent')
+            ->where('foto_atent', '!=', '')
+            ->orderByDesc('fecha_captura')
+            ->get()
+            ->map(function ($item) {
+                return (object) [
+                    'tipo' => 'Supervisión Semanal',
+                    'fecha' => $item->fecha_captura,
+                    'detalles' => 'ATENTADO / DAÑO REGISTRADO CON EVIDENCIA',
+                    'link_evidencia' => $item->foto_atent,
+                ];
+            });
+
+        return $diarias->concat($semanales)->sortByDesc('fecha')->values();
     }
 }

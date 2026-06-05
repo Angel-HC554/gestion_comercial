@@ -68,6 +68,7 @@ class SupervisionSemanalController extends Controller
 
         // 3. Query Vehículos (ACTUALIZADO: Usamos 'departamento' y 'ubicacion' en lugar de 'agencia')
         $queryVehiculos = Vehiculo::query()
+            ->where('estado', '!=', 'Fuera de circulacion')
             ->select('id', 'no_economico', 'departamento', 'ubicacion', 'en_taller')
             ->orderBy('departamento')
             ->orderBy('no_economico');
@@ -215,7 +216,9 @@ class SupervisionSemanalController extends Controller
 
         $queryVehiculos = Vehiculo::with(['supervisioSemanal' => function ($q) use ($inicioConsulta, $finConsulta){
             $q->whereBetween('fecha_captura', [$inicioConsulta, $finConsulta]);
-        }])->select('id', 'no_economico', 'departamento', 'ubicacion', 'en_taller');
+        }])
+        ->where('estado', '!=', 'Fuera de circulacion')
+        ->select('id', 'no_economico', 'departamento', 'ubicacion', 'en_taller');
 
         if ($departamentoFilter) {
             $queryVehiculos->where('departamento', $departamentoFilter);
